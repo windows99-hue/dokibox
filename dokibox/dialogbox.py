@@ -106,6 +106,7 @@ class _DialogBox:
         th = self._tag_h
         tr = self._tag_r
 
+        # white fill
         self.cv.create_rectangle(tx + tr, ty, tx + tw - tr, ty + th,
                                  fill="#ffffff", outline='')
         self.cv.create_rectangle(tx, ty + tr, tx + tw, ty + th - tr,
@@ -118,6 +119,21 @@ class _DialogBox:
                            start=180, extent=90, style=tk.PIESLICE, fill="#ffffff", outline='')
         self.cv.create_arc(tx + tw - tr * 2, ty + th - tr * 2, tx + tw, ty + th,
                            start=270, extent=90, style=tk.PIESLICE, fill="#ffffff", outline='')
+
+        # bottom 25% gradient: white -> black
+        grad_top = ty + th * 0.75
+        grad_h = int(th * 0.25)
+        steps = 12
+        for i in range(steps):
+            t_bot = i / max(steps - 1, 1)
+            t_top = min((i + 1) / max(steps - 1, 1), 1.0)
+            opacity = (t_bot + t_top) / 2
+            color = _blend("#000000", "#ffffff", opacity)
+
+            y1 = int(grad_top + grad_h * t_bot)
+            y2 = int(grad_top + grad_h * t_top)
+            self.cv.create_rectangle(int(tx), int(y1), int(tx + tw), int(y2),
+                                     fill=color, outline='')
 
     def _draw_name_text(self):
         tx = self.r + 10
@@ -143,7 +159,7 @@ class _DialogBox:
         steps = 60
         for i in range(steps):
             t_bottom = i / max(steps - 1, 1)
-            t_top = (i + 1) / max(steps - 1, 1)
+            t_top = min((i + 1) / max(steps - 1, 1), 1.0)
             opacity_top = 1.0 - 0.5 * t_bottom
             opacity_bot = 1.0 - 0.5 * t_top
             opacity = (opacity_top + opacity_bot) / 2
