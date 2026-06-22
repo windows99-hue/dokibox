@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """dokibox.ynbox -- DDLC风格 是/否 对话框"""
+import tkinter as tk
 import tkinter.font as tkfont
 from dokibox._base import _DokiBase
 
@@ -17,6 +18,10 @@ MIN_GAP = 40
 
 
 class _YnDialog(_DokiBase):
+
+    def __init__(self, msg, title="", tooltip=False):
+        self._tooltip = tooltip
+        super().__init__(msg, title)
 
     def _calc_size(self, msg):
         f_msg = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="normal")
@@ -56,14 +61,23 @@ class _YnDialog(_DokiBase):
         self._draw_button(btn_yes_x, btn_y, "是", "btn_yes")
         self._draw_button(btn_no_x, btn_y, "否", "btn_no")
 
-        self.cv.tag_bind("btn_yes", "<Enter>",
+        self.cv.create_rectangle(0, 0, self.w // 2, self.h,
+                                 fill='', outline='', tags='area_yes')
+        self.cv.create_rectangle(self.w // 2, 0, self.w, self.h,
+                                 fill='', outline='', tags='area_no')
+
+        self.cv.tag_bind("area_yes", "<Enter>",
                          lambda e: self._set_hover("btn_yes", True))
-        self.cv.tag_bind("btn_yes", "<Leave>",
+        self.cv.tag_bind("area_yes", "<Leave>",
                          lambda e: self._set_hover("btn_yes", False))
-        self.cv.tag_bind("btn_no", "<Enter>",
+        self.cv.tag_bind("area_no", "<Enter>",
                          lambda e: self._set_hover("btn_no", True))
-        self.cv.tag_bind("btn_no", "<Leave>",
+        self.cv.tag_bind("area_no", "<Leave>",
                          lambda e: self._set_hover("btn_no", False))
+
+        if self._tooltip:
+            self._add_tooltip("area_yes", "是")
+            self._add_tooltip("area_no", "否")
 
         self.root.bind("<Return>", lambda e: self._done(True))
 
@@ -84,12 +98,39 @@ class _YnDialog(_DokiBase):
         for item in items:
             self.cv.itemconfig(item, fill=color)
 
+    def _add_tooltip(self, tag, text):
+        tip = [None]
 
-def ynbox(msg="", title=""):
+        def show(event):
+            if tip[0]:
+                return
+            tw = tk.Toplevel(self.root)
+            tw.overrideredirect(True)
+            tw.attributes('-topmost', True)
+            label = tk.Label(tw, text=text, bg=self.BODY_COLOR, fg='#000000',
+                             font=("Microsoft YaHei", 12),
+                             relief='solid', bd=1, padx=6, pady=2)
+            label.pack()
+            x = event.x_root + 15
+            y = event.y_root + 15
+            tw.geometry(f"+{x}+{y}")
+            tip[0] = tw
+
+        def hide(event):
+            if tip[0]:
+                tip[0].destroy()
+                tip[0] = None
+
+        self.cv.tag_bind(tag, "<Enter>", show, add='+')
+        self.cv.tag_bind(tag, "<Leave>", hide, add='+')
+
+
+def ynbox(msg="", title="", tooltip=False):
     """DDLC风格 是/否 对话框，返回 True(是) / False(否)
 
     用法:
         import dokibox
-        result = dokibox.ynbox("确认删除？")
+        result = dokibox.ynbox("确认删除？")                 # 默认无悬浮提示
+        result = dokibox.ynbox("确认删除？", tooltip=True)    # 开启悬浮提示
     """
-    return _YnDialog.show(msg, title)
+    return _YnDialog.show(msg, title, tooltip=tooltip)

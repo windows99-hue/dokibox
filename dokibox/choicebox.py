@@ -25,9 +25,11 @@ def _hex_to_rgb(hex_color):
 
 class _Panel:
 
-    def __init__(self, master, text, index, pw, on_select):
+    def __init__(self, master, text, index, pw, on_select, tooltip=False):
         self.index = index
+        self.text = text
         self._on_select = on_select
+        self._tooltip = tooltip
 
         self.win = tk.Toplevel(master)
         self.win.overrideredirect(True)
@@ -49,9 +51,38 @@ class _Panel:
         self._draw_gradient_border()
         self._draw_option(text)
 
-        self.cv.tag_bind("opt", "<Enter>", lambda e: self._set_hover(True))
-        self.cv.tag_bind("opt", "<Leave>", lambda e: self._set_hover(False))
+        self.cv.bind("<Enter>", lambda e: self._set_hover(True))
+        self.cv.bind("<Leave>", lambda e: self._set_hover(False))
         self.cv.bind("<Button-1>", lambda e: self._on_select(self.index))
+
+        if self._tooltip:
+            self._add_tooltip()
+
+    def _add_tooltip(self):
+        tip = [None]
+
+        def show(event):
+            if tip[0]:
+                return
+            tw = tk.Toplevel(self.win)
+            tw.overrideredirect(True)
+            tw.attributes('-topmost', True)
+            label = tk.Label(tw, text=self.text, bg=BODY_COLOR, fg='#000000',
+                             font=("Microsoft YaHei", 12),
+                             relief='solid', bd=1, padx=6, pady=2)
+            label.pack()
+            x = event.x_root + 15
+            y = event.y_root + 15
+            tw.geometry(f"+{x}+{y}")
+            tip[0] = tw
+
+        def hide(event):
+            if tip[0]:
+                tip[0].destroy()
+                tip[0] = None
+
+        self.cv.bind("<Enter>", show, add='+')
+        self.cv.bind("<Leave>", hide, add='+')
 
     def _draw_gradient_border(self):
         br, bg, bb = _hex_to_rgb(BORDER_COLOR)
@@ -88,8 +119,9 @@ class _Panel:
 
 class _ChoiceManager:
 
-    def __init__(self, msg, choices, title):
+    def __init__(self, msg, choices, title, tooltip=False):
         self.result = None
+        self._tooltip = tooltip
         self.root = tk.Tk()
         self.root.withdraw()
 
@@ -101,7 +133,7 @@ class _ChoiceManager:
 
         self._panels = []
         for i, choice in enumerate(choices):
-            panel = _Panel(self.root, choice, i, unified_w, self._on_select)
+            panel = _Panel(self.root, choice, i, unified_w, self._on_select, self._tooltip)
             self._panels.append(panel)
 
         if msg.strip():
@@ -167,16 +199,17 @@ class _ChoiceManager:
             start_y += panel.ph + OPT_GAP
 
 
-def choicebox(msg="", choices=None, title=""):
+def choicebox(msg="", choices=None, title="", tooltip=False):
     """DDLC风格多选对话框。每个选项独立悬浮窗口，返回选中项索引。
 
     用法:
         import dokibox
         idx = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"])
+        idx = dokibox.choicebox("选择角色", ["纱世里", "优里"], tooltip=True)
     """
     if not choices:
         return None
-    mgr = _ChoiceManager(msg, choices, title)
+    mgr = _ChoiceManager(msg, choices, title, tooltip)
     mgr.root.mainloop()
     try:
         mgr.root.destroy()
