@@ -268,9 +268,12 @@ class _DialogBox:
         lines = msg.split('\n')
         line_h = 32
         pad_top = 40
-        pad_x = self.r - 110
-        if self._name:
-            pad_x += self._tag_w + 15
+        # # pad_x = self.r - 110
+        # pad_x = 2
+        # if self._name:
+        #     pad_x += self._tag_w + 15
+
+        pad_x = 40
 
         pos = []
         for j, line in enumerate(lines):
