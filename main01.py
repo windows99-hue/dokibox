@@ -10,4 +10,4 @@ if __name__ == "__main__":
     
     dokibox.msgbox("OK！")
     dokibox.ynbox("继续吗？", tooltip=True)
-    dokibox.dialogbox("你好世界！", name="测aaaaaaaaaaaaaaaaa试")
+    dokibox.dialogbox("你好世界！", name="莫妮卡")

@@ -11,9 +11,9 @@ FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
 
 # --- 圆点装饰 ---
-DOT_RADIUS = 16
-DOT_GAP_X = 45
-DOT_GAP_Y = 8
+DOT_RADIUS = 13
+DOT_GAP_X = 35
+DOT_GAP_Y = 6
 DOT_COLOR = "#FB94C1"
 
 
@@ -33,7 +33,7 @@ def _blend(c1, c2, t):
 
 class _DialogBox:
 
-    def __init__(self, msg, w, h, name=None):
+    def __init__(self, msg, w, h, name=None, typewriter=True):
         self.root = tk.Tk()
         self.root.withdraw()
 
@@ -41,6 +41,10 @@ class _DialogBox:
         self.h = h
         self.r = CORNER_RADIUS
         self._name = name
+        self._typewriter = typewriter
+        self._typing = False
+        self._typing_done = False
+        self._after_id = None
 
         f_name = tkfont.Font(family="Microsoft YaHei", size=20, weight="bold")
         name_h = 0
@@ -48,7 +52,7 @@ class _DialogBox:
             tw = f_name.measure(name)
             name_pad = 28
             name_h = f_name.metrics('linespace') + name_pad
-            self._tag_w = int(tw + name_pad * 2)
+            self._tag_w = int(tw + name_pad * 2) + 80
             self._tag_h = name_h
             self._tag_top = 30
             self._tag_r = 12
@@ -85,9 +89,15 @@ class _DialogBox:
             self._draw_name_text()
         self._draw_text(msg)
 
-        self.win.bind("<Button-1>", lambda e: self._done())
+        self.win.bind("<Button-1>", lambda e: self._on_click())
         self.root.bind("<Escape>", lambda e: self._done())
         self.root.update()
+
+    def _on_click(self):
+        if self._typewriter and self._typing:
+            self._finish_typewriter()
+        else:
+            self._done()
 
     def _draw_name_tag_bg(self):
         tx = self.r + 10
@@ -111,7 +121,7 @@ class _DialogBox:
 
     def _draw_name_text(self):
         tx = self.r + 10
-        ty = self._tag_top - 3
+        ty = self._tag_top
         tw = self._tag_w
         th = self._tag_h
         cx = tx + tw // 2
@@ -241,14 +251,79 @@ class _DialogBox:
         font = ("Microsoft YaHei", 20, "bold")
         lines = msg.split('\n')
         line_h = 32
-        pad_top = 35
-        pad_x = self.r - 370
+        pad_top = 40
+        pad_x = self.r - 110
         if self._name:
             pad_x += self._tag_w + 15
 
+        pos = []
         for j, line in enumerate(lines):
             y = top + pad_top + line_h // 2 + j * line_h
-            self._draw_stroked(pad_x, y, line, font)
+            pos.append((pad_x, y, line))
+
+        if self._typewriter:
+            self._start_typewriter(pos, font)
+        else:
+            for px, py, line in pos:
+                self._draw_stroked(px, py, line, font)
+
+    def _start_typewriter(self, positions, font):
+        self._typing = True
+        self._typing_done = False
+        self._lines = []
+        self._pos = positions
+        self._font = font
+        self._cur_line = 0
+        self._cur_char = 0
+
+        self._line_data = []
+        for px, py, full_text in positions:
+            stroke_ids = []
+            for step in range(24):
+                angle = 2 * math.pi * step / 24
+                dx = math.cos(angle)
+                dy = math.sin(angle)
+                sid = self.cv.create_text(px + dx, py + dy, text="",
+                                          font=font, fill="#000000", anchor="w")
+                stroke_ids.append(sid)
+            fid = self.cv.create_text(px, py, text="",
+                                      font=font, fill="#ffffff", anchor="w")
+            self._line_data.append((stroke_ids, fid, full_text))
+
+        self._type_tick()
+
+    def _type_tick(self):
+        if self._cur_line >= len(self._line_data):
+            self._typing = False
+            self._typing_done = True
+            self._after_id = None
+            return
+
+        stroke_ids, fid, full_text = self._line_data[self._cur_line]
+        self._cur_char += 1
+        if self._cur_char > len(full_text):
+            self._cur_line += 1
+            self._cur_char = 0
+            self._type_tick()
+            return
+
+        current = full_text[:self._cur_char]
+        for sid in stroke_ids:
+            self.cv.itemconfig(sid, text=current)
+        self.cv.itemconfig(fid, text=current)
+
+        self._after_id = self.root.after(50, self._type_tick)
+
+    def _finish_typewriter(self):
+        if self._after_id:
+            self.root.after_cancel(self._after_id)
+            self._after_id = None
+        for stroke_ids, fid, full_text in self._line_data:
+            for sid in stroke_ids:
+                self.cv.itemconfig(sid, text=full_text)
+            self.cv.itemconfig(fid, text=full_text)
+        self._typing = False
+        self._typing_done = True
 
     def _draw_stroked(self, x, y, text, font):
         for step in range(24):
@@ -265,19 +340,22 @@ class _DialogBox:
         self.root.quit()
 
 
-def dialogbox(msg="", w=None, h=220, name=None):
+def dialogbox(msg="", w=None, h=220, name=None, typewriter=True):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
+
+    typewriter=True 时文字逐个出现，首次点击跳至全文，再次点击关闭。
 
     用法:
         dokibox.dialogbox("你好！")
         dokibox.dialogbox("你好！", name="纱世里")
+        dokibox.dialogbox("你好！", typewriter=False)
     """
     if w is None:
         root = tk.Tk()
         root.withdraw()
         w = int(root.winfo_screenwidth() * 0.7)
         root.destroy()
-    box = _DialogBox(msg, w, h, name)
+    box = _DialogBox(msg, w, h, name, typewriter)
     box.root.mainloop()
     try:
         box.root.destroy()
