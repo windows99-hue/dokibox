@@ -5,7 +5,7 @@ import tkinter.font as tkfont
 import math
 from dokibox._base import _DokiBase
 
-MSG_COLOR = "#BD539D"
+MSG_COLOR = "#000000"
 BTN_STROKE_COLOR = "#BD539D"
 BTN_FILL_COLOR = "#ffffff"
 BTN_HOVER_COLOR = "#ffd0e8"
@@ -14,7 +14,6 @@ PAD_X = 80
 PAD_TOP = 50
 PAD_BTNS = 30
 PAD_BOT = 70
-MSG_STROKE_W = 2
 BTN_STROKE_W = 6
 MSG_FONT_SIZE = 22
 BTN_FONT_SIZE = 26
@@ -45,9 +44,10 @@ class _MsgDialog(_DokiBase):
         return w, h
 
     def _draw_content(self, msg):
-        self._draw_stroked_text(
-            self.w // 2, PAD_TOP + self._msg_total_h // 2,
-            msg, self._msg_font, MSG_COLOR, self.BORDER_COLOR, MSG_STROKE_W
+        msg_y = PAD_TOP + self._msg_total_h // 2
+        self.cv.create_text(
+            self.w // 2, msg_y, text=msg, font=self._msg_font,
+            fill=MSG_COLOR, anchor="center"
         )
 
         btn_y = self.h - PAD_BOT - self._btn_line_h // 2
