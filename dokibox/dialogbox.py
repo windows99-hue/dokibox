@@ -6,7 +6,7 @@ import math
 BODY_COLOR = "#FEE6F4"
 BORDER_COLOR = "#ffffff"
 TRANSPARENT_KEY = "#010101"
-CORNER_RADIUS = 20
+CORNER_RADIUS = 30
 
 
 def _hex_to_rgb(h):
@@ -41,7 +41,7 @@ class _DialogBox:
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
-        y = sh - h - 30
+        y = sh - h - 60
         self.win.geometry(f"{w}x{h}+{x}+{y}")
 
         self.cv = tk.Canvas(self.win, width=w, height=h,
@@ -58,12 +58,12 @@ class _DialogBox:
 
     def _draw_fill(self):
         r = self.r
-        steps = 40
+        steps = 60
         for i in range(steps):
             t_bottom = i / max(steps - 1, 1)
             t_top = (i + 1) / max(steps - 1, 1)
-            opacity_top = 0.8 - 0.6 * t_bottom
-            opacity_bot = 0.8 - 0.6 * t_top
+            opacity_top = 1.0 - 0.4 * t_bottom
+            opacity_bot = 1.0 - 0.4 * t_top
             opacity = (opacity_top + opacity_bot) / 2
 
             color = _blend(BODY_COLOR, TRANSPARENT_KEY, opacity)
@@ -103,23 +103,23 @@ class _DialogBox:
         color = BORDER_COLOR
 
         self.cv.create_arc(0, 0, r * 2, r * 2,
-                           start=90, extent=90, style=tk.ARC, outline=color, width=2)
+                           start=90, extent=90, style=tk.ARC, outline=color, width=3)
         self.cv.create_arc(w - r * 2, 0, w, r * 2,
-                           start=0, extent=90, style=tk.ARC, outline=color, width=2)
+                           start=0, extent=90, style=tk.ARC, outline=color, width=3)
         self.cv.create_arc(0, h - r * 2, r * 2, h,
-                           start=180, extent=90, style=tk.ARC, outline=color, width=2)
+                           start=180, extent=90, style=tk.ARC, outline=color, width=3)
         self.cv.create_arc(w - r * 2, h - r * 2, w, h,
-                           start=270, extent=90, style=tk.ARC, outline=color, width=2)
+                           start=270, extent=90, style=tk.ARC, outline=color, width=3)
 
-        self.cv.create_line(r, 1, w - r, 1, fill=color, width=2)
-        self.cv.create_line(r, h - 1, w - r, h - 1, fill=color, width=2)
-        self.cv.create_line(1, r, 1, h - r, fill=color, width=2)
-        self.cv.create_line(w - 1, r, w - 1, h - r, fill=color, width=2)
+        self.cv.create_line(r, 1, w - r, 1, fill=color, width=3)
+        self.cv.create_line(r, h - 1, w - r, h - 1, fill=color, width=3)
+        self.cv.create_line(1, r, 1, h - r, fill=color, width=3)
+        self.cv.create_line(w - 1, r, w - 1, h - r, fill=color, width=3)
 
     def _draw_text(self, msg):
         if not msg:
             return
-        font = ("Microsoft YaHei", 18, "bold")
+        font = ("Microsoft YaHei", 20, "bold")
         lines = msg.split('\n')
         cx = self.w // 2
         line_h = 30
@@ -136,7 +136,7 @@ class _DialogBox:
         self.root.quit()
 
 
-def dialogbox(msg, w=800, h=180):
+def dialogbox(msg, w=900, h=180):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 
     用法:
