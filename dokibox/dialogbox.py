@@ -3,16 +3,16 @@
 import tkinter as tk
 import math
 
-BODY_COLOR = "#FEE6F4"
+BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#ffffff"
 TRANSPARENT_KEY = "#010101"
 CORNER_RADIUS = 30
 
 # --- 圆点装饰 ---
 DOT_RADIUS = 8
-DOT_GAP_X = 6
-DOT_GAP_Y = 6
-DOT_COLOR = "#FDD3E8"
+DOT_GAP_X = 20
+DOT_GAP_Y = 2
+DOT_COLOR = "#FB94C1"
 
 
 def _hex_to_rgb(h):
