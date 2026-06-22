@@ -67,8 +67,9 @@ class _DialogBox:
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
-        y = sh - cv_h - 60 + self._dialog_top
-        self.win.geometry(f"{w}x{cv_h}+{x}+{y}")
+        dialog_screen_y = sh - h - 60
+        win_y = dialog_screen_y - self._dialog_top
+        self.win.geometry(f"{w}x{cv_h}+{x}+{win_y}")
 
         self.cv = tk.Canvas(self.win, width=w, height=cv_h,
                             bg=TRANSPARENT_KEY, highlightthickness=0)
