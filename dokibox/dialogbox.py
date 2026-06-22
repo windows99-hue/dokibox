@@ -240,9 +240,9 @@ class _DialogBox:
         top = self._dialog_top
         font = ("Microsoft YaHei", 20, "bold")
         lines = msg.split('\n')
-        line_h = 30
-        pad_top = 15
-        pad_x = self.r + 20
+        line_h = 32
+        pad_top = 35
+        pad_x = self.r - 370
         if self._name:
             pad_x += self._tag_w + 15
 
