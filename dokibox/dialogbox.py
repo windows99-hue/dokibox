@@ -50,7 +50,7 @@ class _DialogBox:
             name_h = f_name.metrics('linespace') + name_pad
             self._tag_w = int(tw + name_pad * 2)
             self._tag_h = name_h
-            self._tag_top = 8
+            self._tag_top = 30
             self._tag_r = 12
         else:
             self._tag_w = 0
@@ -110,7 +110,7 @@ class _DialogBox:
 
     def _draw_name_text(self):
         tx = self.r + 10
-        ty = self._tag_top
+        ty = self._tag_top - 3
         tw = self._tag_w
         th = self._tag_h
         cx = tx + tw // 2
