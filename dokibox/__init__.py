@@ -2,3 +2,4 @@
 """dokibox -- DDLC 风格对话框库"""
 from dokibox.ynbox import ynbox
 from dokibox.choicebox import choicebox
+from dokibox.msgbox import msgbox

@@ -7,3 +7,6 @@ if __name__ == "__main__":
         print("选择了:", ["纱世里", "优里", "夏树", "莫妮卡"][idx])
     else:
         print("未选择")
+    
+    dokibox.msgbox("OK！")
+    dokibox.ynbox("继续吗？", tooltip=True)
