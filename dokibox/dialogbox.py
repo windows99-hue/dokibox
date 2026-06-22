@@ -8,6 +8,13 @@ BORDER_COLOR = "#ffffff"
 TRANSPARENT_KEY = "#010101"
 CORNER_RADIUS = 30
 
+# --- 圆点装饰 ---
+DOT_RADIUS = 8
+DOT_GAP_X = 14
+DOT_GAP_Y = 10
+DOT_COLOR = "#FDD3E8"
+DOT_OPACITY = 0.6
+
 
 def _hex_to_rgb(h):
     h = h.lstrip('#')
@@ -49,6 +56,7 @@ class _DialogBox:
         self.cv.pack()
 
         self._draw_fill()
+        self._draw_dots()
         self._draw_outline()
         self._draw_text(msg)
 
@@ -95,6 +103,30 @@ class _DialogBox:
             x2 = min(self.w, inner_right)
             self.cv.create_rectangle(int(x1), int(y1), int(x2), int(y2),
                                      fill=color, outline='')
+
+    def _draw_dots(self):
+        r = self.r
+        dr = DOT_RADIUS
+        gap_x = DOT_GAP_X
+        gap_y = DOT_GAP_Y
+        color = DOT_COLOR
+        step = int(dr * 2 + gap_x)
+        row_h = int(dr * 2 + gap_y)
+        start_x = int(r + dr)
+        start_y = int(r + dr)
+
+        row = 0
+        y = start_y
+        while y < self.h - r:
+            offset_x = (step // 2) if row % 2 == 1 else 0
+            x = start_x + offset_x
+            while x < self.w - r:
+                d = 2 * dr
+                self.cv.create_oval(x - dr, y - dr, x + dr, y + dr,
+                                    fill=color, outline='')
+                x += step
+            y += row_h
+            row += 1
 
     def _draw_outline(self):
         r = self.r
