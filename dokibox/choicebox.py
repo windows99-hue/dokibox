@@ -119,9 +119,10 @@ class _Panel:
 
 class _ChoiceManager:
 
-    def __init__(self, msg, choices, title, tooltip=False):
+    def __init__(self, msg, choices, title, tooltip=False, force=None):
         self.result = None
         self._tooltip = tooltip
+        self._force = force
         self.root = tk.Tk()
         self.root.withdraw()
 
@@ -140,6 +141,14 @@ class _ChoiceManager:
             self._create_msg_label(msg)
 
         self._layout(msg)
+
+        if force is not None and 0 <= force < len(choices):
+            self._force_index = force
+            p = self._panels[force]
+            cx = p.win.winfo_x() + p.pw // 2
+            cy = p.win.winfo_y() + p.ph // 2
+            self.root.after(50, lambda: p.win.event_generate(
+                '<Motion>', warp=True, x=p.pw // 2, y=p.ph // 2))
 
     def _on_select(self, index):
         self.result = index
@@ -199,17 +208,18 @@ class _ChoiceManager:
             start_y += panel.ph + OPT_GAP
 
 
-def choicebox(msg="", choices=None, title="", tooltip=False):
+def choicebox(msg="", choices=None, title="", tooltip=False, force=None):
     """DDLC风格多选对话框。每个选项独立悬浮窗口，返回选中项索引。
+
+    force: 指定索引（0开始），鼠标会自动移到该选项中央。
 
     用法:
         import dokibox
-        idx = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"])
-        idx = dokibox.choicebox("选择角色", ["纱世里", "优里"], tooltip=True)
+        idx = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"], force=1)
     """
     if not choices:
         return None
-    mgr = _ChoiceManager(msg, choices, title, tooltip)
+    mgr = _ChoiceManager(msg, choices, title, tooltip, force)
     mgr.root.mainloop()
     try:
         mgr.root.destroy()
