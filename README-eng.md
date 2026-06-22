@@ -18,6 +18,8 @@ from dokibox import ynbox, msgbox, choicebox, dialogbox
 
 ### ynbox — Yes / No Dialog
 
+<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/d40c9881-14bd-4876-877c-1d2008805c06" />
+
 ```python
 dokibox.ynbox(msg="Are you sure?", tooltip=False) → bool
 ```
@@ -38,6 +40,8 @@ if dokibox.ynbox("Delete this file?"):
 
 ### msgbox — Message Dialog
 
+<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/da5064d3-8d90-47ec-9b9e-20e87faf0fdc" />
+
 ```python
 dokibox.msgbox(msg="Done!", tooltip=False) → True
 ```
@@ -56,6 +60,8 @@ dokibox.msgbox("Save successful!")
 ---
 
 ### choicebox — Choice Dialog
+
+<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/a33088b1-363b-48f5-8509-44a5d3ef5f4d" />
 
 ```python
 dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | None
@@ -78,6 +84,8 @@ print(char)  # "Yuri"
 ---
 
 ### dialogbox — Dialogue Box
+
+<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/3817a140-66eb-496d-988d-7b728289a1ca" />
 
 ```python
 dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False)
@@ -104,3 +112,11 @@ dokibox.dialogbox("Slower...", speed=80, bold=True)
 dokibox.dialogbox("Show all at once", typewriter=False)
 ```
 
+
+## In the end
+
+This project uses the MIT license
+
+DDLC+ scared me to death, ugh ugh ugh ugh
+>
+> Love Sayori the most!
