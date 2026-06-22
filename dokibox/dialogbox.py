@@ -10,10 +10,9 @@ CORNER_RADIUS = 30
 
 # --- 圆点装饰 ---
 DOT_RADIUS = 8
-DOT_GAP_X = 14
-DOT_GAP_Y = 10
+DOT_GAP_X = 6
+DOT_GAP_Y = 6
 DOT_COLOR = "#FDD3E8"
-DOT_OPACITY = 0.6
 
 
 def _hex_to_rgb(h):
@@ -57,6 +56,7 @@ class _DialogBox:
 
         self._draw_fill()
         self._draw_dots()
+        self._clip_corners()
         self._draw_outline()
         self._draw_text(msg)
 
@@ -105,28 +105,46 @@ class _DialogBox:
                                      fill=color, outline='')
 
     def _draw_dots(self):
-        r = self.r
         dr = DOT_RADIUS
         gap_x = DOT_GAP_X
         gap_y = DOT_GAP_Y
-        color = DOT_COLOR
         step = int(dr * 2 + gap_x)
         row_h = int(dr * 2 + gap_y)
-        start_x = int(r + dr)
-        start_y = int(r + dr)
 
         row = 0
-        y = start_y
-        while y < self.h - r:
+        y = -dr
+        while y < self.h + dr:
+            t = max(0, min(1, y / self.h))
+            opacity = 1.0 - 0.4 * t
+            color = _blend(DOT_COLOR, TRANSPARENT_KEY, opacity)
+
             offset_x = (step // 2) if row % 2 == 1 else 0
-            x = start_x + offset_x
-            while x < self.w - r:
+            x = -dr + offset_x
+            while x < self.w + dr:
                 d = 2 * dr
                 self.cv.create_oval(x - dr, y - dr, x + dr, y + dr,
                                     fill=color, outline='')
                 x += step
             y += row_h
             row += 1
+
+    def _clip_corners(self):
+        r = self.r
+        w = self.w
+        h = self.h
+        key = TRANSPARENT_KEY
+        for y in range(0, r):
+            dy = r - y
+            wx = r - int(math.sqrt(max(r * r - dy * dy, 0)))
+            if wx > 0:
+                self.cv.create_rectangle(0, y, wx, y + 1, fill=key, outline='')
+                self.cv.create_rectangle(w - wx, y, w, y + 1, fill=key, outline='')
+        for y in range(h - r, h):
+            dy = y - (h - r)
+            wx = r - int(math.sqrt(max(r * r - dy * dy, 0)))
+            if wx > 0:
+                self.cv.create_rectangle(0, y, wx, y + 1, fill=key, outline='')
+                self.cv.create_rectangle(w - wx, y, w, y + 1, fill=key, outline='')
 
     def _draw_outline(self):
         r = self.r
