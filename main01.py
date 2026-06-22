@@ -23,7 +23,6 @@ PAD_X = 60
 PAD_TOP = 50
 PAD_BTNS = 30
 PAD_BOT = 35
-BTN_GAP = 80
 BORDER_W = 12
 MSG_STROKE_W = 2
 BTN_STROKE_W = 5
@@ -67,10 +66,12 @@ class _DDLC_Dialog:
 
         yes_w = f_btn.measure("是")
         no_w = f_btn.measure("否")
-        btn_total_w = yes_w + BTN_GAP + no_w
 
-        content_w = max(msg_max_w, btn_total_w)
-        self.w = max(content_w + PAD_X * 2, 350)
+        side_margin = int(yes_w)
+        min_gap = 40
+        content_w = max(msg_max_w, 0)
+        min_btn_w = BORDER_W * 2 + side_margin * 2 + yes_w + no_w + min_gap
+        self.w = max(int(content_w + PAD_X * 2), int(min_btn_w), 300)
         self.h = max(PAD_TOP + msg_total_h + PAD_BTNS + btn_line_h + BTN_STROKE_W * 2 + PAD_BOT, 180)
 
         sw = self.root.winfo_screenwidth()
@@ -92,10 +93,9 @@ class _DDLC_Dialog:
             msg, self.msg_font, MSG_COLOR, BORDER_COLOR, MSG_STROKE_W
         )
 
-        btn_area_start = (self.w - btn_total_w) / 2
         btn_y = self.h - PAD_BOT - btn_line_h // 2
-        btn_yes_x = btn_area_start + yes_w / 2
-        btn_no_x = btn_area_start + yes_w + BTN_GAP + no_w / 2
+        btn_yes_x = BORDER_W + side_margin + yes_w / 2
+        btn_no_x = self.w - BORDER_W - side_margin - no_w / 2
 
         self._draw_button(btn_yes_x, btn_y, "是", "btn_yes")
         self._draw_button(btn_no_x, btn_y, "否", "btn_no")
@@ -125,7 +125,7 @@ class _DDLC_Dialog:
         br, bg, bb = self._hex_to_rgb(BORDER_COLOR)
         er, eg, eb = self._hex_to_rgb(BODY_COLOR)
         for i in range(BORDER_W):
-            t = i / max(BORDER_W - 1, 1)
+            t = (i / max(BORDER_W - 1, 1)) ** 3
             r = int(br + (er - br) * t)
             g = int(bg + (eg - bg) * t)
             b = int(bb + (eb - bb) * t)
