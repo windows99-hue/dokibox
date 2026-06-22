@@ -11,9 +11,9 @@ FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
 
 # --- 圆点装饰 ---
-DOT_RADIUS = 8
-DOT_GAP_X = 20
-DOT_GAP_Y = 2
+DOT_RADIUS = 16
+DOT_GAP_X = 45
+DOT_GAP_Y = 8
 DOT_COLOR = "#FB94C1"
 
 
@@ -42,20 +42,20 @@ class _DialogBox:
         self.r = CORNER_RADIUS
         self._name = name
 
-        f_name = tkfont.Font(family="Microsoft YaHei", size=16, weight="bold")
+        f_name = tkfont.Font(family="Microsoft YaHei", size=20, weight="bold")
         name_h = 0
         if name:
             tw = f_name.measure(name)
-            name_pad = 22
+            name_pad = 28
             name_h = f_name.metrics('linespace') + name_pad
             self._tag_w = int(tw + name_pad * 2)
             self._tag_h = name_h
-            self._tag_top = 10
-            self._tag_r = 10
+            self._tag_top = 8
+            self._tag_r = 12
         else:
             self._tag_w = 0
 
-        cv_h = h + name_h + 20 if name else h
+        cv_h = h + name_h + 24 if name else h
         self._cv_h = cv_h
         self._dialog_top = name_h + 20 if name else 0
 
@@ -79,8 +79,6 @@ class _DialogBox:
         self._draw_fill()
         self._draw_dots()
         self._clip_corners()
-        if self._name:
-            self._draw_name_shadow()
         self._draw_outline()
         if self._name:
             self._draw_name_text()
@@ -110,17 +108,6 @@ class _DialogBox:
         self.cv.create_arc(tx + tw - tr * 2, ty + th - tr * 2, tx + tw, ty + th,
                            start=270, extent=90, style=tk.PIESLICE, fill="#ffffff", outline='')
 
-    def _draw_name_shadow(self):
-        tx = self.r + 10
-        ty = self._tag_top
-        tw = self._tag_w
-        th = self._tag_h
-        for d in range(4):
-            alpha = 0.15 - d * 0.03
-            color = _blend("#000000", TRANSPARENT_KEY, max(alpha, 0))
-            self.cv.create_line(tx + 1, ty + th + d, tx + tw - 1, ty + th + d,
-                                fill=color, width=1)
-
     def _draw_name_text(self):
         tx = self.r + 10
         ty = self._tag_top
@@ -128,12 +115,12 @@ class _DialogBox:
         th = self._tag_h
         cx = tx + tw // 2
         cy = ty + th // 2
-        font = ("Microsoft YaHei", 16, "bold")
+        font = ("Microsoft YaHei", 20, "bold")
 
         for step in range(24):
             angle = 2 * math.pi * step / 24
-            dx = math.cos(angle) * 1.5
-            dy = math.sin(angle) * 1.5
+            dx = math.cos(angle) * 2
+            dy = math.sin(angle) * 2
             self.cv.create_text(cx + dx, cy + dy, text=self._name, font=font,
                                 fill="#BD539D", anchor="center")
         self.cv.create_text(cx, cy, text=self._name, font=font,
@@ -277,7 +264,7 @@ class _DialogBox:
         self.root.quit()
 
 
-def dialogbox(msg="", w=None, h=180, name=None):
+def dialogbox(msg="", w=None, h=220, name=None):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 
     用法:
@@ -287,7 +274,7 @@ def dialogbox(msg="", w=None, h=180, name=None):
     if w is None:
         root = tk.Tk()
         root.withdraw()
-        w = int(root.winfo_screenwidth() * 0.6)
+        w = int(root.winfo_screenwidth() * 0.7)
         root.destroy()
     box = _DialogBox(msg, w, h, name)
     box.root.mainloop()
