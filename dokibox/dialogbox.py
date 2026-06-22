@@ -7,7 +7,7 @@ BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#ffffff"
 TRANSPARENT_KEY = "#00FF00"
 FADE_TO = "#FFFFFF"
-CORNER_RADIUS = 30
+CORNER_RADIUS = 18
 
 # --- 圆点装饰 ---
 DOT_RADIUS = 8
@@ -195,13 +195,18 @@ class _DialogBox:
         self.root.quit()
 
 
-def dialogbox(msg="", w=900, h=180):
+def dialogbox(msg="", w=None, h=180):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 
     用法:
         dokibox.dialogbox("你好，世界！")
-        dokibox.dialogbox("第二句话", w=900, h=200)
+        dokibox.dialogbox("第二句话", h=200)
     """
+    if w is None:
+        root = tk.Tk()
+        root.withdraw()
+        w = int(root.winfo_screenwidth() * 0.6)
+        root.destroy()
     box = _DialogBox(msg, w, h)
     box.root.mainloop()
     try:
