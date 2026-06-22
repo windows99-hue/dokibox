@@ -33,7 +33,7 @@ def _blend(c1, c2, t):
 
 class _DialogBox:
 
-    def __init__(self, msg, w, h, name=None, typewriter=True):
+    def __init__(self, msg, w, h, name=None, typewriter=True, speed=50, bold=False):
         self.root = tk.Tk()
         self.root.withdraw()
 
@@ -42,6 +42,8 @@ class _DialogBox:
         self.r = CORNER_RADIUS
         self._name = name
         self._typewriter = typewriter
+        self._speed = speed
+        self._bold = bold
         self._typing = False
         self._typing_done = False
         self._after_id = None
@@ -296,12 +298,13 @@ class _DialogBox:
         self._cur_char = 0
 
         self._line_data = []
+        sw = 4 if self._bold else 1
         for px, py, full_text in positions:
             stroke_ids = []
             for step in range(24):
                 angle = 2 * math.pi * step / 24
-                dx = math.cos(angle)
-                dy = math.sin(angle)
+                dx = math.cos(angle) * sw
+                dy = math.sin(angle) * sw
                 sid = self.cv.create_text(px + dx, py + dy, text="",
                                           font=font, fill="#000000", anchor="w")
                 stroke_ids.append(sid)
@@ -331,7 +334,7 @@ class _DialogBox:
             self.cv.itemconfig(sid, text=current)
         self.cv.itemconfig(fid, text=current)
 
-        self._after_id = self.root.after(50, self._type_tick)
+        self._after_id = self.root.after(self._speed, self._type_tick)
 
     def _finish_typewriter(self):
         if self._after_id:
@@ -345,10 +348,11 @@ class _DialogBox:
         self._typing_done = True
 
     def _draw_stroked(self, x, y, text, font):
+        sw = 4 if self._bold else 1
         for step in range(24):
             angle = 2 * math.pi * step / 24
-            dx = math.cos(angle)
-            dy = math.sin(angle)
+            dx = math.cos(angle) * sw
+            dy = math.sin(angle) * sw
             self.cv.create_text(x + dx, y + dy, text=text, font=font,
                                 fill="#000000", anchor="w")
         self.cv.create_text(x, y, text=text, font=font,
@@ -359,22 +363,22 @@ class _DialogBox:
         self.root.quit()
 
 
-def dialogbox(msg="", w=None, h=220, name=None, typewriter=True):
+def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 
-    typewriter=True 时文字逐个出现，首次点击跳至全文，再次点击关闭。
+    speed: 打字机模式下每字间隔毫秒数（默认 50）。
+    bold:  正文黑描边加粗（默认 False）。
 
     用法:
         dokibox.dialogbox("你好！")
-        dokibox.dialogbox("你好！", name="纱世里")
-        dokibox.dialogbox("你好！", typewriter=False)
+        dokibox.dialogbox("你好！", name="纱世里", bold=True)
     """
     if w is None:
         root = tk.Tk()
         root.withdraw()
         w = int(root.winfo_screenwidth() * 0.7)
         root.destroy()
-    box = _DialogBox(msg, w, h, name, typewriter)
+    box = _DialogBox(msg, w, h, name, typewriter, speed, bold)
     box.root.mainloop()
     try:
         box.root.destroy()
