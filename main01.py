@@ -19,15 +19,15 @@ BTN_FILL_COLOR = "#ffffff"
 BTN_HOVER_COLOR = "#ffd0e8"
 
 # --- 布局常量 ---
-PAD_X = 60
+PAD_X = 80
 PAD_TOP = 50
 PAD_BTNS = 30
-PAD_BOT = 35
+PAD_BOT = 70
 BORDER_W = 12
 MSG_STROKE_W = 2
-BTN_STROKE_W = 5
+BTN_STROKE_W = 6
 MSG_FONT_SIZE = 22
-BTN_FONT_SIZE = 28
+BTN_FONT_SIZE = 26
 
 
 class DDLC_MsgBox:
@@ -67,7 +67,7 @@ class _DDLC_Dialog:
         yes_w = f_btn.measure("是")
         no_w = f_btn.measure("否")
 
-        side_margin = int(yes_w)
+        side_margin = int(yes_w * 1.5)
         min_gap = 40
         content_w = max(msg_max_w, 0)
         min_btn_w = BORDER_W * 2 + side_margin * 2 + yes_w + no_w + min_gap
