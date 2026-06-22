@@ -70,8 +70,8 @@ class _DialogBox:
         for i in range(steps):
             t_bottom = i / max(steps - 1, 1)
             t_top = (i + 1) / max(steps - 1, 1)
-            opacity_top = 1.0 - 0.4 * t_bottom
-            opacity_bot = 1.0 - 0.4 * t_top
+            opacity_top = 1.0 - 0.95 * t_bottom
+            opacity_bot = 1.0 - 0.95 * t_top
             opacity = (opacity_top + opacity_bot) / 2
 
             color = _blend(BODY_COLOR, TRANSPARENT_KEY, opacity)
@@ -115,7 +115,7 @@ class _DialogBox:
         y = -dr
         while y < self.h + dr:
             t = max(0, min(1, y / self.h))
-            opacity = 1.0 - 0.4 * t
+            opacity = 1.0 - 0.95 * t
             color = _blend(DOT_COLOR, TRANSPARENT_KEY, opacity)
 
             offset_x = (step // 2) if row % 2 == 1 else 0
@@ -186,7 +186,7 @@ class _DialogBox:
         self.root.quit()
 
 
-def dialogbox(msg, w=900, h=180):
+def dialogbox(msg="", w=900, h=180):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 
     用法:
