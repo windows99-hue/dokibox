@@ -15,4 +15,4 @@ if __name__ == "__main__":
     else:
         print("未选择")
     dokibox.ynbox("继续吗？", tooltip=True)
-    dokibox.dialogbox("“你好，我是莫妮卡！这就是你所说的......现实世界？”", name="莫妮卡", typewriter=True,bold=True)
+    dokibox.dialogbox("“你好，我是莫妮卡！这就是你所说的......\n现实世界？”", name="莫妮卡", typewriter=True)
