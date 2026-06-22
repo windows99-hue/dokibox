@@ -111,21 +111,3 @@ dokibox.dialogbox("你好世界！", name="莫妮卡")
 dokibox.dialogbox("慢一点……", speed=80, bold=True)
 dokibox.dialogbox("一下全出来", typewriter=False)
 ```
-
-## 配色
-
-可在各模块顶部修改常量：
-
-```python
-# ynbox.py / msgbox.py
-BORDER_COLOR = "#FFBBE3"   # 描边
-BODY_COLOR = "#FEE6F4"     # 主体
-BTN_STROKE_COLOR = "#BD539D"  # 按钮描边
-
-# dialogbox.py
-BODY_COLOR = "#FDA7D1"
-BORDER_COLOR = "#ffffff"
-DOT_COLOR = "#FB94C1"      # 圆点颜色
-DOT_RADIUS = 24            # 圆点半径
-```
-
