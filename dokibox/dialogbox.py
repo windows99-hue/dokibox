@@ -172,15 +172,23 @@ class _DialogBox:
             return
         font = ("Microsoft YaHei", 20, "bold")
         lines = msg.split('\n')
-        cx = self.w // 2
         line_h = 30
-        total_h = line_h * len(lines)
-        start_y = self.h // 2 - total_h // 2 + line_h // 2
+        pad_x = self.r + 20
+        pad_top = 20
 
         for j, line in enumerate(lines):
-            y = start_y + j * line_h
-            self.cv.create_text(cx, y, text=line, font=font,
-                                fill="#ffffff", anchor="center")
+            y = pad_top + line_h // 2 + j * line_h
+            self._draw_stroked(pad_x, y, line, font)
+
+    def _draw_stroked(self, x, y, text, font):
+        for step in range(24):
+            angle = 2 * math.pi * step / 24
+            dx = math.cos(angle)
+            dy = math.sin(angle)
+            self.cv.create_text(x + dx, y + dy, text=text, font=font,
+                                fill="#000000", anchor="w")
+        self.cv.create_text(x, y, text=text, font=font,
+                            fill="#ffffff", anchor="w")
 
     def _done(self):
         self.win.destroy()
