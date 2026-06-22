@@ -119,7 +119,7 @@ class _DokiBase:
         self.root.destroy()
 
     @classmethod
-    def show(cls, msg="", title=""):
-        dialog = cls(msg, title)
+    def show(cls, *args, **kwargs):
+        dialog = cls(*args, **kwargs)
         dialog.root.mainloop()
         return dialog.result

@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
-"""dokibox 自测 / 使用示例"""
+"""dokibox 使用示例"""
 import dokibox
 
 if __name__ == "__main__":
-    res = dokibox.ynbox("真的要退出DDLC吗？\n纱世里会伤心的...")
-    print("用户选择了:", "是" if res else "否")
+    idx = dokibox.choicebox("请选择", ["纱世里", "优里", "夏树", "莫妮卡"])
+    if idx is not None:
+        print("选择了:", ["纱世里", "优里", "夏树", "莫妮卡"][idx])
+    else:
+        print("未选择")

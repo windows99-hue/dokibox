@@ -1,0 +1,194 @@
+# -*- coding: utf-8 -*-
+"""dokibox.choicebox -- DDLC风格多选对话框（每个选项独立悬浮窗口）"""
+import tkinter as tk
+import tkinter.font as tkfont
+import math
+
+BORDER_COLOR = "#FFBBE3"
+BODY_COLOR = "#FEE6F4"
+OPT_STROKE_COLOR = "#BD539D"
+OPT_FILL_COLOR = "#ffffff"
+OPT_HOVER_COLOR = "#ffd0e8"
+
+BORDER_W = 12
+OPT_STROKE_W = 5
+OPT_FONT_SIZE = 24
+OPT_PAD_X = 50
+OPT_PAD_Y = 20
+OPT_GAP = 8
+MSG_FONT_SIZE = 20
+MSG_PAD_Y = 16
+
+
+def _hex_to_rgb(hex_color):
+    h = hex_color.lstrip('#')
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+class _Panel:
+    """单个选项悬浮面板"""
+
+    def __init__(self, master, text, index, trans_key, on_select):
+        self.index = index
+        self._on_select = on_select
+
+        self.win = tk.Toplevel(master)
+        self.win.overrideredirect(True)
+        self.win.attributes('-topmost', True)
+        self.win.wm_attributes('-transparentcolor', trans_key)
+
+        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="bold")
+        tw = f_opt.measure(text)
+        th = f_opt.metrics('linespace')
+        self._font = ("Microsoft YaHei", OPT_FONT_SIZE, "bold")
+
+        self.pw = int(tw + OPT_PAD_X * 2 + BORDER_W * 2)
+        self.ph = int(th + OPT_PAD_Y * 2 + BORDER_W * 2 + OPT_STROKE_W * 2)
+
+        self.win.geometry(f"{self.pw}x{self.ph}")
+
+        self.cv = tk.Canvas(self.win, width=self.pw, height=self.ph,
+                            bg=trans_key, highlightthickness=0)
+        self.cv.pack()
+
+        self._draw_gradient_border(trans_key)
+        self._draw_option(text)
+
+        self.cv.tag_bind("opt", "<Enter>", lambda e: self._set_hover(True))
+        self.cv.tag_bind("opt", "<Leave>", lambda e: self._set_hover(False))
+        self.cv.tag_bind("opt", "<Button-1>", lambda e: self._on_select(self.index))
+
+    def _draw_gradient_border(self, trans_key):
+        br, bg, bb = _hex_to_rgb(BORDER_COLOR)
+        tr, tg, tb = _hex_to_rgb(trans_key)
+        bw = BORDER_W
+        for i in range(bw):
+            t = (i / max(bw - 1, 1)) ** 3
+            r = int(br + (tr - br) * t)
+            g = int(bg + (tg - bg) * t)
+            b = int(bb + (tb - bb) * t)
+            color = f'#{r:02x}{g:02x}{b:02x}'
+            self.cv.create_rectangle(i, i, self.pw - i, self.ph - i,
+                                     outline=color, width=1)
+
+    def _draw_option(self, text):
+        sw = OPT_STROKE_W
+        cx = self.pw // 2
+        cy = self.ph // 2
+        for step in range(32):
+            angle = 2 * math.pi * step / 32
+            dx = sw * math.cos(angle)
+            dy = sw * math.sin(angle)
+            self.cv.create_text(cx + dx, cy + dy, text=text,
+                                font=self._font, fill=OPT_STROKE_COLOR,
+                                anchor="center", tags="opt")
+        self.cv.create_text(cx, cy, text=text, font=self._font,
+                            fill=OPT_FILL_COLOR, anchor="center",
+                            tags=("opt", "opt_fill"))
+
+    def _set_hover(self, hover):
+        items = self.cv.find_withtag("opt_fill")
+        color = OPT_HOVER_COLOR if hover else OPT_FILL_COLOR
+        for item in items:
+            self.cv.itemconfig(item, fill=color)
+
+    def set_position(self, x, y):
+        self.win.geometry(f"+{x}+{y}")
+
+    def destroy(self):
+        self.win.destroy()
+
+
+class _ChoiceManager:
+
+    def __init__(self, msg, choices, title):
+        self.result = None
+        self.root = tk.Tk()
+        self.root.withdraw()
+
+        TRANSPARENT_KEY = '#010101'
+
+        if msg.strip():
+            self._create_msg_label(msg)
+
+        self._panels = []
+        for i, choice in enumerate(choices):
+            panel = _Panel(self.root, choice, i, TRANSPARENT_KEY, self._on_select)
+            self._panels.append(panel)
+
+        self._layout(msg)
+
+    def _on_select(self, index):
+        self.result = index
+        for p in self._panels:
+            p.destroy()
+        if hasattr(self, '_msg_win'):
+            self._msg_win.destroy()
+        self.root.quit()
+
+    def _create_msg_label(self, msg):
+        f = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="bold")
+        lines = msg.split('\n')
+        max_w = max(f.measure(line) for line in lines)
+        line_h = f.metrics('linespace')
+        total_h = line_h * len(lines) + MSG_PAD_Y * 2
+
+        lbl = tk.Toplevel(self.root)
+        lbl.overrideredirect(True)
+        lbl.attributes('-topmost', True)
+        self._msg_win = lbl
+        self._msg_w = int(max_w + 40)
+        self._msg_h = int(total_h)
+        lbl.geometry(f"{self._msg_w}x{self._msg_h}")
+
+        cv = tk.Canvas(lbl, width=self._msg_w, height=self._msg_h,
+                       bg=BODY_COLOR, highlightthickness=0)
+        cv.pack()
+        cv.create_rectangle(0, 0, self._msg_w, self._msg_h,
+                            outline=BORDER_COLOR, width=4)
+        for j, line in enumerate(lines):
+            y = MSG_PAD_Y + line_h // 2 + j * line_h
+            cv.create_text(self._msg_w // 2, y, text=line,
+                           font=("Microsoft YaHei", MSG_FONT_SIZE, "bold"),
+                           fill="#BD539D", anchor="center")
+
+    def _layout(self, msg):
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+
+        if not self._panels:
+            return
+
+        total_h = sum(p.ph for p in self._panels) + OPT_GAP * (len(self._panels) - 1)
+        if hasattr(self, '_msg_win'):
+            total_h += self._msg_h + OPT_GAP
+
+        start_y = (sh - total_h) // 2
+
+        if hasattr(self, '_msg_win'):
+            msg_x = (sw - self._msg_w) // 2
+            self._msg_win.geometry(f"+{msg_x}+{start_y}")
+            start_y += self._msg_h + OPT_GAP
+
+        for panel in self._panels:
+            px = (sw - panel.pw) // 2
+            panel.set_position(px, start_y)
+            start_y += panel.ph + OPT_GAP
+
+
+def choicebox(msg="", choices=None, title=""):
+    """DDLC风格多选对话框。每个选项独立悬浮、主体透明，返回选中项索引。
+
+    用法:
+        import dokibox
+        idx = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"])
+    """
+    if not choices:
+        return None
+    mgr = _ChoiceManager(msg, choices, title)
+    mgr.root.mainloop()
+    try:
+        mgr.root.destroy()
+    except tk.TclError:
+        pass
+    return mgr.result
