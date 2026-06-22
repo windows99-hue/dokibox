@@ -137,7 +137,7 @@ class _DialogBox:
 
     def _draw_name_text(self):
         tx = self.r + 10
-        ty = self._tag_top
+        ty = self._tag_top - 5
         tw = self._tag_w
         th = self._tag_h
         cx = tx + tw // 2
