@@ -51,7 +51,7 @@ class _Panel:
 
         self.cv.tag_bind("opt", "<Enter>", lambda e: self._set_hover(True))
         self.cv.tag_bind("opt", "<Leave>", lambda e: self._set_hover(False))
-        self.cv.tag_bind("opt", "<Button-1>", lambda e: self._on_select(self.index))
+        self.cv.bind("<Button-1>", lambda e: self._on_select(self.index))
 
     def _draw_gradient_border(self):
         br, bg, bb = _hex_to_rgb(BORDER_COLOR)

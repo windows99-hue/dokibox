@@ -68,17 +68,10 @@ class _YnDialog(_DokiBase):
         self.root.bind("<Return>", lambda e: self._done(True))
 
     def _on_click(self, event):
-        items = self.cv.find_overlapping(
-            event.x - 15, event.y - 15, event.x + 15, event.y + 15
-        )
-        for item in items:
-            tags = self.cv.gettags(item)
-            if "btn_yes" in tags:
-                self._done(True)
-                return
-            if "btn_no" in tags:
-                self._done(False)
-                return
+        if event.x < self.w // 2:
+            self._done(True)
+        else:
+            self._done(False)
 
     def _draw_button(self, x, y, text, tag):
         self.cv.create_text(x, y, text=text, font=self._btn_font,
