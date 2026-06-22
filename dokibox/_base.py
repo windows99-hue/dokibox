@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """dokibox 内部基类 -- 窗口 / 渐变边框 / 描边文字 / 拖拽"""
 import tkinter as tk
 import math
@@ -12,8 +12,6 @@ BODY_COLOR = "#FEE6F4"
 class _DokiBase:
     """对话框基类。子类只需实现 _calc_size / _draw_content / _on_click"""
 
-    BORDER_COLOR = BORDER_COLOR
-    BODY_COLOR = BODY_COLOR
     BORDER_W = 12
 
     def __init__(self, msg, title=""):
@@ -36,7 +34,7 @@ class _DokiBase:
 
         self.cv = tk.Canvas(
             self.root, width=self.w, height=self.h,
-            bg=self.BODY_COLOR, highlightthickness=0
+            bg=BODY_COLOR, highlightthickness=0
         )
         self.cv.pack()
 
@@ -66,8 +64,8 @@ class _DokiBase:
         return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
     def _draw_gradient_border(self):
-        br, bg, bb = self._hex_to_rgb(self.BORDER_COLOR)
-        er, eg, eb = self._hex_to_rgb(self.BODY_COLOR)
+        br, bg, bb = self._hex_to_rgb(BORDER_COLOR)
+        er, eg, eb = self._hex_to_rgb(BODY_COLOR)
         bw = self.BORDER_W
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3

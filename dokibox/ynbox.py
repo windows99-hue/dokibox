@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """dokibox.ynbox -- DDLC风格 是/否 对话框"""
 import tkinter as tk
 import tkinter.font as tkfont
 import math
-from dokibox._base import _DokiBase
+from dokibox._base import _DokiBase, BODY_COLOR
 
 MSG_COLOR = "#000000"
 BTN_STROKE_COLOR = "#BD539D"
@@ -121,7 +121,7 @@ class _YnDialog(_DokiBase):
             tw = tk.Toplevel(self.root)
             tw.overrideredirect(True)
             tw.attributes('-topmost', True)
-            label = tk.Label(tw, text=text, bg=self.BODY_COLOR, fg='#000000',
+            label = tk.Label(tw, text=text, bg=BODY_COLOR, fg='#000000',
                              font=("Microsoft YaHei", 12),
                              relief='solid', bd=1, padx=6, pady=2)
             label.pack()
