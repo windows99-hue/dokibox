@@ -23,8 +23,8 @@ PAD_X = 60
 PAD_TOP = 50
 PAD_BTNS = 30
 PAD_BOT = 35
-BTN_GAP = 50
-BORDER_W = 20
+BTN_GAP = 80
+BORDER_W = 12
 MSG_STROKE_W = 2
 BTN_STROKE_W = 5
 MSG_FONT_SIZE = 22
@@ -85,11 +85,7 @@ class _DDLC_Dialog:
         )
         self.cv.pack()
 
-        half_b = BORDER_W // 2
-        self.cv.create_rectangle(
-            half_b, half_b, self.w - half_b, self.h - half_b,
-            outline=BORDER_COLOR, width=BORDER_W
-        )
+        self._draw_gradient_border()
 
         self._draw_stroked_text(
             self.w // 2, PAD_TOP + msg_total_h // 2,
@@ -120,6 +116,22 @@ class _DDLC_Dialog:
         self.root.bind("<Escape>", lambda e: self._done(False))
         self.root.bind("<Return>", lambda e: self._done(True))
         self.root.focus_force()
+
+    def _hex_to_rgb(self, hex_color):
+        h = hex_color.lstrip('#')
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+    def _draw_gradient_border(self):
+        br, bg, bb = self._hex_to_rgb(BORDER_COLOR)
+        er, eg, eb = self._hex_to_rgb(BODY_COLOR)
+        for i in range(BORDER_W):
+            t = i / max(BORDER_W - 1, 1)
+            r = int(br + (er - br) * t)
+            g = int(bg + (eg - bg) * t)
+            b = int(bb + (eb - bb) * t)
+            color = f'#{r:02x}{g:02x}{b:02x}'
+            self.cv.create_rectangle(i, i, self.w - i, self.h - i,
+                                     outline=color, width=1)
 
     def _draw_stroked_text(self, x, y, text, font, fill, stroke, stroke_w):
         for step in range(24):
