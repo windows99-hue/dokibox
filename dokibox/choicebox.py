@@ -13,9 +13,10 @@ OPT_HOVER_COLOR = "#ffd0e8"
 BORDER_W = 12
 OPT_STROKE_W = 5
 OPT_FONT_SIZE = 24
-OPT_PAD_X = 50
-OPT_PAD_Y = 20
-OPT_GAP = 8
+OPT_PAD_X = 80
+OPT_PAD_Y = 4
+OPT_GAP = 40
+UNIFIED_MIN_W = 600
 MSG_FONT_SIZE = 20
 MSG_PAD_Y = 16
 
@@ -28,45 +29,43 @@ def _hex_to_rgb(hex_color):
 class _Panel:
     """单个选项悬浮面板"""
 
-    def __init__(self, master, text, index, trans_key, on_select):
+    def __init__(self, master, text, index, pw, on_select):
         self.index = index
         self._on_select = on_select
 
         self.win = tk.Toplevel(master)
         self.win.overrideredirect(True)
         self.win.attributes('-topmost', True)
-        self.win.wm_attributes('-transparentcolor', trans_key)
 
         f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="bold")
-        tw = f_opt.measure(text)
         th = f_opt.metrics('linespace')
         self._font = ("Microsoft YaHei", OPT_FONT_SIZE, "bold")
 
-        self.pw = int(tw + OPT_PAD_X * 2 + BORDER_W * 2)
+        self.pw = int(pw)
         self.ph = int(th + OPT_PAD_Y * 2 + BORDER_W * 2 + OPT_STROKE_W * 2)
 
         self.win.geometry(f"{self.pw}x{self.ph}")
 
         self.cv = tk.Canvas(self.win, width=self.pw, height=self.ph,
-                            bg=trans_key, highlightthickness=0)
+                            bg=BODY_COLOR, highlightthickness=0)
         self.cv.pack()
 
-        self._draw_gradient_border(trans_key)
+        self._draw_gradient_border()
         self._draw_option(text)
 
         self.cv.tag_bind("opt", "<Enter>", lambda e: self._set_hover(True))
         self.cv.tag_bind("opt", "<Leave>", lambda e: self._set_hover(False))
         self.cv.tag_bind("opt", "<Button-1>", lambda e: self._on_select(self.index))
 
-    def _draw_gradient_border(self, trans_key):
+    def _draw_gradient_border(self):
         br, bg, bb = _hex_to_rgb(BORDER_COLOR)
-        tr, tg, tb = _hex_to_rgb(trans_key)
+        er, eg, eb = _hex_to_rgb(BODY_COLOR)
         bw = BORDER_W
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3
-            r = int(br + (tr - br) * t)
-            g = int(bg + (tg - bg) * t)
-            b = int(bb + (tb - bb) * t)
+            r = int(br + (er - br) * t)
+            g = int(bg + (eg - bg) * t)
+            b = int(bb + (eb - bb) * t)
             color = f'#{r:02x}{g:02x}{b:02x}'
             self.cv.create_rectangle(i, i, self.pw - i, self.ph - i,
                                      outline=color, width=1)
@@ -106,15 +105,19 @@ class _ChoiceManager:
         self.root = tk.Tk()
         self.root.withdraw()
 
-        TRANSPARENT_KEY = '#010101'
-
-        if msg.strip():
-            self._create_msg_label(msg)
+        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="bold")
+        opt_widths = [f_opt.measure(c) for c in choices]
+        max_opt_w = max(opt_widths) if opt_widths else 0
+        unified_w = max(int(max_opt_w + OPT_PAD_X * 2 + BORDER_W * 2), UNIFIED_MIN_W)
+        self._unified_w = unified_w
 
         self._panels = []
         for i, choice in enumerate(choices):
-            panel = _Panel(self.root, choice, i, TRANSPARENT_KEY, self._on_select)
+            panel = _Panel(self.root, choice, i, unified_w, self._on_select)
             self._panels.append(panel)
+
+        if msg.strip():
+            self._create_msg_label(msg)
 
         self._layout(msg)
 
@@ -137,7 +140,7 @@ class _ChoiceManager:
         lbl.overrideredirect(True)
         lbl.attributes('-topmost', True)
         self._msg_win = lbl
-        self._msg_w = int(max_w + 40)
+        self._msg_w = max(int(max_w + 40), self._unified_w)
         self._msg_h = int(total_h)
         lbl.geometry(f"{self._msg_w}x{self._msg_h}")
 
@@ -177,7 +180,7 @@ class _ChoiceManager:
 
 
 def choicebox(msg="", choices=None, title=""):
-    """DDLC风格多选对话框。每个选项独立悬浮、主体透明，返回选中项索引。
+    """DDLC风格多选对话框。每个选项独立悬浮窗口，返回选中项索引。
 
     用法:
         import dokibox
