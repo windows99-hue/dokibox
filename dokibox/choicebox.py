@@ -209,13 +209,13 @@ class _ChoiceManager:
 
 
 def choicebox(msg="", choices=None, title="", tooltip=False, force=None):
-    """DDLC风格多选对话框。每个选项独立悬浮窗口，返回选中项索引。
+    """DDLC风格多选对话框。每个选项独立悬浮窗口，返回选中的文字内容。
 
     force: 指定索引（0开始），鼠标会自动移到该选项中央。
 
     用法:
         import dokibox
-        idx = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"], force=1)
+        text = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"], force=1)
     """
     if not choices:
         return None
@@ -225,4 +225,4 @@ def choicebox(msg="", choices=None, title="", tooltip=False, force=None):
         mgr.root.destroy()
     except tk.TclError:
         pass
-    return mgr.result
+    return choices[mgr.result] if mgr.result is not None else None
