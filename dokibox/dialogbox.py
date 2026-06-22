@@ -5,7 +5,8 @@ import math
 
 BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#ffffff"
-TRANSPARENT_KEY = "#010101"
+TRANSPARENT_KEY = "#00FF00"
+FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 30
 
 # --- 圆点装饰 ---
@@ -70,11 +71,11 @@ class _DialogBox:
         for i in range(steps):
             t_bottom = i / max(steps - 1, 1)
             t_top = (i + 1) / max(steps - 1, 1)
-            opacity_top = 1.0 - 0.95 * t_bottom
-            opacity_bot = 1.0 - 0.95 * t_top
+            opacity_top = 1.0 - 0.5 * t_bottom
+            opacity_bot = 1.0 - 0.5 * t_top
             opacity = (opacity_top + opacity_bot) / 2
 
-            color = _blend(BODY_COLOR, TRANSPARENT_KEY, opacity)
+            color = _blend(BODY_COLOR, FADE_TO, opacity)
 
             y1 = int(self.h * t_bottom)
             y2 = int(self.h * t_top)
@@ -115,8 +116,8 @@ class _DialogBox:
         y = -dr
         while y < self.h + dr:
             t = max(0, min(1, y / self.h))
-            opacity = 1.0 - 0.95 * t
-            color = _blend(DOT_COLOR, TRANSPARENT_KEY, opacity)
+            opacity = 1.0 - 0.5 * t
+            color = _blend(DOT_COLOR, FADE_TO, opacity)
 
             offset_x = (step // 2) if row % 2 == 1 else 0
             x = -dr + offset_x
@@ -132,19 +133,19 @@ class _DialogBox:
         r = self.r
         w = self.w
         h = self.h
-        key = TRANSPARENT_KEY
+        fill = TRANSPARENT_KEY
         for y in range(0, r):
             dy = r - y
             wx = r - int(math.sqrt(max(r * r - dy * dy, 0)))
             if wx > 0:
-                self.cv.create_rectangle(0, y, wx, y + 1, fill=key, outline='')
-                self.cv.create_rectangle(w - wx, y, w, y + 1, fill=key, outline='')
+                self.cv.create_rectangle(0, y, wx, y + 1, fill=fill, outline='')
+                self.cv.create_rectangle(w - wx, y, w, y + 1, fill=fill, outline='')
         for y in range(h - r, h):
             dy = y - (h - r)
             wx = r - int(math.sqrt(max(r * r - dy * dy, 0)))
             if wx > 0:
-                self.cv.create_rectangle(0, y, wx, y + 1, fill=key, outline='')
-                self.cv.create_rectangle(w - wx, y, w, y + 1, fill=key, outline='')
+                self.cv.create_rectangle(0, y, wx, y + 1, fill=fill, outline='')
+                self.cv.create_rectangle(w - wx, y, w, y + 1, fill=fill, outline='')
 
     def _draw_outline(self):
         r = self.r
