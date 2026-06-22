@@ -2,16 +2,13 @@
 """dokibox.choicebox -- DDLC风格多选对话框（每个选项独立悬浮窗口）"""
 import tkinter as tk
 import tkinter.font as tkfont
-import math
 
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
-OPT_STROKE_COLOR = "#BD539D"
-OPT_FILL_COLOR = "#ffffff"
-OPT_HOVER_COLOR = "#ffd0e8"
+OPT_FILL_COLOR = "#000000"
+OPT_HOVER_COLOR = "#999999"
 
 BORDER_W = 12
-OPT_STROKE_W = 5
 OPT_FONT_SIZE = 24
 OPT_PAD_X = 80
 OPT_PAD_Y = 4
@@ -27,7 +24,6 @@ def _hex_to_rgb(hex_color):
 
 
 class _Panel:
-    """单个选项悬浮面板"""
 
     def __init__(self, master, text, index, pw, on_select):
         self.index = index
@@ -37,12 +33,12 @@ class _Panel:
         self.win.overrideredirect(True)
         self.win.attributes('-topmost', True)
 
-        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="bold")
+        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="normal")
         th = f_opt.metrics('linespace')
-        self._font = ("Microsoft YaHei", OPT_FONT_SIZE, "bold")
+        self._font = ("Microsoft YaHei", OPT_FONT_SIZE, "normal")
 
         self.pw = int(pw)
-        self.ph = int(th + OPT_PAD_Y * 2 + BORDER_W * 2 + OPT_STROKE_W * 2)
+        self.ph = int(th + OPT_PAD_Y * 2 + BORDER_W * 2)
 
         self.win.geometry(f"{self.pw}x{self.ph}")
 
@@ -71,16 +67,8 @@ class _Panel:
                                      outline=color, width=1)
 
     def _draw_option(self, text):
-        sw = OPT_STROKE_W
         cx = self.pw // 2
         cy = self.ph // 2
-        for step in range(32):
-            angle = 2 * math.pi * step / 32
-            dx = sw * math.cos(angle)
-            dy = sw * math.sin(angle)
-            self.cv.create_text(cx + dx, cy + dy, text=text,
-                                font=self._font, fill=OPT_STROKE_COLOR,
-                                anchor="center", tags="opt")
         self.cv.create_text(cx, cy, text=text, font=self._font,
                             fill=OPT_FILL_COLOR, anchor="center",
                             tags=("opt", "opt_fill"))
@@ -105,7 +93,7 @@ class _ChoiceManager:
         self.root = tk.Tk()
         self.root.withdraw()
 
-        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="bold")
+        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="normal")
         opt_widths = [f_opt.measure(c) for c in choices]
         max_opt_w = max(opt_widths) if opt_widths else 0
         unified_w = max(int(max_opt_w + OPT_PAD_X * 2 + BORDER_W * 2), UNIFIED_MIN_W)
@@ -130,7 +118,7 @@ class _ChoiceManager:
         self.root.quit()
 
     def _create_msg_label(self, msg):
-        f = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="bold")
+        f = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="normal")
         lines = msg.split('\n')
         max_w = max(f.measure(line) for line in lines)
         line_h = f.metrics('linespace')
@@ -152,8 +140,8 @@ class _ChoiceManager:
         for j, line in enumerate(lines):
             y = MSG_PAD_Y + line_h // 2 + j * line_h
             cv.create_text(self._msg_w // 2, y, text=line,
-                           font=("Microsoft YaHei", MSG_FONT_SIZE, "bold"),
-                           fill="#BD539D", anchor="center")
+                           font=("Microsoft YaHei", MSG_FONT_SIZE, "normal"),
+                           fill="#000000", anchor="center")
 
     def _layout(self, msg):
         sw = self.root.winfo_screenwidth()

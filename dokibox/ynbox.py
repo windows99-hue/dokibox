@@ -1,23 +1,16 @@
 # -*- coding: utf-8 -*-
 """dokibox.ynbox -- DDLC风格 是/否 对话框"""
 import tkinter.font as tkfont
-import math
 from dokibox._base import _DokiBase
 
+MSG_COLOR = "#000000"
+BTN_FILL_COLOR = "#000000"
+BTN_HOVER_COLOR = "#999999"
 
-# --- 配色 ---
-MSG_COLOR = "#BD539D"
-BTN_STROKE_COLOR = "#BD539D"
-BTN_FILL_COLOR = "#ffffff"
-BTN_HOVER_COLOR = "#ffd0e8"
-
-# --- 布局 ---
 PAD_X = 80
 PAD_TOP = 50
 PAD_BTNS = 30
 PAD_BOT = 70
-MSG_STROKE_W = 2
-BTN_STROKE_W = 6
 MSG_FONT_SIZE = 22
 BTN_FONT_SIZE = 26
 MIN_GAP = 40
@@ -26,11 +19,11 @@ MIN_GAP = 40
 class _YnDialog(_DokiBase):
 
     def _calc_size(self, msg):
-        f_msg = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="bold")
-        f_btn = tkfont.Font(family="Microsoft YaHei", size=BTN_FONT_SIZE, weight="bold")
+        f_msg = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="normal")
+        f_btn = tkfont.Font(family="Microsoft YaHei", size=BTN_FONT_SIZE, weight="normal")
 
-        self._msg_font = ("Microsoft YaHei", MSG_FONT_SIZE, "bold")
-        self._btn_font = ("Microsoft YaHei", BTN_FONT_SIZE, "bold")
+        self._msg_font = ("Microsoft YaHei", MSG_FONT_SIZE, "normal")
+        self._btn_font = ("Microsoft YaHei", BTN_FONT_SIZE, "normal")
 
         lines = msg.split('\n')
         self._msg_max_w = max(f_msg.measure(line) for line in lines)
@@ -46,14 +39,14 @@ class _YnDialog(_DokiBase):
                      + int(self._yes_w) + int(self._no_w) + MIN_GAP)
         w = max(int(self._msg_max_w + PAD_X * 2), int(min_btn_w), 300)
         h = max(PAD_TOP + self._msg_total_h + PAD_BTNS
-                + self._btn_line_h + BTN_STROKE_W * 2 + PAD_BOT, 180)
+                + self._btn_line_h + PAD_BOT, 180)
         return w, h
 
     def _draw_content(self, msg):
         msg_y = PAD_TOP + self._msg_total_h // 2
-        self._draw_stroked_text(
-            self.w // 2, msg_y, msg, self._msg_font,
-            MSG_COLOR, self.BORDER_COLOR, MSG_STROKE_W
+        self.cv.create_text(
+            self.w // 2, msg_y, text=msg, font=self._msg_font,
+            fill=MSG_COLOR, anchor="center"
         )
 
         btn_y = self.h - PAD_BOT - self._btn_line_h // 2
@@ -87,18 +80,7 @@ class _YnDialog(_DokiBase):
                 self._done(False)
                 return
 
-    # ---------- 按钮绘制 ----------
-
     def _draw_button(self, x, y, text, tag):
-        sw = BTN_STROKE_W
-        for step in range(36):
-            angle = 2 * math.pi * step / 36
-            dx = sw * math.cos(angle)
-            dy = sw * math.sin(angle)
-            self.cv.create_text(x + dx, y + dy, text=text,
-                                font=self._btn_font, fill=BTN_STROKE_COLOR,
-                                anchor="center",
-                                tags=(tag, tag + "_stroke"))
         self.cv.create_text(x, y, text=text, font=self._btn_font,
                             fill=BTN_FILL_COLOR, anchor="center",
                             tags=(tag, tag + "_fill"))
