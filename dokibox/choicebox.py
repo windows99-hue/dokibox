@@ -25,7 +25,7 @@ def _hex_to_rgb(hex_color):
 
 class _Panel:
 
-    def __init__(self, master, text, index, pw, on_select, tooltip=False):
+    def __init__(self, master, text, index, pw, on_select, tooltip=False, pinned=True):
         self.index = index
         self.text = text
         self._on_select = on_select
@@ -33,7 +33,7 @@ class _Panel:
 
         self.win = tk.Toplevel(master)
         self.win.overrideredirect(True)
-        self.win.attributes('-topmost', True)
+        self.win.attributes('-topmost', pinned)
 
         f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="normal")
         th = f_opt.metrics('linespace')
@@ -119,10 +119,11 @@ class _Panel:
 
 class _ChoiceManager:
 
-    def __init__(self, msg, choices, title, tooltip=False, force=None):
+    def __init__(self, msg, choices, title, tooltip=False, force=None, pinned=True):
         self.result = None
         self._tooltip = tooltip
         self._force = force
+        self._pinned = pinned
         self.root = tk.Tk()
         self.root.withdraw()
 
@@ -134,7 +135,7 @@ class _ChoiceManager:
 
         self._panels = []
         for i, choice in enumerate(choices):
-            panel = _Panel(self.root, choice, i, unified_w, self._on_select, self._tooltip)
+            panel = _Panel(self.root, choice, i, unified_w, self._on_select, self._tooltip, pinned=pinned)
             self._panels.append(panel)
 
         if msg.strip():
@@ -167,7 +168,7 @@ class _ChoiceManager:
 
         lbl = tk.Toplevel(self.root)
         lbl.overrideredirect(True)
-        lbl.attributes('-topmost', True)
+        lbl.attributes('-topmost', self._pinned)
         self._msg_win = lbl
         self._msg_w = max(int(max_w + 40), self._unified_w)
         self._msg_h = int(total_h)
@@ -208,7 +209,7 @@ class _ChoiceManager:
             start_y += panel.ph + OPT_GAP
 
 
-def choicebox(msg="", choices=None, title="", tooltip=False, force=None):
+def choicebox(msg="", choices=None, title="", tooltip=False, force=None, pinned=True):
     """DDLC风格多选对话框。每个选项独立悬浮窗口，返回选中的文字内容。
 
     force: 指定索引（0开始），鼠标会自动移到该选项中央。
@@ -219,7 +220,7 @@ def choicebox(msg="", choices=None, title="", tooltip=False, force=None):
     """
     if not choices:
         return None
-    mgr = _ChoiceManager(msg, choices, title, tooltip, force)
+    mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned)
     mgr.root.mainloop()
     try:
         mgr.root.destroy()

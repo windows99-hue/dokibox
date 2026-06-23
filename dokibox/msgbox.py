@@ -21,9 +21,9 @@ BTN_FONT_SIZE = 26
 
 class _MsgDialog(_DokiBase):
 
-    def __init__(self, msg, title="", tooltip=False):
+    def __init__(self, msg, title="", tooltip=False, pinned=True):
         self._tooltip = tooltip
-        super().__init__(msg, title)
+        super().__init__(msg, title, pinned=pinned)
 
     def _calc_size(self, msg):
         f_msg = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="bold")
@@ -121,11 +121,11 @@ class _MsgDialog(_DokiBase):
         self.cv.tag_bind(tag, "<Leave>", hide, add='+')
 
 
-def msgbox(msg="", title="", tooltip=False):
+def msgbox(msg="", title="", tooltip=False, pinned=True):
     """DDLC风格消息对话框（OK按钮），返回 True
 
     用法:
         import dokibox
         dokibox.msgbox("操作成功！")
     """
-    return _MsgDialog.show(msg, title, tooltip=tooltip)
+    return _MsgDialog.show(msg, title, tooltip=tooltip, pinned=pinned)

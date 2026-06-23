@@ -22,9 +22,9 @@ MIN_GAP = 40
 
 class _YnDialog(_DokiBase):
 
-    def __init__(self, msg, title="", tooltip=False):
+    def __init__(self, msg, title="", tooltip=False, pinned=True):
         self._tooltip = tooltip
-        super().__init__(msg, title)
+        super().__init__(msg, title, pinned=pinned)
 
     def _calc_size(self, msg):
         f_msg = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="bold")
@@ -139,7 +139,7 @@ class _YnDialog(_DokiBase):
         self.cv.tag_bind(tag, "<Leave>", hide, add='+')
 
 
-def ynbox(msg="", title="", tooltip=False):
+def ynbox(msg="", title="", tooltip=False, pinned=True):
     """DDLC风格 是/否 对话框，返回 True(是) / False(否)
 
     用法:
@@ -147,4 +147,4 @@ def ynbox(msg="", title="", tooltip=False):
         result = dokibox.ynbox("确认删除？")
         result = dokibox.ynbox("确认删除？", tooltip=True)
     """
-    return _YnDialog.show(msg, title, tooltip=tooltip)
+    return _YnDialog.show(msg, title, tooltip=tooltip, pinned=pinned)

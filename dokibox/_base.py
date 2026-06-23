@@ -14,7 +14,7 @@ class _DokiBase:
 
     BORDER_W = 12
 
-    def __init__(self, msg, title=""):
+    def __init__(self, msg, title="", pinned=True):
         self.result = None
         self._px = 0
         self._py = 0
@@ -23,7 +23,7 @@ class _DokiBase:
 
         self.root = tk.Tk()
         self.root.overrideredirect(True)
-        self.root.attributes('-topmost', True)
+        self.root.attributes('-topmost', pinned)
 
         self.w, self.h = self._calc_size(msg)
         sw = self.root.winfo_screenwidth()

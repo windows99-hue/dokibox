@@ -33,7 +33,7 @@ def _blend(c1, c2, t):
 
 class _DialogBox:
 
-    def __init__(self, msg, w, h, name=None, typewriter=True, speed=50, bold=False):
+    def __init__(self, msg, w, h, name=None, typewriter=True, speed=50, bold=False, pinned=True):
         self.root = tk.Tk()
         self.root.withdraw()
 
@@ -67,7 +67,7 @@ class _DialogBox:
 
         self.win = tk.Toplevel(self.root)
         self.win.overrideredirect(True)
-        self.win.attributes('-topmost', True)
+        self.win.attributes('-topmost', pinned)
         self.win.wm_attributes('-transparentcolor', TRANSPARENT_KEY)
 
         sw = self.root.winfo_screenwidth()
@@ -363,7 +363,7 @@ class _DialogBox:
         self.root.quit()
 
 
-def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False):
+def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False, pinned=True):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 
     speed: 打字机模式下每字间隔毫秒数（默认 50）。
@@ -378,7 +378,7 @@ def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=
         root.withdraw()
         w = int(root.winfo_screenwidth() * 0.7)
         root.destroy()
-    box = _DialogBox(msg, w, h, name, typewriter, speed, bold)
+    box = _DialogBox(msg, w, h, name, typewriter, speed, bold, pinned=pinned)
     box.root.mainloop()
     try:
         box.root.destroy()
