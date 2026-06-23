@@ -90,6 +90,7 @@ class _DialogBox:
         if self._name:
             self._draw_name_text()
         self._draw_text(msg)
+        self._draw_triangle()
 
         self.win.bind("<Button-1>", lambda e: self._on_click())
         self.root.bind("<Escape>", lambda e: self._done())
@@ -335,6 +336,18 @@ class _DialogBox:
         self.cv.itemconfig(fid, text=current)
 
         self._after_id = self.root.after(self._speed, self._type_tick)
+
+    def _draw_triangle(self):
+        s = 16
+        h = s * math.sqrt(3) / 2
+        tip_x = self.w - 28
+        tip_y = self._dialog_top + self.h - 24
+        self.cv.create_polygon(
+            tip_x, tip_y,
+            tip_x - h, tip_y - s / 2,
+            tip_x - h, tip_y + s / 2,
+            fill="#ffffff", outline=""
+        )
 
     def _finish_typewriter(self):
         if self._after_id:
