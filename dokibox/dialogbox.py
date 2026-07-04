@@ -36,7 +36,7 @@ _box = None
 
 class _DialogBox:
 
-    def __init__(self, msg, w, h, name=None, typewriter=True, speed=50, bold=False, pinned=True):
+    def __init__(self, msg, w, h, name=None, typewriter=True, speed=50, bold=False, pinned=True, fdst=False):
         global _box
 
         self.w = w
@@ -46,6 +46,7 @@ class _DialogBox:
         self._typewriter = typewriter
         self._speed = speed
         self._bold = bold
+        self._fdst = fdst
         self._typing = False
         self._typing_done = False
         self._after_id = None
@@ -390,7 +391,10 @@ class _DialogBox:
                             fill="#ffffff", anchor="w")
 
     def _done(self):
-        self.root.quit()
+        if self._fdst:
+            _destroy_box()
+        else:
+            self.root.quit()
 
 
 def _destroy_box():
@@ -402,11 +406,12 @@ def _destroy_box():
         _box = None
 
 
-def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False, pinned=True):
+def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False, pinned=True, fdst=False):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 
     speed: 打字机模式下每字间隔毫秒数（默认 50）。
     bold:  正文黑描边加粗（默认 False）。
+    fdst:  播放完毕后是否销毁窗口（默认 False，保留供下次复用）。
 
     用法:
         dokibox.dialogbox("你好！")
@@ -421,5 +426,5 @@ def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=
             root.withdraw()
             w = int(root.winfo_screenwidth() * 0.7)
             root.destroy()
-    box = _DialogBox(msg, w, h, name, typewriter, speed, bold, pinned=pinned)
+    box = _DialogBox(msg, w, h, name, typewriter, speed, bold, pinned=pinned, fdst=fdst)
     box.root.mainloop()
