@@ -393,6 +393,15 @@ class _DialogBox:
         self.root.quit()
 
 
+def _destroy_box():
+    global _box
+    if _box is not None:
+        if _box._after_id:
+            _box.root.after_cancel(_box._after_id)
+        _box.root.destroy()
+        _box = None
+
+
 def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False, pinned=True):
     """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
 

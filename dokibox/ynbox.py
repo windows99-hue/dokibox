@@ -147,4 +147,6 @@ def ynbox(msg="", title="", tooltip=False, pinned=True):
         result = dokibox.ynbox("确认删除？")
         result = dokibox.ynbox("确认删除？", tooltip=True)
     """
+    from dokibox.dialogbox import _destroy_box
+    _destroy_box()
     return _YnDialog.show(msg, title, tooltip=tooltip, pinned=pinned)

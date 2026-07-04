@@ -218,6 +218,8 @@ def choicebox(msg="", choices=None, title="", tooltip=False, force=None, pinned=
         import dokibox
         text = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"], force=1)
     """
+    from dokibox.dialogbox import _destroy_box
+    _destroy_box()
     if not choices:
         return None
     mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned)

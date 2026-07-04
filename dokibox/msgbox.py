@@ -128,4 +128,6 @@ def msgbox(msg="", title="", tooltip=False, pinned=True):
         import dokibox
         dokibox.msgbox("操作成功！")
     """
+    from dokibox.dialogbox import _destroy_box
+    _destroy_box()
     return _MsgDialog.show(msg, title, tooltip=tooltip, pinned=pinned)
