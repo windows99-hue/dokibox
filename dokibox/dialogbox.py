@@ -31,11 +31,13 @@ def _blend(c1, c2, t):
     return f'#{r:02x}{g:02x}{b:02x}'
 
 
+_box = None
+
+
 class _DialogBox:
 
     def __init__(self, msg, w, h, name=None, typewriter=True, speed=50, bold=False, pinned=True):
-        self.root = tk.Tk()
-        self.root.withdraw()
+        global _box
 
         self.w = w
         self.h = h
@@ -47,6 +49,26 @@ class _DialogBox:
         self._typing = False
         self._typing_done = False
         self._after_id = None
+
+        if _box is not None:
+            self.root = _box.root
+            self.win = _box.win
+            self.cv = _box.cv
+
+            if _box._after_id:
+                _box.root.after_cancel(_box._after_id)
+
+            self.cv.delete("all")
+        else:
+            self.root = tk.Tk()
+            self.root.withdraw()
+
+            self.win = tk.Toplevel(self.root)
+            self.win.overrideredirect(True)
+            self.win.wm_attributes('-transparentcolor', TRANSPARENT_KEY)
+
+            self.cv = tk.Canvas(self.win, bg=TRANSPARENT_KEY, highlightthickness=0)
+            self.cv.pack()
 
         f_name = tkfont.Font(family="Microsoft YaHei", size=20, weight="bold")
         name_h = 0
@@ -65,21 +87,15 @@ class _DialogBox:
         self._cv_h = cv_h
         self._dialog_top = name_h + 20 if name else 0
 
-        self.win = tk.Toplevel(self.root)
-        self.win.overrideredirect(True)
-        self.win.attributes('-topmost', pinned)
-        self.win.wm_attributes('-transparentcolor', TRANSPARENT_KEY)
-
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
         dialog_screen_y = sh - h - 60
         win_y = dialog_screen_y - self._dialog_top
         self.win.geometry(f"{w}x{cv_h}+{x}+{win_y}")
+        self.cv.config(width=w, height=cv_h)
 
-        self.cv = tk.Canvas(self.win, width=w, height=cv_h,
-                            bg=TRANSPARENT_KEY, highlightthickness=0)
-        self.cv.pack()
+        self.win.attributes('-topmost', pinned)
 
         if self._name:
             self._draw_name_tag_bg()
@@ -95,6 +111,8 @@ class _DialogBox:
         self.win.bind("<Button-1>", lambda e: self._on_click())
         self.root.bind("<Escape>", lambda e: self._done())
         self.root.update()
+
+        _box = self
 
     def _on_click(self):
         if self._typewriter and self._typing:
@@ -372,7 +390,6 @@ class _DialogBox:
                             fill="#ffffff", anchor="w")
 
     def _done(self):
-        self.win.destroy()
         self.root.quit()
 
 
@@ -386,14 +403,14 @@ def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=
         dokibox.dialogbox("你好！")
         dokibox.dialogbox("你好！", name="纱世里", bold=True)
     """
+    global _box
     if w is None:
-        root = tk.Tk()
-        root.withdraw()
-        w = int(root.winfo_screenwidth() * 0.7)
-        root.destroy()
+        if _box is not None:
+            w = int(_box.root.winfo_screenwidth() * 0.7)
+        else:
+            root = tk.Tk()
+            root.withdraw()
+            w = int(root.winfo_screenwidth() * 0.7)
+            root.destroy()
     box = _DialogBox(msg, w, h, name, typewriter, speed, bold, pinned=pinned)
     box.root.mainloop()
-    try:
-        box.root.destroy()
-    except tk.TclError:
-        pass
