@@ -1,65 +1,74 @@
 # dokibox
 
-DDLC 风格的 Python 对话框库，基于 tkinter。
+A fan-made Python library for *Doki Doki Literature Club*, implementing various in-game prompt boxes using `tkinter`.
 
-## 安装
+> ### ⚠️ Credit & IP Guidelines
+> `dokibox` is a fan derivative work based on *Doki Doki Literature Club* (DDLC) and is not officially affiliated with Team Salvato. The original game can be downloaded [here](https://ddlc.moe/) or from the [Steam store page](https://store.steampowered.com/app/698780/Doki_Doki_Literature_Club/).
+>
+> Any user creating derivative works with this library **must** strictly follow the [official IP guidelines](https://teamsalvato.com/ip-guidelines).
+>
+> Special thanks to Joseph from Team Salvato for his support and responses via email!
 
-把 `dokibox/` 文件夹放在项目目录下即可。
+## Installation
 
-## 导入
+Install from PyPI:
+
+~~~bash
+pip install dokibox
+~~~
+
+## Import
 
 ```python
 import dokibox
-# 或
-from dokibox import ynbox, msgbox, choicebox, dialogbox
 ```
 
 ---
 
-### ynbox — 是/否 对话框
+### ynbox — Yes/No Dialog
 
 <img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/d40c9881-14bd-4876-877c-1d2008805c06" />
 
 ```python
-dokibox.ynbox(msg="确认删除？", tooltip=False) → bool
+dokibox.ynbox(msg="Delete?", tooltip=False) → bool
 ```
 
-| 参数 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| `msg` | str | `""` | 正文 |
-| `tooltip` | bool | `False` | 悬浮文字提示 |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `msg` | str | `""` | Message text |
+| `tooltip` | bool | `False` | Tooltip text |
 
-返回值：点击"是"返回 `True`，点击"否"或 Esc 返回 `False`。
+Return value: clicking "Yes" returns `True`; clicking "No" or pressing Esc returns `False`.
 
 ```python
-if dokibox.ynbox("确认删除？"):
-    print("用户点了是")
+if dokibox.ynbox("Delete?"):
+    print("User clicked Yes")
 ```
 
 ---
 
-### msgbox — 消息提示框
+### msgbox — Message Box
 
 <img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/da5064d3-8d90-47ec-9b9e-20e87faf0fdc" />
 
 ```python
-dokibox.msgbox(msg="操作成功！", tooltip=False) → True
+dokibox.msgbox(msg="Operation successful!", tooltip=False) → True
 ```
 
-| 参数 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| `msg` | str | `""` | 正文 |
-| `tooltip` | bool | `False` | 悬浮文字提示 |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `msg` | str | `""` | Message text |
+| `tooltip` | bool | `False` | Tooltip text |
 
-单 OK 按钮。点击、Enter 或 Esc 关闭，返回 `True`。
+Single OK button. Closes on click, Enter, or Esc; returns `True`.
 
 ```python
-dokibox.msgbox("保存成功！")
+dokibox.msgbox("Saved successfully!")
 ```
 
 ---
 
-### choicebox — 多选对话框
+### choicebox — Multiple Choice Dialog
 
 <img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/a33088b1-363b-48f5-8509-44a5d3ef5f4d" />
 
@@ -67,23 +76,23 @@ dokibox.msgbox("保存成功！")
 dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | None
 ```
 
-| 参数 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| `msg` | str | `""` | 提示文字，为空时不显示 |
-| `choices` | list | `None` | 选项列表 |
-| `tooltip` | bool | `False` | 悬浮文字提示 |
-| `force` | int | `None` | 指定索引（0 开始），鼠标自动移到该选项中央 |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `msg` | str | `""` | Prompt text; hidden when empty |
+| `choices` | list | `None` | List of choices |
+| `tooltip` | bool | `False` | Tooltip text |
+| `force` | int | `None` | Force-select an index (0-based); cursor moves to the center of that choice |
 
-返回值：选中的文字内容，Esc 返回 `None`。
+Return value: the selected text content; Esc returns `None`.
 
 ```python
-char = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"], force=1)
-print(char)  # "优里"
+char = dokibox.choicebox("Choose a character", ["Sayori", "Yuri", "Natsuki"], force=1)
+print(char)  # "Yuri"
 ```
 
 ---
 
-### dialogbox — 底部对话框
+### dialogbox — Bottom Dialog Box
 
 <img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/3817a140-66eb-496d-988d-7b728289a1ca" />
 
@@ -91,31 +100,29 @@ print(char)  # "优里"
 dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False)
 ```
 
-| 参数 | 类型 | 默认 | 说明 |
-|------|------|------|------|
-| `msg` | str | `""` | 正文 |
-| `w` | int | `None` | 宽度（默认 60% 屏宽） |
-| `h` | int | `220` | 高度 |
-| `name` | str | `None` | 角色名牌（探出对话框上方的白色圆角标签） |
-| `typewriter` | bool | `True` | 打字机模式 |
-| `speed` | int | `50` | 打字机每字间隔（ms） |
-| `bold` | bool | `False` | 正文黑色描边加粗 |
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `msg` | str | `""` | Message text |
+| `w` | int | `None` | Width (default 60% of screen width) |
+| `h` | int | `220` | Height |
+| `name` | str | `None` | Character name tag (white rounded label protruding above the dialog) |
+| `typewriter` | bool | `True` | Typewriter mode |
+| `speed` | int | `50` | Typewriter interval per character (ms) |
+| `bold` | bool | `False` | Bold black stroke on text |
 
-打字机模式下：
-- 文字逐个出现
-- 第一次点击 → 全文瞬间显示
-- 第二次点击 → 关闭
+In typewriter mode:
+- Text appears character by character
+- First click → reveals full text instantly
+- Second click → closes
 
 ```python
-dokibox.dialogbox("你好世界！", name="莫妮卡")
-dokibox.dialogbox("慢一点……", speed=80, bold=True)
-dokibox.dialogbox("一下全出来", typewriter=False)
+dokibox.dialogbox("You're actually Administrator, right?", name="Monika")
+dokibox.dialogbox("Slower...", speed=80, bold=True)
+dokibox.dialogbox("All at once", typewriter=False)
 ```
 
-## 在最后
+## Finally
 
-本项目使用`MIT`协议
+This project is licensed under the `MIT` license. When using it, please **strictly** comply with Team Salvato's relevant fan work IP creation guidelines.
 
-> DDLC+吓死我了呜呜呜呜
->
-> 最爱纱世里！
+> Sayori is my favorite!🎀
