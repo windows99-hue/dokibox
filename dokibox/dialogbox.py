@@ -8,7 +8,7 @@ from dokibox._base import _get_root
 
 BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#ffffff"
-TRANSPARENT_KEY = "#000000"
+TRANSPARENT_KEY = "#000001"
 FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
 
