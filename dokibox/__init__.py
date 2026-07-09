@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-"""dokibox -- DDLC-style dialog library"""
+"""dokibox -- DDLC-style dialog library made by 99"""
 from dokibox.ynbox import ynbox
 from dokibox.choicebox import choicebox
 from dokibox.msgbox import msgbox
 from dokibox.dialogbox import dialogbox
+from dokibox.garbled import garbled
