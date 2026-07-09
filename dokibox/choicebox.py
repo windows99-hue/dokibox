@@ -3,6 +3,7 @@
 import tkinter as tk
 import tkinter.font as tkfont
 from typing import Optional, List
+from dokibox._base import _get_root
 
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
@@ -115,7 +116,10 @@ class _Panel:
         self.win.geometry(f"+{x}+{y}")
 
     def destroy(self):
-        self.win.destroy()
+        try:
+            self.win.destroy()
+        except tk.TclError:
+            pass
 
 
 class _ChoiceManager:
@@ -125,8 +129,7 @@ class _ChoiceManager:
         self._tooltip = tooltip
         self._force = force
         self._pinned = pinned
-        self.root = tk.Tk()
-        self.root.withdraw()
+        self.root = _get_root()
 
         f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="normal")
         opt_widths = [f_opt.measure(c) for c in choices]
@@ -157,8 +160,14 @@ class _ChoiceManager:
         for p in self._panels:
             p.destroy()
         if hasattr(self, '_msg_win'):
-            self._msg_win.destroy()
-        self.root.quit()
+            try:
+                self._msg_win.destroy()
+            except tk.TclError:
+                pass
+        try:
+            _get_root().quit()
+        except tk.TclError:
+            pass
 
     def _create_msg_label(self, msg):
         f = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="normal")
@@ -230,9 +239,5 @@ def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "
     if not choices:
         return None
     mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned)
-    mgr.root.mainloop()
-    try:
-        mgr.root.destroy()
-    except tk.TclError:
-        pass
+    _get_root().mainloop()
     return choices[mgr.result] if mgr.result is not None else None

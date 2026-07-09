@@ -8,6 +8,17 @@ import math
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
 
+# --- shared Tk root (NEVER destroyed, for Python 3.9 compat) ---
+_root_instance = None
+
+
+def _get_root():
+    global _root_instance
+    if _root_instance is None:
+        _root_instance = tk.Tk()
+        _root_instance.withdraw()
+    return _root_instance
+
 
 class _DokiBase:
     """Dialog base class. Subclasses only need to implement _calc_size / _draw_content / _on_click"""
@@ -21,7 +32,7 @@ class _DokiBase:
         self._ox = 0
         self._oy = 0
 
-        self.root = tk.Tk()
+        self.root = tk.Toplevel(_get_root())
         self.root.overrideredirect(True)
         self.root.attributes('-topmost', pinned)
 
@@ -114,10 +125,14 @@ class _DokiBase:
 
     def _done(self, value):
         self.result = value
-        self.root.destroy()
+        try:
+            self.root.destroy()
+            _get_root().quit()
+        except tk.TclError:
+            pass
 
     @classmethod
     def show(cls, *args, **kwargs):
         dialog = cls(*args, **kwargs)
-        dialog.root.mainloop()
+        _get_root().mainloop()
         return dialog.result

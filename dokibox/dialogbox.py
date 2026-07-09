@@ -4,10 +4,11 @@ import tkinter as tk
 import tkinter.font as tkfont
 import math
 from typing import Optional
+from dokibox._base import _get_root
 
 BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#ffffff"
-TRANSPARENT_KEY = "#00FF00"
+TRANSPARENT_KEY = "#000000"
 FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
 
@@ -67,8 +68,7 @@ class _DialogBox:
 
             self.cv.delete("all")
         else:
-            self.root = tk.Tk()
-            self.root.withdraw()
+            self.root = _get_root()
 
             self.win = tk.Toplevel(self.root)
             self.win.overrideredirect(True)
@@ -124,7 +124,7 @@ class _DialogBox:
         self._draw_triangle()
 
         self.win.bind("<Button-1>", lambda e: self._on_click())
-        self.root.bind("<Escape>", lambda e: self._done())
+        self.win.bind("<Escape>", lambda e: self._done())
         self.root.update()
 
         _box = self
@@ -449,8 +449,10 @@ class _DialogBox:
     def _done(self):
         if self._fdst:
             _destroy_box()
-        else:
-            self.root.quit()
+        try:
+            _get_root().quit()
+        except tk.TclError:
+            pass
 
 
 def _destroy_box():
@@ -458,7 +460,10 @@ def _destroy_box():
     if _box is not None:
         if _box._after_id:
             _box.root.after_cancel(_box._after_id)
-        _box.root.destroy()
+        try:
+            _box.win.destroy()
+        except tk.TclError:
+            pass
         _box = None
 
 
@@ -489,9 +494,6 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Option
         if _box is not None:
             w = int(_box.root.winfo_screenwidth() * 0.7)
         else:
-            root = tk.Tk()
-            root.withdraw()
-            w = int(root.winfo_screenwidth() * 0.7)
-            root.destroy()
+            w = int(_get_root().winfo_screenwidth() * 0.7)
     box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst, overflow_mode=overflow_mode)
-    box.root.mainloop()
+    _get_root().mainloop()
