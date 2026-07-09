@@ -30,4 +30,4 @@ if __name__ == "__main__":
     dokibox.dialogbox("“I will love you forever.”", name="Monika", typewriter=True)
     
     # The ultimate jump-scare feature using system username
-    dokibox.dialogbox(f"Actually, your name is {os.getlogin()}, isn't it?", name="Monika", typewriter=True)
+    dokibox.dialogbox(f"Do you actually go by {os.getlogin()} or something?", name="Monika", typewriter=True)
