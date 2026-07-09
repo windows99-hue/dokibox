@@ -248,8 +248,8 @@ class _DialogBox:
             color = _blend(DOT_COLOR, FADE_TO, opacity)
 
             offset_x = (step // 2) if row % 2 == 1 else 0
-            x = -dr + offset_x
-            while x < self.w + dr:
+            x = max(0, offset_x)
+            while x < self.w:
                 d = 2 * dr
                 self.cv.create_oval(x - dr, y - dr, x + dr, y + dr,
                                     fill=color, outline='')
