@@ -37,3 +37,4 @@ if __name__ == "__main__":
     
     # The ultimate jump-scare feature using system username
     dokibox.dialogbox(f"Do you actually go by {os.getlogin()} or something?", name="Monika", typewriter=True)
+    dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True,chardelay=5,bold=True,overflow_mode="overflow")

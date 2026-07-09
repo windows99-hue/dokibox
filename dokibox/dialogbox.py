@@ -52,6 +52,7 @@ class _DialogBox:
         self._chardelay = chardelay
         self._bold = bold
         self._fdst = fdst
+        self._pinned = pinned
         self._typing = False
         self._typing_done = False
         self._after_id = None
@@ -93,13 +94,21 @@ class _DialogBox:
         self._cv_h = cv_h
         self._dialog_top = name_h + 20 if name else 0
 
+        canvas_w = w
+        if self._overflow_mode == "overflow" and msg:
+            f_body = tkfont.Font(family="Microsoft YaHei", size=20, weight="bold")
+            max_line_w = max(f_body.measure(line) for line in msg.split('\n'))
+            needed_w = int(max_line_w + 80)
+            if needed_w > canvas_w:
+                canvas_w = needed_w
+
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - w) // 2
         dialog_screen_y = sh - h - 60
         win_y = dialog_screen_y - self._dialog_top
-        self.win.geometry(f"{w}x{cv_h}+{x}+{win_y}")
-        self.cv.config(width=w, height=cv_h)
+        self.win.geometry(f"{canvas_w}x{cv_h}+{x}+{win_y}")
+        self.cv.config(width=canvas_w, height=cv_h)
 
         self.win.attributes('-topmost', pinned)
 
@@ -468,7 +477,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Option
         fdst:          destroy window after the user dismisses it (default False, keeps window for reuse).
         overflow_mode: how to handle text exceeding the dialog width:
                        'wrap'    – wrap text to the next line.
-                       'overflow' – let text render past the dialog boundary (default).
+                       'overflow' – expand the window so text can render past the dialog boundary (default).
                        'hide'    – clip text at the boundary.
 
     Usage:
