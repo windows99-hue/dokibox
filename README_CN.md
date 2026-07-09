@@ -108,7 +108,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `h` | int | `220` | 高度 |
 | `name` | str | `None` | 角色名牌（探出对话框上方的白色圆角标签） |
 | `typewriter` | bool | `True` | 打字机模式 |
-| `speed` | int | `50` | 打字机每字间隔（ms） |
+| `chardelay` | int | `50` | 打字机每字间隔（ms） |
 | `bold` | bool | `False` | 正文黑色描边加粗 |
 
 打字机模式下：

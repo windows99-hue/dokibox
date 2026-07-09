@@ -37,7 +37,7 @@ _box = None
 
 class _DialogBox:
 
-    def __init__(self, msg, w, h, name=None, typewriter=True, speed=50, bold=False, pinned=True, fdst=False):
+    def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50, bold=False, pinned=True, fdst=False):
         global _box
 
         self.w = w
@@ -45,7 +45,7 @@ class _DialogBox:
         self.r = CORNER_RADIUS
         self._name = name
         self._typewriter = typewriter
-        self._speed = speed
+        self._chardelay = chardelay
         self._bold = bold
         self._fdst = fdst
         self._typing = False
@@ -355,7 +355,7 @@ class _DialogBox:
             self.cv.itemconfig(sid, text=current)
         self.cv.itemconfig(fid, text=current)
 
-        self._after_id = self.root.after(self._speed, self._type_tick)
+        self._after_id = self.root.after(self._chardelay, self._type_tick)
 
     def _draw_triangle(self):
         s = 16
@@ -407,7 +407,7 @@ def _destroy_box():
         _box = None
 
 
-def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, speed: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False) -> None:
+def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -416,7 +416,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Option
         h:          height in pixels (default 220).
         name:       character name shown in a white rounded tag above the dialog.
         typewriter: animate text character-by-character (default True).
-        speed:      delay in ms per character in typewriter mode (default 50).
+        chardelay:      delay in ms per character in typewriter mode (default 50).
         bold:       use a thicker black stroke outline for body text (default False).
         pinned:     keep the window always on top of other windows (default True).
         fdst:       destroy window after the user dismisses it (default False, keeps window for reuse).
@@ -434,5 +434,5 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Option
             root.withdraw()
             w = int(root.winfo_screenwidth() * 0.7)
             root.destroy()
-    box = _DialogBox(msg, w, h, name, typewriter, speed, bold, pinned=pinned, fdst=fdst)
+    box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst)
     box.root.mainloop()

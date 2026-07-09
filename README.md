@@ -108,7 +108,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `h` | int | `220` | Height |
 | `name` | str | `None` | Character name tag (white rounded label protruding above the dialog) |
 | `typewriter` | bool | `True` | Typewriter mode |
-| `speed` | int | `50` | Typewriter interval per character (ms) |
+| `chardelay` | int | `50` | Typewriter interval per character (ms) |
 | `bold` | bool | `False` | Bold black stroke on text |
 
 In typewriter mode:
