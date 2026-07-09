@@ -3,6 +3,7 @@
 import tkinter as tk
 import tkinter.font as tkfont
 import math
+from typing import Optional
 
 BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#ffffff"
@@ -406,12 +407,19 @@ def _destroy_box():
         _box = None
 
 
-def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False, pinned=True, fdst=False):
+def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, speed: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
-    speed: delay in ms per character in typewriter mode (default 50).
-    bold:  bold outline for body text (default False).
-    fdst:  destroy window after finishing (default False, keeps window for reuse).
+    Args:
+        msg:        body text to display (supports \\n for multiple lines).
+        w:          width in pixels. Defaults to 70% of screen width if None.
+        h:          height in pixels (default 220).
+        name:       character name shown in a white rounded tag above the dialog.
+        typewriter: animate text character-by-character (default True).
+        speed:      delay in ms per character in typewriter mode (default 50).
+        bold:       use a thicker black stroke outline for body text (default False).
+        pinned:     keep the window always on top of other windows (default True).
+        fdst:       destroy window after the user dismisses it (default False, keeps window for reuse).
 
     Usage:
         dokibox.dialogbox("Hello!")

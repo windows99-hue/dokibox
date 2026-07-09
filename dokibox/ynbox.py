@@ -4,6 +4,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 import math
 import locale
+from typing import Optional, Tuple
 from dokibox._base import _DokiBase, BODY_COLOR
 
 MSG_COLOR = "#000000"
@@ -170,10 +171,15 @@ class _YnDialog(_DokiBase):
         self.cv.tag_bind(tag, "<Leave>", hide, add='+')
 
 
-def ynbox(msg="", title="", tooltip=False, pinned=True, btn_texts=None):
+def ynbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True, btn_texts: Optional[Tuple[str, str]] = None) -> bool:
     """DDLC-style yes/no dialog. Returns True(Yes) / False(No)
 
-    btn_texts: (confirm, cancel) tuple. Auto-detected from system language if not provided.
+    Args:
+        msg:        message text to display (supports \\n for multiple lines).
+        title:      window title (unused in borderless mode).
+        tooltip:    show a floating tooltip when hovering over buttons.
+        pinned:     keep the window always on top of other windows.
+        btn_texts:  (confirm, cancel) tuple. Auto-detected from system language if None.
 
     Usage:
         import dokibox

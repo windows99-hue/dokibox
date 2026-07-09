@@ -2,6 +2,7 @@
 """dokibox.choicebox -- DDLC-style multi-choice dialog (floating windows per option)"""
 import tkinter as tk
 import tkinter.font as tkfont
+from typing import Optional, List
 
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
@@ -209,10 +210,16 @@ class _ChoiceManager:
             start_y += panel.ph + OPT_GAP
 
 
-def choicebox(msg="", choices=None, title="", tooltip=False, force=None, pinned=True):
-    """DDLC-style multi-choice dialog. Each option is a floating window. Returns the selected text.
+def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "", tooltip: bool = False, force: Optional[int] = None, pinned: bool = True) -> Optional[str]:
+    """DDLC-style multi-choice dialog. Each option is a floating window. Returns the selected text, or None if cancelled.
 
-    force: pre-select an option by index (0-based). The mouse will warp to the center of that option.
+    Args:
+        msg:      prompt text displayed above the options. No label shown if empty.
+        choices:  list of option strings to display.
+        title:    window title (unused in borderless mode).
+        tooltip:  show a floating tooltip when hovering over an option.
+        force:    pre-select an option by index (0-based). The mouse warps to its center.
+        pinned:   keep the windows always on top of other windows.
 
     Usage:
         import dokibox

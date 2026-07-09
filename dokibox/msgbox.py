@@ -121,8 +121,14 @@ class _MsgDialog(_DokiBase):
         self.cv.tag_bind(tag, "<Leave>", hide, add='+')
 
 
-def msgbox(msg="", title="", tooltip=False, pinned=True):
+def msgbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True) -> bool:
     """DDLC-style message dialog (OK button). Returns True.
+
+    Args:
+        msg:       message text to display (supports \\n for multiple lines).
+        title:     window title (unused in borderless mode).
+        tooltip:   show a floating tooltip when hovering over the button.
+        pinned:    keep the window always on top of other windows.
 
     Usage:
         import dokibox
