@@ -22,4 +22,4 @@ if __name__ == "__main__":
     dokibox.ynbox("你会永远爱我吗？", tooltip=True)
     dokibox.dialogbox("“我会永远爱你。”", name="莫妮卡", typewriter=True)
     dokibox.dialogbox(f"...其实你应该叫{os.getlogin()}之类的吧？", name="莫妮卡", typewriter=True)
-    dokibox.dialogbox(dokibox.garbled(100), name="莫妮卡", typewriter=True,chardelay=10,bold=True)
+    dokibox.dialogbox(dokibox.garbled(200), name="莫妮卡", typewriter=True,chardelay=5,bold=True,overflow_mode="hide")

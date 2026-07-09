@@ -37,8 +37,12 @@ _box = None
 
 class _DialogBox:
 
-    def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50, bold=False, pinned=True, fdst=False):
+    def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50, bold=False, pinned=True, fdst=False, overflow_mode="overflow"):
         global _box
+
+        if overflow_mode not in ("wrap", "overflow", "hide"):
+            raise ValueError(f"overflow_mode must be 'wrap', 'overflow', or 'hide', got {overflow_mode!r}")
+        self._overflow_mode = overflow_mode
 
         self.w = w
         self.h = h
@@ -283,20 +287,62 @@ class _DialogBox:
         self.cv.create_line(1, top + r, 1, top + h - r, fill=color, width=3)
         self.cv.create_line(w - 1, top + r, w - 1, top + h - r, fill=color, width=3)
 
+    def _text_area_width(self):
+        return self.w - 80
+
+    def _wrap_line(self, text, font, max_w):
+        f = tkfont.Font(font=font)
+        if f.measure(text) <= max_w:
+            return [text]
+        lines = []
+        current = ""
+        for ch in text:
+            test = current + ch
+            if f.measure(test) <= max_w:
+                current = test
+            else:
+                if current:
+                    lines.append(current)
+                current = ch
+        if current:
+            lines.append(current)
+        return lines
+
+    def _truncate_line(self, text, font, max_w):
+        f = tkfont.Font(font=font)
+        if f.measure(text) <= max_w:
+            return text
+        lo, hi = 0, len(text)
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if f.measure(text[:mid]) <= max_w:
+                lo = mid
+            else:
+                hi = mid - 1
+        return text[:lo]
+
+    def _process_lines(self, text, font, max_w):
+        if self._overflow_mode == "overflow":
+            return text.split('\n')
+        raw_lines = text.split('\n')
+        if self._overflow_mode == "wrap":
+            result = []
+            for line in raw_lines:
+                result.extend(self._wrap_line(line, font, max_w))
+            return result
+        if self._overflow_mode == "hide":
+            return [self._truncate_line(line, font, max_w) for line in raw_lines]
+
     def _draw_text(self, msg):
         if not msg:
             return
         top = self._dialog_top
         font = ("Microsoft YaHei", 20, "bold")
-        lines = msg.split('\n')
         line_h = 44
         pad_top = 40
-        # # pad_x = self.r - 110
-        # pad_x = 2
-        # if self._name:
-        #     pad_x += self._tag_w + 15
-
         pad_x = 40
+
+        lines = self._process_lines(msg, font, self._text_area_width())
 
         pos = []
         for j, line in enumerate(lines):
@@ -407,19 +453,23 @@ def _destroy_box():
         _box = None
 
 
-def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False) -> None:
+def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False, overflow_mode: str = "overflow") -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
-        msg:        body text to display (supports \\n for multiple lines).
-        w:          width in pixels. Defaults to 70% of screen width if None.
-        h:          height in pixels (default 220).
-        name:       character name shown in a white rounded tag above the dialog.
-        typewriter: animate text character-by-character (default True).
-        chardelay:      delay in ms per character in typewriter mode (default 50).
-        bold:       use a thicker black stroke outline for body text (default False).
-        pinned:     keep the window always on top of other windows (default True).
-        fdst:       destroy window after the user dismisses it (default False, keeps window for reuse).
+        msg:           body text to display (supports \\n for multiple lines).
+        w:             width in pixels. Defaults to 70% of screen width if None.
+        h:             height in pixels (default 220).
+        name:          character name shown in a white rounded tag above the dialog.
+        typewriter:    animate text character-by-character (default True).
+        chardelay:     delay in ms per character in typewriter mode (default 50).
+        bold:          use a thicker black stroke outline for body text (default False).
+        pinned:        keep the window always on top of other windows (default True).
+        fdst:          destroy window after the user dismisses it (default False, keeps window for reuse).
+        overflow_mode: how to handle text exceeding the dialog width:
+                       'wrap'    – wrap text to the next line.
+                       'overflow' – let text render past the dialog boundary (default).
+                       'hide'    – clip text at the boundary.
 
     Usage:
         dokibox.dialogbox("Hello!")
@@ -434,5 +484,5 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Option
             root.withdraw()
             w = int(root.winfo_screenwidth() * 0.7)
             root.destroy()
-    box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst)
+    box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst, overflow_mode=overflow_mode)
     box.root.mainloop()
