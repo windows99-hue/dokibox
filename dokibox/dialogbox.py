@@ -59,6 +59,10 @@ class _DialogBox:
         self._after_id = None
 
         if _box is not None:
+            if bool(_box._name) != bool(name) or _box.w != w or _box.h != h:
+                _destroy_box()   # name状态改变时强制重建窗口
+
+        if _box is not None:
             self.root = _box.root
             self.win = _box.win
             self.cv = _box.cv
