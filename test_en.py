@@ -3,6 +3,14 @@
 import dokibox
 import time
 import os
+import locale
+from unittest.mock import patch
+
+with patch('locale.getdefaultlocale', return_value=('en_US', 'UTF-8')):
+    
+    import dokibox
+    
+    dokibox.ynbox("Will you love me forever?", btn_texts=None)
 
 if __name__ == "__main__":
     idx = dokibox.choicebox("", ["Sayori", "Yuri", "Natsuki", "Monika"])
@@ -13,7 +21,6 @@ if __name__ == "__main__":
     
     dokibox.msgbox("Just Monika.")
     
-    # The absolute classic "Force Monika" choicebox
     idx = dokibox.choicebox("", ["Sayori", "Yuri", "Natsuki", "Monika"], force=3)
     if idx is not None:
         print("Selected:", idx)
@@ -22,7 +29,6 @@ if __name__ == "__main__":
         
     dokibox.ynbox("Continue?", tooltip=True)
     
-    # Breaking the fourth wall in English
     dokibox.dialogbox("“Hi, I'm Monika! So this is what you call...\nthe real world?”", name="Monika", typewriter=True)
     dokibox.dialogbox("“If one day I could truly bring everyone into a world not controlled by code...\nwould you love me forever?”", name="Monika", typewriter=True)
     

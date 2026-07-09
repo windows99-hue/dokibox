@@ -3,6 +3,7 @@
 import tkinter as tk
 import tkinter.font as tkfont
 import math
+import locale
 from dokibox._base import _DokiBase, BODY_COLOR
 
 MSG_COLOR = "#000000"
@@ -19,11 +20,41 @@ MSG_FONT_SIZE = 22
 BTN_FONT_SIZE = 26
 MIN_GAP = 40
 
+_BTN_TEXTS = {
+    'zh': ("是", "否"),
+    'en': ("Yes", "No"),
+    'ja': ("はい", "いいえ"),
+    'ko': ("예", "아니요"),
+    'ru': ("Да", "Нет"),
+}
+
+
+def _get_system_lang():
+    try:
+        lang, _ = locale.getdefaultlocale()
+    except Exception:
+        lang = None
+    if lang:
+        lang = lang.lower()
+        if lang.startswith('zh'):
+            return 'zh'
+        if lang.startswith('ja'):
+            return 'ja'
+        if lang.startswith('ko'):
+            return 'ko'
+        if lang.startswith('ru'):
+            return 'ru'
+    return 'en'
+
 
 class _YnDialog(_DokiBase):
 
-    def __init__(self, msg, title="", tooltip=False, pinned=True):
+    def __init__(self, msg, title="", tooltip=False, pinned=True, btn_texts=None):
         self._tooltip = tooltip
+        if btn_texts is not None:
+            self._yes_text, self._no_text = btn_texts
+        else:
+            self._yes_text, self._no_text = _BTN_TEXTS.get(_get_system_lang(), _BTN_TEXTS['en'])
         super().__init__(msg, title, pinned=pinned)
 
     def _calc_size(self, msg):
@@ -39,8 +70,8 @@ class _YnDialog(_DokiBase):
         self._msg_total_h = self._msg_line_h * len(lines)
         self._btn_line_h = f_btn.metrics('linespace')
 
-        self._yes_w = f_btn.measure("是")
-        self._no_w = f_btn.measure("否")
+        self._yes_w = f_btn.measure(self._yes_text)
+        self._no_w = f_btn.measure(self._no_text)
         self._side_margin = int(self._yes_w * 1.5)
 
         min_btn_w = (self.BORDER_W * 2 + self._side_margin * 2
@@ -61,8 +92,8 @@ class _YnDialog(_DokiBase):
         btn_yes_x = self.BORDER_W + self._side_margin + self._yes_w / 2
         btn_no_x = self.w - self.BORDER_W - self._side_margin - self._no_w / 2
 
-        self._draw_button(btn_yes_x, btn_y, "是", "btn_yes")
-        self._draw_button(btn_no_x, btn_y, "否", "btn_no")
+        self._draw_button(btn_yes_x, btn_y, self._yes_text, "btn_yes")
+        self._draw_button(btn_no_x, btn_y, self._no_text, "btn_no")
 
         self.cv.tag_bind("btn_yes", "<Enter>",
                          lambda e: self._set_hover("btn_yes", True))
@@ -74,8 +105,8 @@ class _YnDialog(_DokiBase):
                          lambda e: self._set_hover("btn_no", False))
 
         if self._tooltip:
-            self._add_tooltip("btn_yes", "是")
-            self._add_tooltip("btn_no", "否")
+            self._add_tooltip("btn_yes", self._yes_text)
+            self._add_tooltip("btn_no", self._no_text)
 
         self.root.bind("<Return>", lambda e: self._done(True))
 
@@ -139,14 +170,17 @@ class _YnDialog(_DokiBase):
         self.cv.tag_bind(tag, "<Leave>", hide, add='+')
 
 
-def ynbox(msg="", title="", tooltip=False, pinned=True):
+def ynbox(msg="", title="", tooltip=False, pinned=True, btn_texts=None):
     """DDLC风格 是/否 对话框，返回 True(是) / False(否)
+
+    btn_texts: (确认文本, 取消文本) 元组，不传则根据系统语言自动选择。
 
     用法:
         import dokibox
         result = dokibox.ynbox("确认删除？")
         result = dokibox.ynbox("确认删除？", tooltip=True)
+        result = dokibox.ynbox("Save?", btn_texts=("Save", "Cancel"))
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
-    return _YnDialog.show(msg, title, tooltip=tooltip, pinned=pinned)
+    return _YnDialog.show(msg, title, tooltip=tooltip, pinned=pinned, btn_texts=btn_texts)
