@@ -462,7 +462,7 @@ def _destroy_box():
         _box = None
 
 
-def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False, overflow_mode: str = "overflow") -> None:
+def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False, overflow_mode: str = "wrap") -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:

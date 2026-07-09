@@ -110,6 +110,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `typewriter` | bool | `True` | 打字机模式 |
 | `chardelay` | int | `50` | 打字机每字间隔（ms） |
 | `bold` | bool | `False` | 正文黑色描边加粗 |
+| `overflow_mode` | string | `wrap` | 有`wrap` `overflow` `hide`三个参数，`wrap` 为自动换行，`overflow` 为直接溢出屏幕，`hide`为隐藏出画的内容 |
 
 打字机模式下：
 - 文字逐个出现

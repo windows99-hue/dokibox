@@ -110,6 +110,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `typewriter` | bool | `True` | Typewriter mode |
 | `chardelay` | int | `50` | Typewriter interval per character (ms) |
 | `bold` | bool | `False` | Bold black stroke on text |
+| `overflow_mode` | string | `wrap` | Has three parameters: `wrap`, `overflow`, and `hide`. `wrap` enables automatic line wrapping, `overflow` causes content to overflow the screen, and `hide` hides the content that goes off-screen.|
 
 In typewriter mode:
 - Text appears character by character
