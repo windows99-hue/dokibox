@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""dokibox.choicebox -- DDLC风格多选对话框（每个选项独立悬浮窗口）"""
+"""dokibox.choicebox -- DDLC-style multi-choice dialog (floating windows per option)"""
 import tkinter as tk
 import tkinter.font as tkfont
 
@@ -210,13 +210,13 @@ class _ChoiceManager:
 
 
 def choicebox(msg="", choices=None, title="", tooltip=False, force=None, pinned=True):
-    """DDLC风格多选对话框。每个选项独立悬浮窗口，返回选中的文字内容。
+    """DDLC-style multi-choice dialog. Each option is a floating window. Returns the selected text.
 
-    force: 指定索引（0开始），鼠标会自动移到该选项中央。
+    force: pre-select an option by index (0-based). The mouse will warp to the center of that option.
 
-    用法:
+    Usage:
         import dokibox
-        text = dokibox.choicebox("选择角色", ["纱世里", "优里", "夏树"], force=1)
+        text = dokibox.choicebox("Choose a character", ["Sayori", "Yuri", "Natsuki"], force=1)
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()

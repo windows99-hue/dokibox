@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""dokibox.msgbox -- DDLC风格消息对话框（单 OK 按钮）"""
+"""dokibox.msgbox -- DDLC-style message dialog (single OK button)"""
 import tkinter as tk
 import tkinter.font as tkfont
 import math
@@ -122,11 +122,11 @@ class _MsgDialog(_DokiBase):
 
 
 def msgbox(msg="", title="", tooltip=False, pinned=True):
-    """DDLC风格消息对话框（OK按钮），返回 True
+    """DDLC-style message dialog (OK button). Returns True.
 
-    用法:
+    Usage:
         import dokibox
-        dokibox.msgbox("操作成功！")
+        dokibox.msgbox("Operation completed!")
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()

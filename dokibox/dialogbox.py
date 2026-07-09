@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""dokibox.dialogbox -- DDLC风格底部对话框（圆角矩形·渐变不透明度·白色描边）"""
+"""dokibox.dialogbox -- DDLC-style bottom dialog (rounded corners, gradient opacity, white stroke)"""
 import tkinter as tk
 import tkinter.font as tkfont
 import math
@@ -10,7 +10,7 @@ TRANSPARENT_KEY = "#00FF00"
 FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
 
-# --- 圆点装饰 ---
+# --- dot pattern decoration ---
 DOT_RADIUS = 13
 DOT_GAP_X = 35
 DOT_GAP_Y = 6
@@ -407,15 +407,15 @@ def _destroy_box():
 
 
 def dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False, pinned=True, fdst=False):
-    """DDLC风格底部圆角对话框。点击任意位置或按 Esc 关闭。
+    """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
-    speed: 打字机模式下每字间隔毫秒数（默认 50）。
-    bold:  正文黑描边加粗（默认 False）。
-    fdst:  播放完毕后是否销毁窗口（默认 False，保留供下次复用）。
+    speed: delay in ms per character in typewriter mode (default 50).
+    bold:  bold outline for body text (default False).
+    fdst:  destroy window after finishing (default False, keeps window for reuse).
 
-    用法:
-        dokibox.dialogbox("你好！")
-        dokibox.dialogbox("你好！", name="纱世里", bold=True)
+    Usage:
+        dokibox.dialogbox("Hello!")
+        dokibox.dialogbox("Hello!", name="Sayori", bold=True)
     """
     global _box
     if w is None:

@@ -1,5 +1,5 @@
 ﻿# -*- coding: utf-8 -*-
-"""dokibox.ynbox -- DDLC风格 是/否 对话框"""
+"""dokibox.ynbox -- DDLC-style yes/no dialog"""
 import tkinter as tk
 import tkinter.font as tkfont
 import math
@@ -171,14 +171,13 @@ class _YnDialog(_DokiBase):
 
 
 def ynbox(msg="", title="", tooltip=False, pinned=True, btn_texts=None):
-    """DDLC风格 是/否 对话框，返回 True(是) / False(否)
+    """DDLC-style yes/no dialog. Returns True(Yes) / False(No)
 
-    btn_texts: (确认文本, 取消文本) 元组，不传则根据系统语言自动选择。
+    btn_texts: (confirm, cancel) tuple. Auto-detected from system language if not provided.
 
-    用法:
+    Usage:
         import dokibox
-        result = dokibox.ynbox("确认删除？")
-        result = dokibox.ynbox("确认删除？", tooltip=True)
+        result = dokibox.ynbox("Delete this file?")
         result = dokibox.ynbox("Save?", btn_texts=("Save", "Cancel"))
     """
     from dokibox.dialogbox import _destroy_box

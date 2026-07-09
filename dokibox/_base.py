@@ -1,16 +1,16 @@
 ﻿# -*- coding: utf-8 -*-
-"""dokibox 内部基类 -- 窗口 / 渐变边框 / 描边文字 / 拖拽"""
+"""dokibox internal base class -- window / gradient border / stroked text / dragging"""
 import tkinter as tk
 import math
 
 
-# --- 默认配色 ---
+# --- default colors ---
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
 
 
 class _DokiBase:
-    """对话框基类。子类只需实现 _calc_size / _draw_content / _on_click"""
+    """Dialog base class. Subclasses only need to implement _calc_size / _draw_content / _on_click"""
 
     BORDER_W = 12
 
@@ -45,7 +45,7 @@ class _DokiBase:
         self._make_draggable()
         self.root.focus_force()
 
-    # ========== 子类必须实现 ==========
+    # ========== subclass must implement ==========
 
     def _calc_size(self, msg):
         raise NotImplementedError
@@ -56,7 +56,7 @@ class _DokiBase:
     def _on_click(self, event):
         pass
 
-    # ========== 共享绘制工具 ==========
+    # ========== shared drawing utilities ==========
 
     @staticmethod
     def _hex_to_rgb(hex_color):
@@ -86,7 +86,7 @@ class _DokiBase:
         self.cv.create_text(x, y, text=text, font=font,
                             fill=fill, anchor="center")
 
-    # ========== 拖拽 ==========
+    # ========== dragging ==========
 
     def _make_draggable(self):
         self.cv.bind("<ButtonPress-1>", self._on_press, add='+')
@@ -110,7 +110,7 @@ class _DokiBase:
         if dx < 5 and dy < 5:
             self._on_click(event)
 
-    # ========== 生命周期 ==========
+    # ========== lifecycle ==========
 
     def _done(self, value):
         self.result = value
