@@ -37,6 +37,7 @@ dokibox.ynbox(msg="确认删除？", tooltip=False) → bool
 |------|------|------|------|
 | `msg` | str | `""` | 正文 |
 | `tooltip` | bool | `False` | 悬浮文字提示 |
+| `btn_texts` | tuple | None| 确认按钮提示，为None时`dokibox`会自动检测系统语言，如需修改请传入一个元组，第一个参数替换"Yes"第二个参数替换"No"，语言未知时默认使用英文 |
 
 返回值：点击"是"返回 `True`，点击"否"或 Esc 返回 `False`。
 

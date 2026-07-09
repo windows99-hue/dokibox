@@ -37,6 +37,7 @@ dokibox.ynbox(msg="Delete?", tooltip=False) → bool
 |-----------|------|---------|-------------|
 | `msg` | str | `""` | Message text |
 | `tooltip` | bool | `False` | Tooltip text |
+| `btn_texts` | tuple | None | Confirm button prompt. When set to None, `dokibox` will automatically detect the system language. To modify, please pass in a tuple, replacing "Yes" with the first parameter and "No" with the second parameter. English is used by default when the language is unknown. |
 
 Return value: clicking "Yes" returns `True`; clicking "No" or pressing Esc returns `False`.
 
