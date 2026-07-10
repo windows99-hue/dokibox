@@ -7,7 +7,7 @@ from typing import Optional
 from dokibox._base import _get_root
 
 BODY_COLOR = "#FDA7D1"
-BORDER_COLOR = "#ffffff"
+BORDER_COLOR = "#FFDEEF"
 TRANSPARENT_KEY = "#000001"
 FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
@@ -194,7 +194,6 @@ class _DialogBox:
                             fill="#ffffff", anchor="center")
 
     def _draw_fill(self):
-        r = self.r
         top = self._dialog_top
         steps = 60
         for i in range(steps):
@@ -209,31 +208,7 @@ class _DialogBox:
             y1 = int(self.h * t_bottom) + top
             y2 = int(self.h * t_top) + top
 
-            inner_left = 0
-            inner_right = self.w
-            ly1 = y1 - top
-            ly2 = y2 - top
-            if ly1 < r:
-                dy1 = r - ly1
-                inner_left = r - int(math.sqrt(max(r * r - dy1 * dy1, 0)))
-                inner_right = self.w - inner_left
-            if ly2 < r:
-                dy2 = r - ly2
-                inner_left = max(inner_left, r - int(math.sqrt(max(r * r - dy2 * dy2, 0))))
-                inner_right = min(inner_right, self.w - (r - int(math.sqrt(max(r * r - dy2 * dy2, 0)))))
-
-            if ly1 > self.h - r:
-                dy1 = ly1 - (self.h - r)
-                inner_left = r - int(math.sqrt(max(r * r - dy1 * dy1, 0)))
-                inner_right = self.w - inner_left
-            if ly2 > self.h - r:
-                dy2 = ly2 - (self.h - r)
-                inner_left = max(inner_left, r - int(math.sqrt(max(r * r - dy2 * dy2, 0))))
-                inner_right = min(inner_right, self.w - (r - int(math.sqrt(max(r * r - dy2 * dy2, 0)))))
-
-            x1 = max(0, inner_left)
-            x2 = min(self.w, inner_right)
-            self.cv.create_rectangle(int(x1), int(y1), int(x2), int(y2),
+            self.cv.create_rectangle(0, int(y1), int(self.w), int(y2),
                                      fill=color, outline='')
 
     def _draw_dots(self):
@@ -265,19 +240,41 @@ class _DialogBox:
         r = self.r
         w = self.w
         top = self._dialog_top
+        h = self.h
         key = TRANSPARENT_KEY
-        for y in range(top, top + r + 2):
-            dy = max(0, r - (y - top))
-            wx = r - int(math.sqrt(max(r * r - dy * dy, 0)))
-            if wx > 0:
-                self.cv.create_rectangle(0, y, wx + 1, y + 1, fill=key, outline='')
-                self.cv.create_rectangle(w - wx - 1, y, w, y + 1, fill=key, outline='')
-        for y in range(top + self.h - r - 2, top + self.h):
-            dy = max(0, y - (top + self.h - r))
-            wx = r - int(math.sqrt(max(r * r - dy * dy, 0)))
-            if wx > 0:
-                self.cv.create_rectangle(0, y, wx + 1, y + 1, fill=key, outline='')
-                self.cv.create_rectangle(w - wx - 1, y, w, y + 1, fill=key, outline='')
+        n = 36
+
+        # Top-left corner: angles π → 3π/2
+        pts = [(0, top), (r, top)]
+        for i in range(n + 1):
+            a = math.pi + (math.pi / 2) * i / n
+            pts.append((r + r * math.cos(a), top + r + r * math.sin(a)))
+        pts.append((0, top + r))
+        self.cv.create_polygon(pts, fill=key, outline='')
+
+        # Top-right corner: angles 3π/2 → 2π
+        pts = [(w, top), (w - r, top)]
+        for i in range(n + 1):
+            a = 3 * math.pi / 2 + (math.pi / 2) * i / n
+            pts.append((w - r + r * math.cos(a), top + r + r * math.sin(a)))
+        pts.append((w, top + r))
+        self.cv.create_polygon(pts, fill=key, outline='')
+
+        # Bottom-left corner: angles π/2 → π
+        pts = [(0, top + h), (r, top + h)]
+        for i in range(n + 1):
+            a = math.pi / 2 + (math.pi / 2) * i / n
+            pts.append((r + r * math.cos(a), top + h - r + r * math.sin(a)))
+        pts.append((0, top + h - r))
+        self.cv.create_polygon(pts, fill=key, outline='')
+
+        # Bottom-right corner: angles 0 → π/2
+        pts = [(w, top + h), (w - r, top + h)]
+        for i in range(n + 1):
+            a = 0 + (math.pi / 2) * i / n
+            pts.append((w - r + r * math.cos(a), top + h - r + r * math.sin(a)))
+        pts.append((w, top + h - r))
+        self.cv.create_polygon(pts, fill=key, outline='')
 
     def _draw_outline(self):
         r = self.r
@@ -296,9 +293,9 @@ class _DialogBox:
                            start=270, extent=90, style=tk.ARC, outline=color, width=3)
 
         self.cv.create_line(r, top + 1, w - r, top + 1, fill=color, width=3)
-        self.cv.create_line(r, top + h - 1, w - r, top + h - 1, fill=color, width=3)
+        self.cv.create_line(r, top + h - 2, w - r, top + h - 2, fill=color, width=3)
         self.cv.create_line(1, top + r, 1, top + h - r, fill=color, width=3)
-        self.cv.create_line(w - 1, top + r, w - 1, top + h - r, fill=color, width=3)
+        self.cv.create_line(w - 2, top + r, w - 2, top + h - r, fill=color, width=3)
 
     def _text_area_width(self):
         return self.w - 80
