@@ -135,6 +135,8 @@ class _ChoiceManager:
         opt_widths = [f_opt.measure(c) for c in choices]
         max_opt_w = max(opt_widths) if opt_widths else 0
         unified_w = max(int(max_opt_w + OPT_PAD_X * 2 + BORDER_W * 2), UNIFIED_MIN_W)
+        screen_w = self.root.winfo_screenwidth()
+        unified_w = min(unified_w, screen_w - BORDER_W * 2)
         self._unified_w = unified_w
 
         self._panels = []
@@ -171,16 +173,35 @@ class _ChoiceManager:
 
     def _create_msg_label(self, msg):
         f = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="normal")
-        lines = msg.split('\n')
-        max_w = max(f.measure(line) for line in lines)
+        max_lbl_w = max(self._unified_w - 40, 200)
+
+        raw_lines = msg.split('\n')
+        wrapped_lines = []
+        for line in raw_lines:
+            if f.measure(line) <= max_lbl_w:
+                wrapped_lines.append(line)
+            else:
+                current = ""
+                for ch in line:
+                    test = current + ch
+                    if f.measure(test) <= max_lbl_w:
+                        current = test
+                    else:
+                        if current:
+                            wrapped_lines.append(current)
+                        current = ch
+                if current:
+                    wrapped_lines.append(current)
+
         line_h = f.metrics('linespace')
-        total_h = line_h * len(lines) + MSG_PAD_Y * 2
+        total_h = line_h * len(wrapped_lines) + MSG_PAD_Y * 2
+        text_w = max(f.measure(line) for line in wrapped_lines)
 
         lbl = tk.Toplevel(self.root)
         lbl.overrideredirect(True)
         lbl.attributes('-topmost', self._pinned)
         self._msg_win = lbl
-        self._msg_w = max(int(max_w + 40), self._unified_w)
+        self._msg_w = max(int(text_w + 40), self._unified_w)
         self._msg_h = int(total_h)
         lbl.geometry(f"{self._msg_w}x{self._msg_h}")
 
@@ -189,7 +210,7 @@ class _ChoiceManager:
         cv.pack()
         cv.create_rectangle(0, 0, self._msg_w, self._msg_h,
                             outline=BORDER_COLOR, width=4)
-        for j, line in enumerate(lines):
+        for j, line in enumerate(wrapped_lines):
             y = MSG_PAD_Y + line_h // 2 + j * line_h
             cv.create_text(self._msg_w // 2, y, text=line,
                            font=("Microsoft YaHei", MSG_FONT_SIZE, "normal"),

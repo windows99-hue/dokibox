@@ -32,13 +32,35 @@ class _MsgDialog(_DokiBase):
         self._msg_font = ("Microsoft YaHei", MSG_FONT_SIZE, "bold")
         self._btn_font = ("Microsoft YaHei", BTN_FONT_SIZE, "bold")
 
-        lines = msg.split('\n')
-        msg_max_w = max(f_msg.measure(line) for line in lines)
+        screen_w = self.root.winfo_screenwidth()
+        max_msg_w = max(screen_w - PAD_X * 2, 200)
+
+        raw_lines = msg.split('\n')
+        wrapped_lines = []
+        for line in raw_lines:
+            if f_msg.measure(line) <= max_msg_w:
+                wrapped_lines.append(line)
+            else:
+                current = ""
+                for ch in line:
+                    test = current + ch
+                    if f_msg.measure(test) <= max_msg_w:
+                        current = test
+                    else:
+                        if current:
+                            wrapped_lines.append(current)
+                        current = ch
+                if current:
+                    wrapped_lines.append(current)
+
+        self._wrapped_msg = '\n'.join(wrapped_lines)
         self._msg_line_h = f_msg.metrics('linespace')
-        self._msg_total_h = self._msg_line_h * len(lines)
+        self._msg_total_h = self._msg_line_h * len(wrapped_lines)
         self._btn_line_h = f_btn.metrics('linespace')
 
-        w = max(int(msg_max_w + PAD_X * 2), 250)
+        msg_w = max(f_msg.measure(line) for line in wrapped_lines)
+        w = max(int(msg_w + PAD_X * 2), 250)
+        w = min(w, screen_w - 24)
         h = max(PAD_TOP + self._msg_total_h + PAD_BTNS
                 + self._btn_line_h + BTN_STROKE_W * 2 + PAD_BOT, 150)
         return w, h
@@ -46,7 +68,7 @@ class _MsgDialog(_DokiBase):
     def _draw_content(self, msg):
         msg_y = PAD_TOP + self._msg_total_h // 2
         self.cv.create_text(
-            self.w // 2, msg_y, text=msg, font=self._msg_font,
+            self.w // 2, msg_y, text=self._wrapped_msg, font=self._msg_font,
             fill=MSG_COLOR, anchor="center"
         )
 

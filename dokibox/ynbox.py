@@ -65,19 +65,42 @@ class _YnDialog(_DokiBase):
         self._msg_font = ("Microsoft YaHei", MSG_FONT_SIZE, "bold")
         self._btn_font = ("Microsoft YaHei", BTN_FONT_SIZE, "bold")
 
-        lines = msg.split('\n')
-        self._msg_max_w = max(f_msg.measure(line) for line in lines)
-        self._msg_line_h = f_msg.metrics('linespace')
-        self._msg_total_h = self._msg_line_h * len(lines)
-        self._btn_line_h = f_btn.metrics('linespace')
-
         self._yes_w = f_btn.measure(self._yes_text)
         self._no_w = f_btn.measure(self._no_text)
         self._side_margin = int(self._yes_w * 1.5)
 
         min_btn_w = (self.BORDER_W * 2 + self._side_margin * 2
                      + int(self._yes_w) + int(self._no_w) + MIN_GAP)
-        w = max(int(self._msg_max_w + PAD_X * 2), int(min_btn_w), 300)
+
+        screen_w = self.root.winfo_screenwidth()
+        max_msg_w = max(screen_w - PAD_X * 2, min_btn_w - PAD_X * 2, 200)
+
+        raw_lines = msg.split('\n')
+        wrapped_lines = []
+        for line in raw_lines:
+            if f_msg.measure(line) <= max_msg_w:
+                wrapped_lines.append(line)
+            else:
+                current = ""
+                for ch in line:
+                    test = current + ch
+                    if f_msg.measure(test) <= max_msg_w:
+                        current = test
+                    else:
+                        if current:
+                            wrapped_lines.append(current)
+                        current = ch
+                if current:
+                    wrapped_lines.append(current)
+
+        self._wrapped_msg = '\n'.join(wrapped_lines)
+        self._msg_line_h = f_msg.metrics('linespace')
+        self._msg_total_h = self._msg_line_h * len(wrapped_lines)
+        self._btn_line_h = f_btn.metrics('linespace')
+
+        msg_w = max(f_msg.measure(line) for line in wrapped_lines)
+        w = max(int(msg_w + PAD_X * 2), int(min_btn_w), 300)
+        w = min(w, screen_w - self.BORDER_W * 2)
         h = max(PAD_TOP + self._msg_total_h + PAD_BTNS
                 + self._btn_line_h + BTN_STROKE_W * 2 + PAD_BOT, 180)
         return w, h
@@ -85,7 +108,7 @@ class _YnDialog(_DokiBase):
     def _draw_content(self, msg):
         msg_y = PAD_TOP + self._msg_total_h // 2
         self.cv.create_text(
-            self.w // 2, msg_y, text=msg, font=self._msg_font,
+            self.w // 2, msg_y, text=self._wrapped_msg, font=self._msg_font,
             fill=MSG_COLOR, anchor="center"
         )
 

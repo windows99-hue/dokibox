@@ -3,17 +3,22 @@
 import tkinter as tk
 import math
 
-# enable per-monitor DPI awareness for correct scaling on high-DPI displays
-try:
-    import ctypes
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except Exception:
-    pass
-
 
 # --- default colors ---
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
+
+
+def _get_dpi_scale():
+    try:
+        import ctypes
+        hdc = ctypes.windll.user32.GetDC(0)
+        dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88)
+        ctypes.windll.user32.ReleaseDC(0, hdc)
+        return dpi / 96.0
+    except Exception:
+        return 1.0
+
 
 # --- shared Tk root (NEVER destroyed, for Python 3.9 compat) ---
 _root_instance = None

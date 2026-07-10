@@ -4,7 +4,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 import math
 from typing import Optional
-from dokibox._base import _get_root
+from dokibox._base import _get_root, _get_dpi_scale
 
 BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#FFDEEF"
@@ -472,13 +472,13 @@ def _destroy_box():
         _box = None
 
 
-def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False, overflow_mode: str = "wrap") -> None:
+def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False, overflow_mode: str = "wrap") -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
         msg:           body text to display (supports \\n for multiple lines).
         w:             width in pixels. Defaults to 70% of screen width if None.
-        h:             height in pixels (default 220).
+        h:             height in pixels. Defaults to 220 (DPI-scaled) if None.
         name:          character name shown in a white rounded tag above the dialog.
         typewriter:    animate text character-by-character (default True).
         chardelay:     delay in ms per character in typewriter mode (default 50).
@@ -495,11 +495,13 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Option
         dokibox.dialogbox("Hello!", name="Sayori", bold=True)
     """
     global _box
+    if _box is not None:
+        sw = _box.root.winfo_screenwidth()
+    else:
+        sw = _get_root().winfo_screenwidth()
     if w is None:
-        if _box is not None:
-            w = int(_box.root.winfo_screenwidth() * 0.7)
-        else:
-            w = int(_get_root().winfo_screenwidth() * 0.7)
-        w = min(w, 1200)
+        w = min(int(sw * 0.7), 1200)
+    if h is None:
+        h = int(220 / _get_dpi_scale())
     box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst, overflow_mode=overflow_mode)
     _get_root().mainloop()
