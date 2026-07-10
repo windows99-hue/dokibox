@@ -105,6 +105,7 @@ class _DialogBox:
             needed_w = int(max_line_w + 80)
             if needed_w > canvas_w:
                 canvas_w = needed_w
+        self._canvas_w = canvas_w
 
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
@@ -244,37 +245,40 @@ class _DialogBox:
         key = TRANSPARENT_KEY
         n = 36
 
-        # Top-left corner: angles π → 3π/2
+        # Top-left: arc from 90°→180°  (top → left), center=(r, top+r)
         pts = [(0, top), (r, top)]
-        for i in range(n + 1):
-            a = math.pi + (math.pi / 2) * i / n
-            pts.append((r + r * math.cos(a), top + r + r * math.sin(a)))
-        pts.append((0, top + r))
-        self.cv.create_polygon(pts, fill=key, outline='')
-
-        # Top-right corner: angles 3π/2 → 2π
-        pts = [(w, top), (w - r, top)]
-        for i in range(n + 1):
-            a = 3 * math.pi / 2 + (math.pi / 2) * i / n
-            pts.append((w - r + r * math.cos(a), top + r + r * math.sin(a)))
-        pts.append((w, top + r))
-        self.cv.create_polygon(pts, fill=key, outline='')
-
-        # Bottom-left corner: angles π/2 → π
-        pts = [(0, top + h), (r, top + h)]
+        cx, cy = r, top + r
         for i in range(n + 1):
             a = math.pi / 2 + (math.pi / 2) * i / n
-            pts.append((r + r * math.cos(a), top + h - r + r * math.sin(a)))
-        pts.append((0, top + h - r))
+            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
         self.cv.create_polygon(pts, fill=key, outline='')
 
-        # Bottom-right corner: angles 0 → π/2
-        pts = [(w, top + h), (w - r, top + h)]
+        # Top-right: arc from 90°→0°  (top → right), center=(w-r, top+r)
+        pts = [(w, top), (w - r, top)]
+        cx, cy = w - r, top + r
         for i in range(n + 1):
-            a = 0 + (math.pi / 2) * i / n
-            pts.append((w - r + r * math.cos(a), top + h - r + r * math.sin(a)))
-        pts.append((w, top + h - r))
+            a = math.pi / 2 - (math.pi / 2) * i / n
+            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
         self.cv.create_polygon(pts, fill=key, outline='')
+
+        # Bottom-left: arc from 270°→180°  (bottom → left), center=(r, top+h-r)
+        pts = [(0, top + h), (r, top + h)]
+        cx, cy = r, top + h - r
+        for i in range(n + 1):
+            a = 3 * math.pi / 2 - (math.pi / 2) * i / n
+            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
+        self.cv.create_polygon(pts, fill=key, outline='')
+
+        # Bottom-right: arc from 270°→360°  (bottom → right), center=(w-r, top+h-r)
+        pts = [(w, top + h), (w - r, top + h)]
+        cx, cy = w - r, top + h - r
+        for i in range(n + 1):
+            a = 3 * math.pi / 2 + (math.pi / 2) * i / n
+            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
+        self.cv.create_polygon(pts, fill=key, outline='')
+
+        # Clip the bottom edge to prevent fill bleed at y=top+h
+        self.cv.create_rectangle(0, top + h, self._canvas_w, top + h + 10, fill=key, outline='')
 
     def _draw_outline(self):
         r = self.r
@@ -293,9 +297,9 @@ class _DialogBox:
                            start=270, extent=90, style=tk.ARC, outline=color, width=3)
 
         self.cv.create_line(r, top + 1, w - r, top + 1, fill=color, width=3)
-        self.cv.create_line(r, top + h - 2, w - r, top + h - 2, fill=color, width=3)
+        self.cv.create_line(r, top + h - 1, w - r, top + h - 1, fill=color, width=3)
         self.cv.create_line(1, top + r, 1, top + h - r, fill=color, width=3)
-        self.cv.create_line(w - 2, top + r, w - 2, top + h - r, fill=color, width=3)
+        self.cv.create_line(w - 1, top + r, w - 1, top + h - r, fill=color, width=3)
 
     def _text_area_width(self):
         return self.w - 80
