@@ -3,6 +3,13 @@
 import tkinter as tk
 import math
 
+# enable per-monitor DPI awareness for correct scaling on high-DPI displays
+try:
+    import ctypes
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except Exception:
+    pass
+
 
 # --- default colors ---
 BORDER_COLOR = "#FFBBE3"

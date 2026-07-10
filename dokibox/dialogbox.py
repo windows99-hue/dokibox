@@ -500,5 +500,6 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: int = 220, name: Option
             w = int(_box.root.winfo_screenwidth() * 0.7)
         else:
             w = int(_get_root().winfo_screenwidth() * 0.7)
+        w = min(w, 1200)
     box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst, overflow_mode=overflow_mode)
     _get_root().mainloop()
