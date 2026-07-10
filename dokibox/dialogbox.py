@@ -246,7 +246,7 @@ class _DialogBox:
 
         row = 0
         y = top + dr
-        while y < top + self.h + dr:
+        while y < top + self.h - dr:
             t = max(0, min(1, (y - top) / self.h))
             opacity = 1.0 - 0.5 * t
             color = _blend(DOT_COLOR, FADE_TO, opacity)
