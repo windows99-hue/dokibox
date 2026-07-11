@@ -210,7 +210,6 @@ class _DialogBox(QWidget):
 
         tag_path = QPainterPath()
         tag_path.addRoundedRect(QRectF(tx, ty, tw, th), tr, tr)
-        painter.setClipPath(QPainterPath())
         painter.fillPath(tag_path, QColor("#ffffff"))
 
         grad_top = ty + th * 0.75
