@@ -33,20 +33,32 @@ _BTN_TEXTS = {
 
 def get_system_locale():
     try:
-        locale.setlocale(locale.LC_CTYPE, '')
-    except locale.Error:
+        import ctypes
+        lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+        lang_map = {
+            0x0804: 'zh', 0x0404: 'zh', 0x0C04: 'zh', 0x1004: 'zh',
+            0x0411: 'ja',
+            0x0412: 'ko',
+            0x0419: 'ru',
+        }
+        if lang_id in lang_map:
+            return lang_map[lang_id]
+    except Exception:
         pass
-    lang, encoding = locale.getlocale()
-    if lang:
-        lang = lang.lower()
-        if lang.startswith('zh'):
-            return 'zh'
-        if lang.startswith('ja'):
-            return 'ja'
-        if lang.startswith('ko'):
-            return 'ko'
-        if lang.startswith('ru'):
-            return 'ru'
+    try:
+        lang, _ = locale.getdefaultlocale()
+        if lang:
+            lang = lang.lower()
+            if 'zh' in lang or 'chinese' in lang:
+                return 'zh'
+            if 'ja' in lang or 'japanese' in lang:
+                return 'ja'
+            if 'ko' in lang or 'korean' in lang:
+                return 'ko'
+            if 'ru' in lang or 'russian' in lang:
+                return 'ru'
+    except Exception:
+        pass
     return 'en'
 
 
