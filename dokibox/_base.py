@@ -57,7 +57,7 @@ class _DokiBase(QWidget):
         self._drag_start = QPoint()
         self._click_pos = QPoint()
 
-        flags = Qt.FramelessWindowHint | Qt.Dialog
+        flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)

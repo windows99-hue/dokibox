@@ -106,7 +106,7 @@ class _DialogBox(QWidget):
         self._tag_top = 30 + INSET
         self._tag_r = 12
 
-        cv_h = h + name_h + 24
+        cv_h = h + name_h + 30
         cv_h += INSET
         self._cv_h = cv_h
         self._dialog_top = name_h + 20 + INSET
@@ -178,7 +178,7 @@ class _DialogBox(QWidget):
         self._tag_top = 30 + INSET
         self._tag_r = 12
 
-        cv_h = self.h + name_h + 24
+        cv_h = self.h + name_h + 30
         cv_h += INSET
         self._cv_h = cv_h
         self._dialog_top = name_h + 20 + INSET
@@ -197,11 +197,6 @@ class _DialogBox(QWidget):
             self._dialog_left = INSET
         else:
             self._dialog_left = (canvas_w - self.w) // 2
-
-        cv_h = self.h + name_h + 24 if self._name else self.h
-        cv_h += INSET
-        self._cv_h = cv_h
-        self._dialog_top = (name_h + 20 if self._name else 0) + INSET
 
         sw = QApplication.primaryScreen().size().width()
         sh = QApplication.primaryScreen().size().height()
