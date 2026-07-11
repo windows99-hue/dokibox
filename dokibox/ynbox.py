@@ -30,11 +30,12 @@ _BTN_TEXTS = {
 }
 
 
-def _get_system_lang():
+def get_system_locale():
     try:
-        lang, _ = locale.getdefaultlocale()
-    except Exception:
-        lang = None
+        locale.setlocale(locale.LC_CTYPE, '')
+    except locale.Error:
+        pass
+    lang, encoding = locale.getlocale()
     if lang:
         lang = lang.lower()
         if lang.startswith('zh'):
@@ -55,7 +56,7 @@ class _YnDialog(_DokiBase):
         if btn_texts is not None:
             self._yes_text, self._no_text = btn_texts
         else:
-            self._yes_text, self._no_text = _BTN_TEXTS.get(_get_system_lang(), _BTN_TEXTS['en'])
+            self._yes_text, self._no_text = _BTN_TEXTS.get(get_system_locale(), _BTN_TEXTS['en'])
         super().__init__(msg, title, pinned=pinned)
 
     def _calc_size(self, msg):
