@@ -170,7 +170,8 @@ class _DialogBox(QWidget):
 
         _box = self
 
-    def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None):
+    def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,
+                        font_family=None, font_size=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -187,6 +188,17 @@ class _DialogBox(QWidget):
         self._typing_done = False
 
         self._name = name
+
+        if font_family is not None:
+            self._font_family = font_family
+        else:
+            self._font_family = "Microsoft YaHei"
+        if font_size is not None:
+            self._font_size = font_size
+        else:
+            self._font_size = 20
+        self._body_fs = self._font_size
+        self._name_fs = self._font_size
 
         dpi = _get_dpi_scale()
         s = 1.0 / dpi
@@ -621,7 +633,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     if _box is not None:
         try:
             if _box.w == w and _box.h == h:
-                _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, name)
+                _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, name,
+                                     font_family=font_family, font_size=font_size)
             else:
                 _destroy_box()
         except Exception:
