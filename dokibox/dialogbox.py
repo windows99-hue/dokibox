@@ -70,7 +70,8 @@ _dialogbox_loop = None
 class _DialogBox(QWidget):
 
     def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50,
-                 bold=False, pinned=True, fdst=False, overflow_mode="wrap"):
+                 bold=False, pinned=True, fdst=False, overflow_mode="wrap",
+                 font_family=None, font_size=None):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -93,10 +94,13 @@ class _DialogBox(QWidget):
         self._typing_done = False
         self._after_timer = None
 
+        self._font_family = font_family or "Microsoft YaHei"
+        self._font_size = font_size or 20
+
         dpi = _get_dpi_scale()
         s = 1.0 / dpi
-        self._body_fs = max(12, int(20 * s))
-        self._name_fs = max(12, int(20 * s))
+        self._body_fs = max(12, int(self._font_size * s))
+        self._name_fs = max(12, int(self._font_size * s))
         self._line_h = int(44 * s)
         self._pad_top = int(40 * s)
         self._pad_x = int(40 * s)
@@ -112,7 +116,7 @@ class _DialogBox(QWidget):
         self.r = self._corner_radius
         self.r = self._corner_radius
 
-        f_name = QFont("Microsoft YaHei", self._name_fs, QFont.Bold)
+        f_name = QFont(self._font_family, self._name_fs, QFont.Bold)
         fm = QFontMetrics(f_name)
         name_pad = self._name_pad_val
         name_h = fm.lineSpacing() + name_pad
@@ -132,7 +136,7 @@ class _DialogBox(QWidget):
 
         canvas_w = w
         if self._overflow_mode == "overflow" and msg:
-            f_body = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
+            f_body = QFont(self._font_family, self._body_fs, QFont.Bold)
             fm = QFontMetrics(f_body)
             max_line_w = max(fm.horizontalAdvance(line) for line in msg.split('\n'))
             needed_w = int(max_line_w + int(80 * s))
@@ -188,7 +192,7 @@ class _DialogBox(QWidget):
         s = 1.0 / dpi
         name_pad = int(28 * s)
 
-        f_name = QFont("Microsoft YaHei", self._name_fs, QFont.Bold)
+        f_name = QFont(self._font_family, self._name_fs, QFont.Bold)
         fm = QFontMetrics(f_name)
         name_h = fm.lineSpacing() + name_pad
         if self._name:
@@ -207,7 +211,7 @@ class _DialogBox(QWidget):
 
         canvas_w = self.w
         if self._overflow_mode == "overflow" and msg:
-            f_body = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
+            f_body = QFont(self._font_family, self._body_fs, QFont.Bold)
             fm = QFontMetrics(f_body)
             max_line_w = max(fm.horizontalAdvance(line) for line in msg.split('\n'))
             needed_w = int(max_line_w + int(80 * s))
@@ -258,7 +262,7 @@ class _DialogBox(QWidget):
             self._typing_done = False
             self._cur_line = 0
             self._cur_char = 0
-            font = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
+            font = QFont(self._font_family, self._body_fs, QFont.Bold)
             lines = self._process_lines(msg, font, self._text_area_width())
             self._typewriter_lines = lines
             self._typewriter_font = font
@@ -373,7 +377,7 @@ class _DialogBox(QWidget):
         th = self._tag_h
         cx = tx + tw // 2
         cy = ty + th // 2
-        font = QFont("Microsoft YaHei", self._name_fs, QFont.Bold)
+        font = QFont(self._font_family, self._name_fs, QFont.Bold)
         painter.setFont(font)
         fm = QFontMetrics(font)
         tw_text = fm.horizontalAdvance(self._name)
@@ -504,7 +508,7 @@ class _DialogBox(QWidget):
         msg = self._full_msg
         if not msg:
             return
-        font = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
+        font = QFont(self._font_family, self._body_fs, QFont.Bold)
 
         if self._typewriter and self._typing:
             positions = self._typewriter_positions
@@ -582,7 +586,8 @@ def _destroy_box():
 def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               name: Optional[str] = None, typewriter: bool = True,
               chardelay: int = 50, bold: bool = False, pinned: bool = True,
-              fdst: bool = False, overflow_mode: str = "wrap") -> None:
+              fdst: bool = False, overflow_mode: str = "wrap",
+              font_family: str = None, font_size: int = None) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -624,7 +629,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 
     if _box is None:
         _box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned,
-                          fdst=fdst, overflow_mode=overflow_mode)
+                          fdst=fdst, overflow_mode=overflow_mode,
+                          font_family=font_family, font_size=font_size)
 
     _dialogbox_loop = QEventLoop()
     _dialogbox_loop.exec()

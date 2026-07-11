@@ -64,7 +64,10 @@ def get_system_locale():
 
 class _YnDialog(_DokiBase):
 
-    def __init__(self, msg, title="", tooltip=False, pinned=True, btn_texts=None):
+    def __init__(self, msg, title="", tooltip=False, pinned=True, btn_texts=None,
+                 font_family=None, font_size=None):
+        self._font_family = font_family or "Microsoft YaHei"
+        self._font_size = font_size
         self._tooltip = tooltip
         if btn_texts is not None:
             self._yes_text, self._no_text = btn_texts
@@ -104,12 +107,12 @@ class _YnDialog(_DokiBase):
         pad_top = int(PAD_TOP * s)
         pad_btns = int(PAD_BTNS * s)
         pad_bot = int(PAD_BOT * s)
-        msg_fs = max(12, int(MSG_FONT_SIZE * s))
-        btn_fs = max(12, int(BTN_FONT_SIZE * s))
+        msg_fs = max(12, int((self._font_size or MSG_FONT_SIZE) * s))
+        btn_fs = max(12, int((self._font_size or BTN_FONT_SIZE) * s))
         btn_stroke = max(3, int(BTN_STROKE_W * s))
 
-        self._msg_font = QFont("Microsoft YaHei", msg_fs, QFont.Bold)
-        self._btn_font = QFont("Microsoft YaHei", btn_fs, QFont.Bold)
+        self._msg_font = QFont(self._font_family, msg_fs, QFont.Bold)
+        self._btn_font = QFont(self._font_family, btn_fs, QFont.Bold)
 
         fm_msg = QFontMetrics(self._msg_font)
         fm_btn = QFontMetrics(self._btn_font)
@@ -266,7 +269,8 @@ class _YnDialog(_DokiBase):
 
 
 def ynbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True,
-          btn_texts: Optional[Tuple[str, str]] = None) -> bool:
+          btn_texts: Optional[Tuple[str, str]] = None,
+          font_family: str = None, font_size: int = None) -> bool:
     """DDLC-style yes/no dialog. Returns True(Yes) / False(No)
 
     Args:
@@ -283,4 +287,5 @@ def ynbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = 
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
-    return _YnDialog.run(msg, title, tooltip=tooltip, pinned=pinned, btn_texts=btn_texts)
+    return _YnDialog.run(msg, title, tooltip=tooltip, pinned=pinned, btn_texts=btn_texts,
+                         font_family=font_family, font_size=font_size)

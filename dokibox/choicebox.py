@@ -24,7 +24,7 @@ MSG_PAD_Y = 16
 class _Panel(QWidget):
 
     def __init__(self, index, text, pw, opt_fs, opt_pad_y, border_w,
-                 on_select, tooltip=False, pinned=True):
+                 on_select, tooltip=False, pinned=True, font_family=None):
         super().__init__(None)
         self.index = index
         self.text = text
@@ -34,7 +34,7 @@ class _Panel(QWidget):
         self._border_w = border_w
 
         self.pw = int(pw)
-        self._opt_font = QFont("Microsoft YaHei", opt_fs, QFont.Normal)
+        self._opt_font = QFont(font_family or "Microsoft YaHei", opt_fs, QFont.Normal)
         fm = QFontMetrics(self._opt_font)
         th = fm.lineSpacing()
         self.ph = int(th + opt_pad_y * 2 + border_w * 2)
@@ -105,14 +105,17 @@ class _Panel(QWidget):
 
 class _ChoiceManager:
 
-    def __init__(self, msg, choices, title, tooltip=False, force=None, pinned=True):
+    def __init__(self, msg, choices, title, tooltip=False, force=None, pinned=True,
+                 font_family=None, font_size=None):
         _get_app()
         self.result = None
         self._tooltip = tooltip
         self._pinned = pinned
+        self._font_family = font_family or "Microsoft YaHei"
+        self._font_size = font_size
 
         s = 1.0 / _get_dpi_scale()
-        opt_fs = max(12, int(OPT_FONT_SIZE * s))
+        opt_fs = max(12, int((self._font_size or OPT_FONT_SIZE) * s))
         opt_pad_x = int(OPT_PAD_X * s)
         opt_pad_y = int(OPT_PAD_Y * s)
         border_w = int(BORDER_W * s)
@@ -136,7 +139,8 @@ class _ChoiceManager:
         self._panels = []
         for i, choice in enumerate(choices):
             panel = _Panel(i, choice, unified_w, opt_fs, opt_pad_y, border_w,
-                          self._on_select, tooltip, pinned=pinned)
+                          self._on_select, tooltip, pinned=pinned,
+                          font_family=self._font_family)
             self._panels.append(panel)
 
         self._msg_win = None
@@ -167,9 +171,9 @@ class _ChoiceManager:
 
     def _create_msg_label(self, msg):
         s = 1.0 / _get_dpi_scale()
-        msg_fs = max(12, int(MSG_FONT_SIZE * s))
+        msg_fs = max(12, int((self._font_size or MSG_FONT_SIZE) * s))
         msg_pad_y = int(MSG_PAD_Y * s)
-        f = QFont("Microsoft YaHei", msg_fs, QFont.Normal)
+        f = QFont(self._font_family, msg_fs, QFont.Normal)
         fm = QFontMetrics(f)
         max_lbl_w = max(self._unified_w - int(40 * s), 200)
 
@@ -264,7 +268,8 @@ class _MsgLabel(QWidget):
 
 def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "",
               tooltip: bool = False, force: Optional[int] = None,
-              pinned: bool = True) -> Optional[str]:
+              pinned: bool = True, font_family: str = None,
+              font_size: int = None) -> Optional[str]:
     """DDLC-style multi-choice dialog. Each option is a floating window.
     Returns the selected text, or None if cancelled.
 
@@ -284,7 +289,8 @@ def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "
     _destroy_box()
     if not choices:
         return None
-    mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned)
+    mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned,
+                         font_family=font_family, font_size=font_size)
 
     from PySide6.QtCore import QEventLoop
     loop = QEventLoop()
