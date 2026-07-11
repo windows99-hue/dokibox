@@ -16,7 +16,7 @@ def _get_dpi_scale():
         app = QApplication.instance()
         if app:
             screen = app.primaryScreen()
-            return screen.logicalDotsPerInch() / 96.0
+            return screen.devicePixelRatio()
     except Exception:
         pass
     return 1.0
@@ -56,6 +56,7 @@ class _DokiBase(QWidget):
         self._drag_pos = QPoint()
         self._drag_start = QPoint()
         self._click_pos = QPoint()
+        self._dpi_s = 1.0 / _get_dpi_scale()
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:

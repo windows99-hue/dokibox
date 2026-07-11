@@ -6,7 +6,7 @@ import ctypes
 from typing import Optional
 from PySide6.QtCore import Qt, QTimer, QEventLoop, QRectF, QPointF
 from PySide6.QtGui import (
-    QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath,
+    QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
 )
 from PySide6.QtWidgets import QWidget, QApplication
 from dokibox._base import _get_app, _get_dpi_scale
@@ -37,7 +37,7 @@ def _blend(c1, c2, t):
     r1, g1, b1 = _hex_to_rgb(c1)
     r2, g2, b2 = _hex_to_rgb(c2)
     r = int(r1 * t + r2 * (1 - t))
-    g = int(g1 * t + r2 * (1 - t))
+    g = int(g1 * t + g2 * (1 - t))
     b = int(b1 * t + b2 * (1 - t))
     return QColor(r, g, b)
 
@@ -83,7 +83,6 @@ class _DialogBox(QWidget):
         self._overflow_mode = overflow_mode
         self.w = w
         self.h = h
-        self.r = CORNER_RADIUS
         self._name = name
         self._typewriter = typewriter
         self._chardelay = chardelay
@@ -94,36 +93,53 @@ class _DialogBox(QWidget):
         self._typing_done = False
         self._after_timer = None
 
-        f_name = QFont("Microsoft YaHei", 20, QFont.Bold)
+        dpi = _get_dpi_scale()
+        s = 1.0 / dpi
+        self._body_fs = max(12, int(20 * s))
+        self._name_fs = max(12, int(20 * s))
+        self._line_h = int(44 * s)
+        self._pad_top = int(40 * s)
+        self._pad_x = int(40 * s)
+        self._name_pad_val = int(28 * s)
+        self._dot_radius = int(DOT_RADIUS * s)
+        self._dot_gap_x = int(DOT_GAP_X * s)
+        self._dot_gap_y = int(DOT_GAP_Y * s)
+        self._corner_radius = max(8, int(CORNER_RADIUS * s))
+        self._inset = max(2, int(INSET * s))
+        self._stroke_w = 4 if bold else 1
+        self._triangle_s = int(16 * s)
+        self.r = self._corner_radius
+
+        f_name = QFont("Microsoft YaHei", self._name_fs, QFont.Bold)
         fm = QFontMetrics(f_name)
-        name_pad = 28
+        name_pad = self._name_pad_val
         name_h = fm.lineSpacing() + name_pad
         if name:
             tw = fm.horizontalAdvance(name)
-            self._tag_w = int(tw + name_pad * 2) + 80
+            self._tag_w = int(tw + name_pad * 2) + int(80 * s)
         else:
             self._tag_w = 0
         self._tag_h = name_h
-        self._tag_top = 30 + INSET
+        self._tag_top = int(30 * s) + self._inset
         self._tag_r = 12
 
-        cv_h = h + name_h + 30
-        cv_h += INSET
+        cv_h = h + name_h + int(30 * s)
+        cv_h += self._inset
         self._cv_h = cv_h
-        self._dialog_top = name_h + 20 + INSET
+        self._dialog_top = name_h + int(20 * s) + self._inset
 
         canvas_w = w
         if self._overflow_mode == "overflow" and msg:
-            f_body = QFont("Microsoft YaHei", 20, QFont.Bold)
+            f_body = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
             fm = QFontMetrics(f_body)
             max_line_w = max(fm.horizontalAdvance(line) for line in msg.split('\n'))
-            needed_w = int(max_line_w + 80)
+            needed_w = int(max_line_w + int(80 * s))
             if needed_w > canvas_w:
                 canvas_w = needed_w
-        canvas_w += INSET * 2
+        canvas_w += self._inset * 2
         self._canvas_w = canvas_w
         if self._overflow_mode == "overflow":
-            self._dialog_left = INSET
+            self._dialog_left = self._inset
         else:
             self._dialog_left = (canvas_w - w) // 2
 
@@ -166,36 +182,39 @@ class _DialogBox(QWidget):
 
         self._name = name
 
-        f_name = QFont("Microsoft YaHei", 20, QFont.Bold)
+        dpi = _get_dpi_scale()
+        s = 1.0 / dpi
+        name_pad = int(28 * s)
+
+        f_name = QFont("Microsoft YaHei", self._name_fs, QFont.Bold)
         fm = QFontMetrics(f_name)
-        name_pad = 28
         name_h = fm.lineSpacing() + name_pad
         if self._name:
             tw = fm.horizontalAdvance(self._name)
-            self._tag_w = int(tw + name_pad * 2) + 80
+            self._tag_w = int(tw + name_pad * 2) + int(80 * s)
         else:
             self._tag_w = 0
         self._tag_h = name_h
-        self._tag_top = 30 + INSET
+        self._tag_top = int(30 * s) + self._inset
         self._tag_r = 12
 
-        cv_h = self.h + name_h + 30
-        cv_h += INSET
+        cv_h = self.h + name_h + int(30 * s)
+        cv_h += self._inset
         self._cv_h = cv_h
-        self._dialog_top = name_h + 20 + INSET
+        self._dialog_top = name_h + int(20 * s) + self._inset
 
         canvas_w = self.w
         if self._overflow_mode == "overflow" and msg:
-            f_body = QFont("Microsoft YaHei", 20, QFont.Bold)
+            f_body = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
             fm = QFontMetrics(f_body)
             max_line_w = max(fm.horizontalAdvance(line) for line in msg.split('\n'))
-            needed_w = int(max_line_w + 80)
+            needed_w = int(max_line_w + int(80 * s))
             if needed_w > canvas_w:
                 canvas_w = needed_w
-        canvas_w += INSET * 2
+        canvas_w += self._inset * 2
         self._canvas_w = canvas_w
         if self._overflow_mode == "overflow":
-            self._dialog_left = INSET
+            self._dialog_left = self._inset
         else:
             self._dialog_left = (canvas_w - self.w) // 2
 
@@ -237,7 +256,7 @@ class _DialogBox(QWidget):
             self._typing_done = False
             self._cur_line = 0
             self._cur_char = 0
-            font = QFont("Microsoft YaHei", 20, QFont.Bold)
+            font = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
             lines = self._process_lines(msg, font, self._text_area_width())
             self._typewriter_lines = lines
             self._typewriter_font = font
@@ -352,7 +371,7 @@ class _DialogBox(QWidget):
         th = self._tag_h
         cx = tx + tw // 2
         cy = ty + th // 2
-        font = QFont("Microsoft YaHei", 20, QFont.Bold)
+        font = QFont("Microsoft YaHei", self._name_fs, QFont.Bold)
         painter.setFont(font)
         fm = QFontMetrics(font)
         tw_text = fm.horizontalAdvance(self._name)
@@ -369,29 +388,22 @@ class _DialogBox(QWidget):
         painter.drawText(text_x, text_y, self._name)
 
     def _draw_fill(self, painter, dl, top, w, h):
-        steps = 60
-        for i in range(steps):
-            t_bottom = i / max(steps - 1, 1)
-            t_top = min((i + 1) / max(steps - 1, 1), 1.0)
-            opacity_top = 1.0 - 0.5 * t_bottom
-            opacity_bot = 1.0 - 0.5 * t_top
-            opacity = (opacity_top + opacity_bot) / 2
-            color = _blend(BODY_COLOR, FADE_TO, opacity)
-
-            y1 = int(self.h * t_bottom) + top
-            y2 = int(self.h * t_top) + top
-            painter.fillRect(QRectF(dl, y1, w, y2 - y1), color)
+        gradient = QLinearGradient(0, top, 0, top + h)
+        gradient.setColorAt(0, _blend(BODY_COLOR, FADE_TO, 1.0))
+        gradient.setColorAt(1, _blend(BODY_COLOR, FADE_TO, 0.5))
+        painter.setBrush(gradient)
+        painter.drawRect(QRectF(dl, top, w, h))
 
     def _draw_dots(self, painter, dl, top, w, h):
-        dr = DOT_RADIUS
-        gap_x = DOT_GAP_X
-        gap_y = DOT_GAP_Y
+        dr = self._dot_radius
+        gap_x = self._dot_gap_x
+        gap_y = self._dot_gap_y
         step_x = int(dr * 2 + gap_x)
         row_h = int(dr * 2 + gap_y)
 
         row = 0
         y = top + dr
-        while y < top + h - dr:
+        while y < top + h + row_h:
             t = max(0, min(1, (y - top) / h))
             opacity = 1.0 - 0.5 * t
 
@@ -414,10 +426,10 @@ class _DialogBox(QWidget):
         painter.drawRoundedRect(QRectF(dl, top, w, h), r, r)
 
     def _draw_triangle(self, painter, dl, top, w, h):
-        s = 16
+        s = self._triangle_s
         tri_h = s * math.sqrt(3) / 2
-        tip_x = dl + w - 28
-        tip_y = top + h - 24
+        tip_x = dl + w - self._pad_x
+        tip_y = top + h - self._pad_top
         path = QPainterPath()
         path.moveTo(tip_x, tip_y)
         path.lineTo(tip_x - tri_h, tip_y - s / 2)
@@ -427,7 +439,7 @@ class _DialogBox(QWidget):
         painter.fillPath(path, QColor("#ffffff"))
 
     def _text_area_width(self):
-        return self.w - 80
+        return self.w - self._pad_x * 2
 
     def _wrap_line(self, text, font, max_w):
         fm = QFontMetrics(font)
@@ -474,10 +486,10 @@ class _DialogBox(QWidget):
         return raw_lines
 
     def _layout_text_positions(self, lines):
+        line_h = self._line_h
+        pad_top = self._pad_top
+        pad_x = self._pad_x
         top = self._dialog_top
-        line_h = 44
-        pad_top = 40
-        pad_x = 40
         pos = []
         for j, line in enumerate(lines):
             y = top + pad_top + line_h // 2 + j * line_h
@@ -488,7 +500,7 @@ class _DialogBox(QWidget):
         msg = self._full_msg
         if not msg:
             return
-        font = QFont("Microsoft YaHei", 20, QFont.Bold)
+        font = QFont("Microsoft YaHei", self._body_fs, QFont.Bold)
 
         if self._typewriter and self._typing:
             positions = self._typewriter_positions

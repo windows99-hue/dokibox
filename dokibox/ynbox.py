@@ -99,8 +99,17 @@ class _YnDialog(_DokiBase):
         return wrapped_lines
 
     def _calc_size(self, msg):
-        self._msg_font = QFont("Microsoft YaHei", MSG_FONT_SIZE, QFont.Bold)
-        self._btn_font = QFont("Microsoft YaHei", BTN_FONT_SIZE, QFont.Bold)
+        s = self._dpi_s
+        pad_x = int(PAD_X * s)
+        pad_top = int(PAD_TOP * s)
+        pad_btns = int(PAD_BTNS * s)
+        pad_bot = int(PAD_BOT * s)
+        msg_fs = max(12, int(MSG_FONT_SIZE * s))
+        btn_fs = max(12, int(BTN_FONT_SIZE * s))
+        btn_stroke = int(BTN_STROKE_W * s)
+
+        self._msg_font = QFont("Microsoft YaHei", msg_fs, QFont.Bold)
+        self._btn_font = QFont("Microsoft YaHei", btn_fs, QFont.Bold)
 
         fm_msg = QFontMetrics(self._msg_font)
         fm_btn = QFontMetrics(self._btn_font)
@@ -110,10 +119,10 @@ class _YnDialog(_DokiBase):
         self._side_margin = int(self._yes_w * 1.5)
 
         min_btn_w = (self.BORDER_W * 2 + self._side_margin * 2
-                     + int(self._yes_w) + int(self._no_w) + MIN_GAP)
+                     + int(self._yes_w) + int(self._no_w) + int(MIN_GAP * s))
 
         screen_w = self.screen().size().width()
-        max_msg_w = max(screen_w - PAD_X * 2, min_btn_w - PAD_X * 2, 200)
+        max_msg_w = max(screen_w - pad_x * 2, min_btn_w - pad_x * 2, 200)
 
         wrapped = self._wrap_lines(msg, self._msg_font, max_msg_w)
         self._wrapped_msg = wrapped
@@ -122,17 +131,21 @@ class _YnDialog(_DokiBase):
         self._btn_line_h = fm_btn.lineSpacing()
 
         msg_w = max(fm_msg.horizontalAdvance(line) for line in wrapped) if wrapped else 0
-        w = max(int(msg_w + PAD_X * 2), int(min_btn_w), 300)
+        w = max(int(msg_w + pad_x * 2), int(min_btn_w), 300)
         w = min(w, screen_w - self.BORDER_W * 2)
-        h = max(PAD_TOP + self._msg_total_h + PAD_BTNS
-                + self._btn_line_h + BTN_STROKE_W * 2 + PAD_BOT, 180)
+        h = max(pad_top + self._msg_total_h + pad_btns
+                + self._btn_line_h + btn_stroke * 2 + pad_bot, 180)
+        self._btn_stroke = btn_stroke
+        self._pad_x = pad_x
+        self._pad_top = pad_top
+        self._pad_bot = pad_bot
         return w, h
 
     def _draw_content(self, painter):
-        msg_y = PAD_TOP + self._msg_total_h // 2
+        msg_y = self._pad_top + self._msg_total_h // 2
         self._draw_msg_lines(painter, msg_y)
 
-        btn_y = self.h - PAD_BOT - self._btn_line_h // 2
+        btn_y = self.h - self._pad_bot - self._btn_line_h // 2
         btn_yes_x = int(self.BORDER_W + self._side_margin + self._yes_w / 2)
         btn_no_x = int(self.w - self.BORDER_W - self._side_margin - self._no_w / 2)
 
@@ -152,7 +165,7 @@ class _YnDialog(_DokiBase):
             painter.drawText(int(x), int(y), line)
 
     def _draw_button(self, painter, x, y, text, hover, which):
-        sw = BTN_STROKE_W
+        sw = self._btn_stroke
         painter.setFont(self._btn_font)
         fm = QFontMetrics(self._btn_font)
         tw = fm.horizontalAdvance(text)
