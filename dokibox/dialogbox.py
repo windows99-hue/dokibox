@@ -13,6 +13,7 @@ BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#FFDEEF"
 FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
+INSET = 3
 
 DOT_RADIUS = 13
 DOT_GAP_X = 35
@@ -74,14 +75,17 @@ class _DialogBox(QWidget):
             name_h = fm.lineSpacing() + name_pad
             self._tag_w = int(tw + name_pad * 2) + 80
             self._tag_h = name_h
-            self._tag_top = 30
+            self._tag_top = 30 + INSET
             self._tag_r = 12
         else:
             self._tag_w = 0
+            self._tag_top = 0
+            self._tag_r = 12
 
         cv_h = h + name_h + 24 if name else h
+        cv_h += INSET
         self._cv_h = cv_h
-        self._dialog_top = name_h + 20 if name else 0
+        self._dialog_top = (name_h + 20 if name else 0) + INSET
 
         canvas_w = w
         if self._overflow_mode == "overflow" and msg:
@@ -91,6 +95,7 @@ class _DialogBox(QWidget):
             needed_w = int(max_line_w + 80)
             if needed_w > canvas_w:
                 canvas_w = needed_w
+        canvas_w += INSET * 2
         self._canvas_w = canvas_w
         self._dialog_left = (canvas_w - w) // 2
 
