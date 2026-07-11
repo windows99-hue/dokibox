@@ -94,25 +94,22 @@ class _DialogBox(QWidget):
         self._after_timer = None
 
         f_name = QFont("Microsoft YaHei", 20, QFont.Bold)
-        name_h = 0
+        fm = QFontMetrics(f_name)
+        name_pad = 28
+        name_h = fm.lineSpacing() + name_pad
         if name:
-            fm = QFontMetrics(f_name)
             tw = fm.horizontalAdvance(name)
-            name_pad = 28
-            name_h = fm.lineSpacing() + name_pad
             self._tag_w = int(tw + name_pad * 2) + 80
-            self._tag_h = name_h
-            self._tag_top = 30 + INSET
-            self._tag_r = 12
         else:
             self._tag_w = 0
-            self._tag_top = 0
-            self._tag_r = 12
+        self._tag_h = name_h
+        self._tag_top = 30 + INSET
+        self._tag_r = 12
 
-        cv_h = h + name_h + 24 if name else h
+        cv_h = h + name_h + 24
         cv_h += INSET
         self._cv_h = cv_h
-        self._dialog_top = (name_h + 20 if name else 0) + INSET
+        self._dialog_top = name_h + 20 + INSET
 
         canvas_w = w
         if self._overflow_mode == "overflow" and msg:
@@ -150,7 +147,7 @@ class _DialogBox(QWidget):
 
         _box = self
 
-    def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode):
+    def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -166,11 +163,25 @@ class _DialogBox(QWidget):
         self._typing = False
         self._typing_done = False
 
+        self._name = name
+
         f_name = QFont("Microsoft YaHei", 20, QFont.Bold)
-        name_h = 0
+        fm = QFontMetrics(f_name)
+        name_pad = 28
+        name_h = fm.lineSpacing() + name_pad
         if self._name:
-            fm = QFontMetrics(f_name)
-            name_h = fm.lineSpacing() + 28
+            tw = fm.horizontalAdvance(self._name)
+            self._tag_w = int(tw + name_pad * 2) + 80
+        else:
+            self._tag_w = 0
+        self._tag_h = name_h
+        self._tag_top = 30 + INSET
+        self._tag_r = 12
+
+        cv_h = self.h + name_h + 24
+        cv_h += INSET
+        self._cv_h = cv_h
+        self._dialog_top = name_h + 20 + INSET
 
         canvas_w = self.w
         if self._overflow_mode == "overflow" and msg:
@@ -593,8 +604,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 
     if _box is not None:
         try:
-            if bool(_box._name) == bool(name) and _box.w == w and _box.h == h:
-                _box._update_content(msg, typewriter, chardelay, bold, overflow_mode)
+            if _box.w == w and _box.h == h:
+                _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, name)
             else:
                 _destroy_box()
         except Exception:
