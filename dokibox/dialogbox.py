@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """dokibox.dialogbox -- DDLC-style bottom dialog (rounded corners, gradient opacity, white stroke)"""
 import math
+import ctypes
 from typing import Optional
 from PySide6.QtCore import Qt, QTimer, QEventLoop, QRectF, QPointF
 from PySide6.QtGui import (
@@ -8,6 +9,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QWidget, QApplication
 from dokibox._base import _get_app, _get_dpi_scale
+
 
 BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#FFDEEF"
@@ -19,6 +21,8 @@ DOT_RADIUS = 13
 DOT_GAP_X = 35
 DOT_GAP_Y = 6
 DOT_COLOR = "#FB94C1"
+
+DWMWA_BORDER_COLOR = 34
 
 
 def _hex_to_rgb(h):
@@ -117,6 +121,20 @@ class _DialogBox(QWidget):
         self.show()
 
         _box = self
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        try:
+            hwnd = int(self.winId())
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_BORDER_COLOR,
+                ctypes.byref(ctypes.c_int(0xFFFFFFFE)),
+                ctypes.sizeof(ctypes.c_int),
+            )
+            
+        except Exception:
+            pass
 
     def _init_typewriter_state(self, msg):
         self._full_msg = msg
