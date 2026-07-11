@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """dokibox.dialogbox -- DDLC-style bottom dialog (rounded corners, gradient opacity, white stroke)"""
 import math
+import sys
 import ctypes
 from typing import Optional
 from PySide6.QtCore import Qt, QTimer, QEventLoop, QRectF, QPointF
@@ -214,19 +215,18 @@ class _DialogBox(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        if sys.platform != 'win32':
+            return
         try:
             hwnd = int(self.winId())
             remove_dwm_frame(hwnd)
-            # 新增关闭窗口阴影
             remove_window_shadow(hwnd)
-            
             ctypes.windll.dwmapi.DwmSetWindowAttribute(
                 hwnd,
                 DWMWA_BORDER_COLOR,
                 ctypes.byref(ctypes.c_int(0xFFFFFFFE)),
                 ctypes.sizeof(ctypes.c_int),
             )
-            
         except Exception:
             pass
 
