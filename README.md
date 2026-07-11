@@ -9,6 +9,8 @@ A fan-made Python library for *Doki Doki Literature Club*, implementing various 
 >
 > Special thanks to Joseph from Team Salvato for his support and responses via email!
 
+<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/a25345b9-28a3-4415-9d14-4090bbb3ee51" />
+
 ## Installation
 
 Install from PyPI:
