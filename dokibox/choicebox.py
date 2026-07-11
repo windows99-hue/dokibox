@@ -138,8 +138,8 @@ class _ChoiceManager:
 
         if force is not None and 0 <= force < len(choices):
             p = self._panels[force]
-            ctr = p.geometry().center()
-            QCursor.setPos(p.mapToGlobal(ctr))
+            gc = p.mapToGlobal(QPoint(p.width() // 2, p.height() // 2))
+            QCursor.setPos(gc)
 
     def _on_select(self, index):
         self.result = index
