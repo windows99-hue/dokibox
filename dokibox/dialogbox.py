@@ -38,6 +38,17 @@ def _blend(c1, c2, t):
     b = int(b1 * t + b2 * (1 - t))
     return QColor(r, g, b)
 
+class MARGINS(ctypes.Structure):
+    _fields_ = [
+        ("cxLeftWidth", ctypes.c_int),
+        ("cxRightWidth", ctypes.c_int),
+        ("cxTopHeight", ctypes.c_int),
+        ("cxBottomHeight", ctypes.c_int),
+    ]
+
+def remove_dwm_frame(hwnd):
+    margins = MARGINS(-1, -1, -1, -1)
+    ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
 
 _box = None
 _dialogbox_loop = None
@@ -126,6 +137,7 @@ class _DialogBox(QWidget):
         super().showEvent(event)
         try:
             hwnd = int(self.winId())
+            remove_dwm_frame(hwnd)
             ctypes.windll.dwmapi.DwmSetWindowAttribute(
                 hwnd,
                 DWMWA_BORDER_COLOR,
