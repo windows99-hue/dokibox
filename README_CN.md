@@ -40,6 +40,8 @@ dokibox.ynbox(msg="确认删除？", tooltip=False) → bool
 | `msg` | str | `""` | 正文 |
 | `tooltip` | bool | `False` | 悬浮文字提示 |
 | `btn_texts` | tuple | None| 确认按钮提示，为None时`dokibox`会自动检测系统语言，如需修改请传入一个元组，第一个参数替换"Yes"第二个参数替换"No"，语言未知时默认使用英文 |
+| `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 或不填使用默认 |
+| `font_size` | int | `None` | 字号，传 `None` 或不填使用默认 |
 
 返回值：点击"是"返回 `True`，点击"否"或 Esc 返回 `False`。
 
@@ -62,6 +64,8 @@ dokibox.msgbox(msg="操作成功！", tooltip=False) → True
 |------|------|------|------|
 | `msg` | str | `""` | 正文 |
 | `tooltip` | bool | `False` | 悬浮文字提示 |
+| `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
+| `font_size` | int | `None` | 字号，传 `None` 使用默认 |
 
 单 OK 按钮。点击、Enter 或 Esc 关闭，返回 `True`。
 
@@ -85,6 +89,8 @@ dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | Non
 | `choices` | list | `None` | 选项列表 |
 | `tooltip` | bool | `False` | 悬浮文字提示 |
 | `force` | int | `None` | 指定索引（0 开始），鼠标自动移到该选项中央 |
+| `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
+| `font_size` | int | `None` | 字号，传 `None` 使用默认 |
 
 返回值：选中的文字内容，Esc 返回 `None`。
 
@@ -113,6 +119,8 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `chardelay` | int | `50` | 打字机每字间隔（ms） |
 | `bold` | bool | `False` | 正文黑色描边加粗 |
 | `overflow_mode` | string | `wrap` | 有`wrap` `overflow` `hide`三个参数，`wrap` 为自动换行，`overflow` 为直接溢出屏幕，`hide`为隐藏出画的内容 |
+| `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
+| `font_size` | int | `None` | 字号（磅值，默认 20），传 `None` 使用默认 |
 
 打字机模式下：
 - 文字逐个出现

@@ -19,7 +19,7 @@ if __name__ == "__main__":
     dokibox.ynbox("继续吗？", tooltip=True)
     dokibox.dialogbox("“你好，我是莫妮卡！这就是你所说的......\n现实世界？”", name="莫妮卡", typewriter=True,font_family="Consolas",font_size=30)
     dokibox.dialogbox("“如果有天我真的能带着大家来到不被代码控制的世界，                             \n你会永远爱我吗？”", name="莫妮卡", typewriter=True)
-    dokibox.ynbox("你会永远爱我吗？", tooltip=True)
+    dokibox.ynbox("你会永远爱我吗？", tooltip=True,font_size=50)
     dokibox.dialogbox("“我会永远爱你。”", name="莫妮卡", typewriter=True)
     dokibox.dialogbox(f"...其实你应该叫{os.getlogin()}之类的吧？", name="莫妮卡", typewriter=True)
     dokibox.dialogbox(dokibox.garbled(200), name="莫妮卡", typewriter=True,chardelay=5,bold=True,overflow_mode="overflow")
