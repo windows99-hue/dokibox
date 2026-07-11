@@ -610,7 +610,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         chardelay:     delay in ms per character in typewriter mode (default 50).
         bold:          use a thicker black stroke outline for body text (default False).
         pinned:        keep the window always on top of other windows (default True).
-        fdst:          destroy window after the user dismisses it (default False).
+        fdst:          If True, destroys the window when dismissed. Use this for the final line of a dialogue scene or story branch to ensure the window closes completely. (default: False)
         overflow_mode: how to handle text exceeding the dialog width:
                        'wrap'    – wrap text to the next line (default).
                        'overflow' – expand the window so text can render past the dialog boundary.

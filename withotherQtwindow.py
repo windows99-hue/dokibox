@@ -44,7 +44,12 @@ class DdlcBlockTest(QWidget):
 
     def _show_dialogbox(self):
         dokibox.dialogbox("你喜欢文学部吗？")
-        dokibox.dialogbox("你喜欢文学部吗111111111？",fdst=True)
+        dokibox.ynbox("你喜欢文学部吗？", tooltip=True)
+        dokibox.dialogbox("你喜欢文学部吗111111111？")
+
+        self.label.setText("用户已选择，继续执行主循环。")
+        dokibox.dialogbox("你喜欢文学部吗222222222？")
+        dokibox.dialogbox("你喜欢文学部吗333333333？",fdst=True)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

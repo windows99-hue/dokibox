@@ -121,6 +121,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `overflow_mode` | string | `wrap` | 有`wrap` `overflow` `hide`三个参数，`wrap` 为自动换行，`overflow` 为直接溢出屏幕，`hide`为隐藏出画的内容 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号（磅值，默认 20），传 `None` 使用默认 |
+| `fdst` | bool | `False` | 若设为 True，则在关闭时销毁该窗口。请在对话场景或剧情分支的最后一行使用此设置，以确保窗口彻底关闭。 |
 
 打字机模式下：
 - 文字逐个出现

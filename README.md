@@ -121,6 +121,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `overflow_mode` | string | `wrap` | Has three parameters: `wrap`, `overflow`, and `hide`. `wrap` enables automatic line wrapping, `overflow` causes content to overflow the screen, and `hide` hides the content that goes off-screen.|
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points (default: 20). Set to `None` to use default. |
+| `fdst` | bool | `False` | If True, destroys the window when dismissed. Use this for the final line of a dialogue scene or story branch to ensure the window closes completely. |
 
 In typewriter mode:
 - Text appears character by character
