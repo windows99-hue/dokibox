@@ -56,6 +56,7 @@ class _Panel:
         self.cv.bind("<Enter>", lambda e: self._set_hover(True))
         self.cv.bind("<Leave>", lambda e: self._set_hover(False))
         self.cv.bind("<Button-1>", lambda e: self._on_select(self.index))
+        self.win.bind("<Escape>", lambda e: self._on_select(None))
 
         if self._tooltip:
             self._add_tooltip()
@@ -130,6 +131,8 @@ class _ChoiceManager:
         self._force = force
         self._pinned = pinned
         self.root = _get_root()
+        self._master = tk.Toplevel(self.root)
+        self._master.withdraw()
 
         f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="normal")
         opt_widths = [f_opt.measure(c) for c in choices]
@@ -167,7 +170,7 @@ class _ChoiceManager:
             except tk.TclError:
                 pass
         try:
-            _get_root().quit()
+            self._master.destroy()
         except tk.TclError:
             pass
 
@@ -200,6 +203,7 @@ class _ChoiceManager:
         lbl = tk.Toplevel(self.root)
         lbl.overrideredirect(True)
         lbl.attributes('-topmost', self._pinned)
+        lbl.bind("<Escape>", lambda e: self._on_select(None))
         self._msg_win = lbl
         self._msg_w = max(int(text_w + 40), self._unified_w)
         self._msg_h = int(total_h)
@@ -260,5 +264,5 @@ def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "
     if not choices:
         return None
     mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned)
-    _get_root().mainloop()
+    _get_root().wait_window(mgr._master)
     return choices[mgr.result] if mgr.result is not None else None

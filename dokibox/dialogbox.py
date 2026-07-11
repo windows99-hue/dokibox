@@ -38,7 +38,7 @@ _box = None
 
 class _DialogBox:
 
-    def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50, bold=False, pinned=True, fdst=False, overflow_mode="overflow"):
+    def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50, bold=False, pinned=True, fdst=False, overflow_mode="overflow", _ready=None):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -54,6 +54,7 @@ class _DialogBox:
         self._bold = bold
         self._fdst = fdst
         self._pinned = pinned
+        self._ready = _ready
         self._typing = False
         self._typing_done = False
         self._after_id = None
@@ -454,10 +455,8 @@ class _DialogBox:
     def _done(self):
         if self._fdst:
             _destroy_box()
-        try:
-            _get_root().quit()
-        except tk.TclError:
-            pass
+        if self._ready is not None:
+            self._ready.set("done")
 
 
 def _destroy_box():
@@ -503,5 +502,6 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None, n
         w = min(int(sw * 0.7), 1200)
     if h is None:
         h = int(220 / _get_dpi_scale())
-    box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst, overflow_mode=overflow_mode)
-    _get_root().mainloop()
+    _ready = tk.StringVar(_get_root())
+    box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst, overflow_mode=overflow_mode, _ready=_ready)
+    _get_root().wait_variable(_ready)

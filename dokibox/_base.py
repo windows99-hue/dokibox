@@ -26,9 +26,17 @@ _root_instance = None
 
 def _get_root():
     global _root_instance
-    if _root_instance is None:
-        _root_instance = tk.Tk()
-        _root_instance.withdraw()
+    if _root_instance is not None:
+        return _root_instance
+    try:
+        existing = tk._default_root
+        if existing is not None:
+            _root_instance = existing
+            return _root_instance
+    except AttributeError:
+        pass
+    _root_instance = tk.Tk()
+    _root_instance.withdraw()
     return _root_instance
 
 
@@ -139,12 +147,11 @@ class _DokiBase:
         self.result = value
         try:
             self.root.destroy()
-            _get_root().quit()
         except tk.TclError:
             pass
 
     @classmethod
     def show(cls, *args, **kwargs):
         dialog = cls(*args, **kwargs)
-        _get_root().mainloop()
+        _get_root().wait_window(dialog.root)
         return dialog.result
