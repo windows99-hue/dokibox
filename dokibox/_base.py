@@ -62,6 +62,8 @@ class _DokiBase(QWidget):
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
 
+        self.setMouseTracking(True)
+
         self.w, self.h = self._calc_size(msg)
         sw = self.screen().size().width()
         sh = self.screen().size().height()

@@ -95,9 +95,8 @@ class _MsgDialog(_DokiBase):
         painter.setFont(self._btn_font)
         fm = QFontMetrics(self._btn_font)
         tw = fm.horizontalAdvance(text)
-        th = fm.height()
         text_x = int(x - tw // 2)
-        text_y = int(y + fm.ascent() - th // 2)
+        text_y = int(y + fm.ascent() - fm.height() // 2)
 
         fill_color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
         fill_rgb = _hex_to_rgb(fill_color)
@@ -113,7 +112,11 @@ class _MsgDialog(_DokiBase):
         painter.setPen(QColor(*fill_rgb))
         painter.drawText(text_x, text_y, text)
 
-        self._btn_ok_rect = (text_x - sw, text_y - fm.ascent(), tw + sw * 2, th + sw * 2)
+        br = fm.boundingRect(text)
+        self._btn_ok_rect = (
+            text_x - 15, text_y + br.top() - 10,
+            tw + 30, fm.height() + 20
+        )
 
     def _on_click_local(self, event):
         if self._btn_ok_rect:
