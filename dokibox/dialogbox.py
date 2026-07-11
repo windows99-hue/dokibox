@@ -230,7 +230,7 @@ class _DialogBox:
 
             offset_x = (step // 2) if row % 2 == 1 else 0
             x = max(0, offset_x)
-            while x < self.w:
+            while x + dr <= self.w:
                 d = 2 * dr
                 self.cv.create_oval(x - dr, y - dr, x + dr, y + dr,
                                     fill=color, outline='')
