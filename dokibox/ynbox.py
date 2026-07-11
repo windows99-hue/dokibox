@@ -1,11 +1,12 @@
 ﻿# -*- coding: utf-8 -*-
 """dokibox.ynbox -- DDLC-style yes/no dialog"""
-import tkinter as tk
-import tkinter.font as tkfont
 import math
 import locale
 from typing import Optional, Tuple
-from dokibox._base import _DokiBase, BODY_COLOR
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
+from PySide6.QtWidgets import QToolTip
+from dokibox._base import _DokiBase, _hex_to_rgb, BODY_COLOR
 
 MSG_COLOR = "#000000"
 BTN_STROKE_COLOR = "#BD539D"
@@ -57,35 +58,24 @@ class _YnDialog(_DokiBase):
             self._yes_text, self._no_text = btn_texts
         else:
             self._yes_text, self._no_text = _BTN_TEXTS.get(get_system_locale(), _BTN_TEXTS['en'])
+        self._btn_yes_hover = False
+        self._btn_no_hover = False
+        self._btn_yes_rect = None
+        self._btn_no_rect = None
         super().__init__(msg, title, pinned=pinned)
 
-    def _calc_size(self, msg):
-        f_msg = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="bold")
-        f_btn = tkfont.Font(family="Microsoft YaHei", size=BTN_FONT_SIZE, weight="bold")
-
-        self._msg_font = ("Microsoft YaHei", MSG_FONT_SIZE, "bold")
-        self._btn_font = ("Microsoft YaHei", BTN_FONT_SIZE, "bold")
-
-        self._yes_w = f_btn.measure(self._yes_text)
-        self._no_w = f_btn.measure(self._no_text)
-        self._side_margin = int(self._yes_w * 1.5)
-
-        min_btn_w = (self.BORDER_W * 2 + self._side_margin * 2
-                     + int(self._yes_w) + int(self._no_w) + MIN_GAP)
-
-        screen_w = self.root.winfo_screenwidth()
-        max_msg_w = max(screen_w - PAD_X * 2, min_btn_w - PAD_X * 2, 200)
-
-        raw_lines = msg.split('\n')
+    def _wrap_lines(self, text, font, max_w):
+        raw_lines = text.split('\n')
         wrapped_lines = []
         for line in raw_lines:
-            if f_msg.measure(line) <= max_msg_w:
+            fm = QFontMetrics(font)
+            if fm.horizontalAdvance(line) <= max_w:
                 wrapped_lines.append(line)
             else:
                 current = ""
                 for ch in line:
                     test = current + ch
-                    if f_msg.measure(test) <= max_msg_w:
+                    if fm.horizontalAdvance(test) <= max_w:
                         current = test
                     else:
                         if current:
@@ -93,109 +83,160 @@ class _YnDialog(_DokiBase):
                         current = ch
                 if current:
                     wrapped_lines.append(current)
+        return wrapped_lines
 
-        self._wrapped_msg = '\n'.join(wrapped_lines)
-        self._msg_line_h = f_msg.metrics('linespace')
-        self._msg_total_h = self._msg_line_h * len(wrapped_lines)
-        self._btn_line_h = f_btn.metrics('linespace')
+    def _calc_size(self, msg):
+        self._msg_font = QFont("Microsoft YaHei", MSG_FONT_SIZE, QFont.Bold)
+        self._btn_font = QFont("Microsoft YaHei", BTN_FONT_SIZE, QFont.Bold)
 
-        msg_w = max(f_msg.measure(line) for line in wrapped_lines)
+        fm_msg = QFontMetrics(self._msg_font)
+        fm_btn = QFontMetrics(self._btn_font)
+
+        self._yes_w = fm_btn.horizontalAdvance(self._yes_text)
+        self._no_w = fm_btn.horizontalAdvance(self._no_text)
+        self._side_margin = int(self._yes_w * 1.5)
+
+        min_btn_w = (self.BORDER_W * 2 + self._side_margin * 2
+                     + int(self._yes_w) + int(self._no_w) + MIN_GAP)
+
+        screen_w = self.screen().size().width()
+        max_msg_w = max(screen_w - PAD_X * 2, min_btn_w - PAD_X * 2, 200)
+
+        wrapped = self._wrap_lines(msg, self._msg_font, max_msg_w)
+        self._wrapped_msg = wrapped
+        self._msg_line_h = fm_msg.lineSpacing()
+        self._msg_total_h = self._msg_line_h * len(wrapped)
+        self._btn_line_h = fm_btn.lineSpacing()
+
+        msg_w = max(fm_msg.horizontalAdvance(line) for line in wrapped) if wrapped else 0
         w = max(int(msg_w + PAD_X * 2), int(min_btn_w), 300)
         w = min(w, screen_w - self.BORDER_W * 2)
         h = max(PAD_TOP + self._msg_total_h + PAD_BTNS
                 + self._btn_line_h + BTN_STROKE_W * 2 + PAD_BOT, 180)
         return w, h
 
-    def _draw_content(self, msg):
+    def _draw_content(self, painter):
         msg_y = PAD_TOP + self._msg_total_h // 2
-        self.cv.create_text(
-            self.w // 2, msg_y, text=self._wrapped_msg, font=self._msg_font,
-            fill=MSG_COLOR, anchor="center"
-        )
+        self._draw_msg_lines(painter, msg_y)
 
         btn_y = self.h - PAD_BOT - self._btn_line_h // 2
-        btn_yes_x = self.BORDER_W + self._side_margin + self._yes_w / 2
-        btn_no_x = self.w - self.BORDER_W - self._side_margin - self._no_w / 2
+        btn_yes_x = int(self.BORDER_W + self._side_margin + self._yes_w / 2)
+        btn_no_x = int(self.w - self.BORDER_W - self._side_margin - self._no_w / 2)
 
-        self._draw_button(btn_yes_x, btn_y, self._yes_text, "btn_yes")
-        self._draw_button(btn_no_x, btn_y, self._no_text, "btn_no")
+        self._draw_button(painter, btn_yes_x, btn_y, self._yes_text,
+                          self._btn_yes_hover, 'yes')
+        self._draw_button(painter, btn_no_x, btn_y, self._no_text,
+                          self._btn_no_hover, 'no')
 
-        self.cv.tag_bind("btn_yes", "<Enter>",
-                         lambda e: self._set_hover("btn_yes", True))
-        self.cv.tag_bind("btn_yes", "<Leave>",
-                         lambda e: self._set_hover("btn_yes", False))
-        self.cv.tag_bind("btn_no", "<Enter>",
-                         lambda e: self._set_hover("btn_no", True))
-        self.cv.tag_bind("btn_no", "<Leave>",
-                         lambda e: self._set_hover("btn_no", False))
+    def _draw_msg_lines(self, painter, msg_y):
+        painter.setFont(self._msg_font)
+        fm = QFontMetrics(self._msg_font)
+        painter.setPen(QColor(MSG_COLOR))
+        for j, line in enumerate(self._wrapped_msg):
+            tw = fm.horizontalAdvance(line)
+            x = self.w // 2 - tw // 2
+            y = msg_y - self._msg_total_h // 2 + self._msg_line_h // 2 + j * self._msg_line_h + fm.ascent() - self._msg_line_h // 2
+            painter.drawText(int(x), int(y), line)
 
-        if self._tooltip:
-            self._add_tooltip("btn_yes", self._yes_text)
-            self._add_tooltip("btn_no", self._no_text)
-
-        self.root.bind("<Return>", lambda e: self._done(True))
-
-    def _on_click(self, event):
-        items = self.cv.find_overlapping(
-            event.x - 15, event.y - 15, event.x + 15, event.y + 15
-        )
-        for item in items:
-            tags = self.cv.gettags(item)
-            if "btn_yes" in tags:
-                self._done(True)
-                return
-            if "btn_no" in tags:
-                self._done(False)
-                return
-
-    def _draw_button(self, x, y, text, tag):
+    def _draw_button(self, painter, x, y, text, hover, which):
         sw = BTN_STROKE_W
+        painter.setFont(self._btn_font)
+        fm = QFontMetrics(self._btn_font)
+        tw = fm.horizontalAdvance(text)
+        th = fm.height()
+        text_x = int(x - tw // 2)
+        text_y = int(y + fm.ascent() - th // 2)
+
+        fill_color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
+        fill_rgb = _hex_to_rgb(fill_color)
+        stroke_rgb = _hex_to_rgb(BTN_STROKE_COLOR)
+
         for step in range(36):
             angle = 2 * math.pi * step / 36
-            dx = sw * math.cos(angle)
-            dy = sw * math.sin(angle)
-            self.cv.create_text(x + dx, y + dy, text=text,
-                                font=self._btn_font, fill=BTN_STROKE_COLOR,
-                                anchor="center",
-                                tags=(tag, tag + "_stroke"))
-        self.cv.create_text(x, y, text=text, font=self._btn_font,
-                            fill=BTN_FILL_COLOR, anchor="center",
-                            tags=(tag, tag + "_fill"))
+            dx = int(sw * math.cos(angle))
+            dy = int(sw * math.sin(angle))
+            painter.setPen(QColor(*stroke_rgb))
+            painter.drawText(text_x + dx, text_y + dy, text)
 
-    def _set_hover(self, tag, hover):
-        items = self.cv.find_withtag(tag + "_fill")
-        color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
-        for item in items:
-            self.cv.itemconfig(item, fill=color)
+        painter.setPen(QColor(*fill_rgb))
+        painter.drawText(text_x, text_y, text)
 
-    def _add_tooltip(self, tag, text):
-        tip = [None]
+        rect = (text_x - sw, text_y - fm.ascent(), tw + sw * 2, th + sw * 2)
+        if which == 'yes':
+            self._btn_yes_rect = rect
+        else:
+            self._btn_no_rect = rect
 
-        def show(event):
-            if tip[0]:
-                return
-            tw = tk.Toplevel(self.root)
-            tw.overrideredirect(True)
-            tw.attributes('-topmost', True)
-            label = tk.Label(tw, text=text, bg=BODY_COLOR, fg='#000000',
-                             font=("Microsoft YaHei", 12),
-                             relief='solid', bd=1, padx=6, pady=2)
-            label.pack()
-            x = event.x_root + 15
-            y = event.y_root + 15
-            tw.geometry(f"+{x}+{y}")
-            tip[0] = tw
+    def _hit_button(self, pos):
+        for rect, handler in [
+            (self._btn_yes_rect, lambda: self._done(True)),
+            (self._btn_no_rect, lambda: self._done(False)),
+        ]:
+            if rect:
+                rx, ry, rw, rh = rect
+                if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                    handler()
+                    return True
+        return False
 
-        def hide(event):
-            if tip[0]:
-                tip[0].destroy()
-                tip[0] = None
+    def _on_click_local(self, event):
+        self._hit_button(event.position().toPoint())
 
-        self.cv.tag_bind(tag, "<Enter>", show, add='+')
-        self.cv.tag_bind(tag, "<Leave>", hide, add='+')
+    def _update_hover(self, pos):
+        yes_hover = False
+        no_hover = False
+        if self._btn_yes_rect:
+            rx, ry, rw, rh = self._btn_yes_rect
+            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                yes_hover = True
+        if self._btn_no_rect:
+            rx, ry, rw, rh = self._btn_no_rect
+            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                no_hover = True
+        changed = (yes_hover != self._btn_yes_hover or no_hover != self._btn_no_hover)
+        self._btn_yes_hover = yes_hover
+        self._btn_no_hover = no_hover
+        if changed:
+            self.update()
+        return yes_hover or no_hover
+
+    def enterEvent(self, event):
+        self._update_hover(event.position().toPoint())
+
+    def leaveEvent(self, event):
+        self._btn_yes_hover = False
+        self._btn_no_hover = False
+        self.update()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        hovering = self._update_hover(event.position().toPoint())
+        if self._tooltip and hovering:
+            gp = event.globalPosition().toPoint()
+            pos = event.position().toPoint()
+            text = ""
+            if self._btn_yes_rect:
+                rx, ry, rw, rh = self._btn_yes_rect
+                if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                    text = self._yes_text
+            if self._btn_no_rect and not text:
+                rx, ry, rw, rh = self._btn_no_rect
+                if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                    text = self._no_text
+            if text:
+                QToolTip.showText(gp, text, self)
+        else:
+            QToolTip.hideText()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            self._done(True)
+        elif event.key() == Qt.Key_Escape:
+            self._done(False)
 
 
-def ynbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True, btn_texts: Optional[Tuple[str, str]] = None) -> bool:
+def ynbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True,
+          btn_texts: Optional[Tuple[str, str]] = None) -> bool:
     """DDLC-style yes/no dialog. Returns True(Yes) / False(No)
 
     Args:
@@ -212,4 +253,4 @@ def ynbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = 
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
-    return _YnDialog.show(msg, title, tooltip=tooltip, pinned=pinned, btn_texts=btn_texts)
+    return _YnDialog.run(msg, title, tooltip=tooltip, pinned=pinned, btn_texts=btn_texts)

@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 """dokibox.dialogbox -- DDLC-style bottom dialog (rounded corners, gradient opacity, white stroke)"""
-import tkinter as tk
-import tkinter.font as tkfont
 import math
 from typing import Optional
-from dokibox._base import _get_root, _get_dpi_scale
+from PySide6.QtCore import Qt, QTimer, QEventLoop, QRectF, QPointF
+from PySide6.QtGui import (
+    QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath,
+)
+from PySide6.QtWidgets import QWidget, QApplication
+from dokibox._base import _get_app, _get_dpi_scale
 
 BODY_COLOR = "#FDA7D1"
 BORDER_COLOR = "#FFDEEF"
-TRANSPARENT_KEY = "#000001"
 FADE_TO = "#FFFFFF"
 CORNER_RADIUS = 18
 
-# --- dot pattern decoration ---
 DOT_RADIUS = 13
 DOT_GAP_X = 35
 DOT_GAP_Y = 6
@@ -30,21 +31,27 @@ def _blend(c1, c2, t):
     r = int(r1 * t + r2 * (1 - t))
     g = int(g1 * t + g2 * (1 - t))
     b = int(b1 * t + b2 * (1 - t))
-    return f'#{r:02x}{g:02x}{b:02x}'
+    return QColor(r, g, b)
 
 
 _box = None
+_dialogbox_loop = None
 
 
-class _DialogBox:
+class _DialogBox(QWidget):
 
-    def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50, bold=False, pinned=True, fdst=False, overflow_mode="overflow", _ready=None):
+    def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50,
+                 bold=False, pinned=True, fdst=False, overflow_mode="wrap"):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
-            raise ValueError(f"overflow_mode must be 'wrap', 'overflow', or 'hide', got {overflow_mode!r}")
-        self._overflow_mode = overflow_mode
+            raise ValueError(
+                f"overflow_mode must be 'wrap', 'overflow', or 'hide', got {overflow_mode!r}"
+            )
+        super().__init__(None)
+        _get_app()
 
+        self._overflow_mode = overflow_mode
         self.w = w
         self.h = h
         self.r = CORNER_RADIUS
@@ -54,40 +61,17 @@ class _DialogBox:
         self._bold = bold
         self._fdst = fdst
         self._pinned = pinned
-        self._ready = _ready
         self._typing = False
         self._typing_done = False
-        self._after_id = None
+        self._after_timer = None
 
-        if _box is not None:
-            if bool(_box._name) != bool(name) or _box.w != w or _box.h != h:
-                _destroy_box()   # name状态改变时强制重建窗口
-
-        if _box is not None:
-            self.root = _box.root
-            self.win = _box.win
-            self.cv = _box.cv
-
-            if _box._after_id:
-                _box.root.after_cancel(_box._after_id)
-
-            self.cv.delete("all")
-        else:
-            self.root = _get_root()
-
-            self.win = tk.Toplevel(self.root)
-            self.win.overrideredirect(True)
-            self.win.wm_attributes('-transparentcolor', TRANSPARENT_KEY)
-
-            self.cv = tk.Canvas(self.win, bg=TRANSPARENT_KEY, highlightthickness=0)
-            self.cv.pack()
-
-        f_name = tkfont.Font(family="Microsoft YaHei", size=20, weight="bold")
+        f_name = QFont("Microsoft YaHei", 20, QFont.Bold)
         name_h = 0
         if name:
-            tw = f_name.measure(name)
+            fm = QFontMetrics(f_name)
+            tw = fm.horizontalAdvance(name)
             name_pad = 28
-            name_h = f_name.metrics('linespace') + name_pad
+            name_h = fm.lineSpacing() + name_pad
             self._tag_w = int(tw + name_pad * 2) + 80
             self._tag_h = name_h
             self._tag_top = 30
@@ -101,70 +85,136 @@ class _DialogBox:
 
         canvas_w = w
         if self._overflow_mode == "overflow" and msg:
-            f_body = tkfont.Font(family="Microsoft YaHei", size=20, weight="bold")
-            max_line_w = max(f_body.measure(line) for line in msg.split('\n'))
+            f_body = QFont("Microsoft YaHei", 20, QFont.Bold)
+            fm = QFontMetrics(f_body)
+            max_line_w = max(fm.horizontalAdvance(line) for line in msg.split('\n'))
             needed_w = int(max_line_w + 80)
             if needed_w > canvas_w:
                 canvas_w = needed_w
         self._canvas_w = canvas_w
+        self._dialog_left = (canvas_w - w) // 2
 
-        sw = self.root.winfo_screenwidth()
-        sh = self.root.winfo_screenheight()
+        sw = QApplication.primaryScreen().size().width()
+        sh = QApplication.primaryScreen().size().height()
         x = (sw - w) // 2
         dialog_screen_y = sh - h - 60
         win_y = dialog_screen_y - self._dialog_top
-        self.win.geometry(f"{canvas_w}x{cv_h}+{x}+{win_y}")
-        self.cv.config(width=canvas_w, height=cv_h)
 
-        self.win.attributes('-topmost', pinned)
+        flags = Qt.FramelessWindowHint | Qt.Tool
+        if pinned:
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setGeometry(x, win_y, canvas_w, cv_h)
+        self.setFixedSize(canvas_w, cv_h)
 
-        if self._name:
-            self._draw_name_tag_bg()
-        self._draw_fill()
-        self._draw_dots()
-        self._clip_corners()
-        self._draw_outline()
-        if self._name:
-            self._draw_name_text()
-        self._draw_text(msg)
-        self._draw_triangle()
-
-        self.win.bind("<Button-1>", lambda e: self._on_click())
-        self.win.bind("<Escape>", lambda e: self._done())
-        self.root.update()
+        self._init_typewriter_state(msg)
+        self.show()
 
         _box = self
 
-    def _on_click(self):
-        if self._typewriter and self._typing:
-            self._finish_typewriter()
+    def _init_typewriter_state(self, msg):
+        self._full_msg = msg
+        if self._typewriter and msg:
+            self._typing = True
+            self._typing_done = False
+            self._cur_line = 0
+            self._cur_char = 0
+            font = QFont("Microsoft YaHei", 20, QFont.Bold)
+            lines = self._process_lines(msg, font, self._text_area_width())
+            self._typewriter_lines = lines
+            self._typewriter_font = font
+            self._typewriter_positions = self._layout_text_positions(lines)
+            self._start_typewriter_timer()
         else:
-            self._done()
+            self._typing = False
+            self._typing_done = True
 
-    def _draw_name_tag_bg(self):
-        tx = self.r + 10
+    def _start_typewriter_timer(self):
+        self._after_timer = QTimer(self)
+        self._after_timer.setSingleShot(True)
+        self._after_timer.timeout.connect(self._type_tick)
+        self._after_timer.start(self._chardelay)
+
+    def _type_tick(self):
+        if self._cur_line >= len(self._typewriter_lines):
+            self._typing = False
+            self._typing_done = True
+            self._after_timer = None
+            return
+
+        full_text = self._typewriter_lines[self._cur_line]
+        self._cur_char += 1
+        if self._cur_char > len(full_text):
+            self._cur_line += 1
+            self._cur_char = 0
+            self._type_tick()
+            return
+
+        self.update()
+        self._after_timer = QTimer(self)
+        self._after_timer.setSingleShot(True)
+        self._after_timer.timeout.connect(self._type_tick)
+        self._after_timer.start(self._chardelay)
+
+    def _finish_typewriter(self):
+        if self._after_timer:
+            try:
+                self._after_timer.stop()
+            except Exception:
+                pass
+            self._after_timer.deleteLater()
+            self._after_timer = None
+        self._typing = False
+        self._typing_done = True
+        self._cur_line = len(self._typewriter_lines)
+        self._cur_char = 0
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+
+        r = self.r
+        w = self.w
+        top = self._dialog_top
+        h = self.h
+        dl = self._dialog_left
+
+        if self._name:
+            self._draw_name_tag_bg(painter)
+            self._draw_name_text(painter, dl)
+
+        dialog_rect = QRectF(dl, top, w, h)
+        path = QPainterPath()
+        path.addRoundedRect(dialog_rect, r, r)
+        painter.setClipPath(path)
+
+        self._draw_fill(painter, dl, top, w, h)
+        self._draw_dots(painter, dl, top, w, h)
+        painter.setClipping(False)
+
+        self._draw_outline(painter, dl, top, w, h, r)
+        self._draw_text(painter, dl, top)
+        self._draw_triangle(painter, dl, top, w, h)
+
+        painter.end()
+
+    def _draw_name_tag_bg(self, painter):
+        tx = self.r + 10 + self._dialog_left
         ty = self._tag_top
         tw = self._tag_w
         th = self._tag_h
         tr = self._tag_r
 
-        # white fill
-        self.cv.create_rectangle(tx + tr, ty, tx + tw - tr, ty + th,
-                                 fill="#ffffff", outline='')
-        self.cv.create_rectangle(tx, ty + tr, tx + tw, ty + th - tr,
-                                 fill="#ffffff", outline='')
-        self.cv.create_arc(tx, ty, tx + tr * 2, ty + tr * 2,
-                           start=90, extent=90, style=tk.PIESLICE, fill="#ffffff", outline='')
-        self.cv.create_arc(tx + tw - tr * 2, ty, tx + tw, ty + tr * 2,
-                           start=0, extent=90, style=tk.PIESLICE, fill="#ffffff", outline='')
-        self.cv.create_arc(tx, ty + th - tr * 2, tx + tr * 2, ty + th,
-                           start=180, extent=90, style=tk.PIESLICE, fill="#ffffff", outline='')
-        self.cv.create_arc(tx + tw - tr * 2, ty + th - tr * 2, tx + tw, ty + th,
-                           start=270, extent=90, style=tk.PIESLICE, fill="#ffffff", outline='')
+        tag_path = QPainterPath()
+        tag_path.addRoundedRect(QRectF(tx, ty, tw, th), tr, tr)
+        painter.setClipPath(QPainterPath())
+        painter.fillPath(tag_path, QColor("#ffffff"))
 
-        # bottom 25% gradient: white -> black
         grad_top = ty + th * 0.75
-        grad_h = int(th * 0.25)
+        grad_h = th * 0.25
         steps = 12
         for i in range(steps):
             t_bot = i / max(steps - 1, 1)
@@ -174,29 +224,35 @@ class _DialogBox:
 
             y1 = int(grad_top + grad_h * t_bot)
             y2 = int(grad_top + grad_h * t_top)
-            self.cv.create_rectangle(int(tx), int(y1), int(tx + tw), int(y2),
-                                     fill=color, outline='')
+            region = QPainterPath()
+            region.addRect(QRectF(tx, y1, tw, y2 - y1))
+            clipped = tag_path.intersected(region)
+            painter.fillPath(clipped, color)
 
-    def _draw_name_text(self):
-        tx = self.r + 10
+    def _draw_name_text(self, painter, dl):
+        tx = self.r + 10 + dl
         ty = self._tag_top - 5
         tw = self._tag_w
         th = self._tag_h
         cx = tx + tw // 2
         cy = ty + th // 2
-        font = ("Microsoft YaHei", 20, "bold")
+        font = QFont("Microsoft YaHei", 20, QFont.Bold)
+        painter.setFont(font)
+        fm = QFontMetrics(font)
+        tw_text = fm.horizontalAdvance(self._name)
+        text_x = int(cx - tw_text // 2)
+        text_y = int(cy + fm.ascent() - fm.height() // 2)
 
         for step in range(24):
             angle = 2 * math.pi * step / 24
-            dx = math.cos(angle) * 2
-            dy = math.sin(angle) * 2
-            self.cv.create_text(cx + dx, cy + dy, text=self._name, font=font,
-                                fill="#BD539D", anchor="center")
-        self.cv.create_text(cx, cy, text=self._name, font=font,
-                            fill="#ffffff", anchor="center")
+            dx = int(math.cos(angle) * 2)
+            dy = int(math.sin(angle) * 2)
+            painter.setPen(QColor("#BD539D"))
+            painter.drawText(text_x + dx, text_y + dy, self._name)
+        painter.setPen(QColor("#ffffff"))
+        painter.drawText(text_x, text_y, self._name)
 
-    def _draw_fill(self):
-        top = self._dialog_top
+    def _draw_fill(self, painter, dl, top, w, h):
         steps = 60
         for i in range(steps):
             t_bottom = i / max(steps - 1, 1)
@@ -204,116 +260,68 @@ class _DialogBox:
             opacity_top = 1.0 - 0.5 * t_bottom
             opacity_bot = 1.0 - 0.5 * t_top
             opacity = (opacity_top + opacity_bot) / 2
-
             color = _blend(BODY_COLOR, FADE_TO, opacity)
 
             y1 = int(self.h * t_bottom) + top
             y2 = int(self.h * t_top) + top
+            painter.fillRect(QRectF(dl, y1, w, y2 - y1), color)
 
-            self.cv.create_rectangle(0, int(y1), int(self.w), int(y2),
-                                     fill=color, outline='')
-
-    def _draw_dots(self):
+    def _draw_dots(self, painter, dl, top, w, h):
         dr = DOT_RADIUS
         gap_x = DOT_GAP_X
         gap_y = DOT_GAP_Y
-        top = self._dialog_top
-        step = int(dr * 2 + gap_x)
+        step_x = int(dr * 2 + gap_x)
         row_h = int(dr * 2 + gap_y)
 
         row = 0
         y = top + dr
-        while y < top + self.h - dr:
-            t = max(0, min(1, (y - top) / self.h))
+        while y < top + h - dr:
+            t = max(0, min(1, (y - top) / h))
             opacity = 1.0 - 0.5 * t
-            color = _blend(DOT_COLOR, FADE_TO, opacity)
 
-            offset_x = (step // 2) if row % 2 == 1 else 0
-            x = max(0, offset_x)
-            while x + dr <= self.w:
-                d = 2 * dr
-                self.cv.create_oval(x - dr, y - dr, x + dr, y + dr,
-                                    fill=color, outline='')
-                x += step
+            offset_x = (step_x // 2) if row % 2 == 1 else 0
+            x = dl + max(0, offset_x)
+            while x + dr <= dl + w:
+                color = _blend(DOT_COLOR, FADE_TO, opacity)
+                painter.setBrush(color)
+                painter.setPen(Qt.NoPen)
+                painter.drawEllipse(QPointF(x, y), dr, dr)
+                x += step_x
             y += row_h
             row += 1
 
-    def _clip_corners(self):
-        r = self.r
-        w = self.w
-        top = self._dialog_top
-        h = self.h
-        key = TRANSPARENT_KEY
-        n = 36
+    def _draw_outline(self, painter, dl, top, w, h, r):
+        color = QColor(BORDER_COLOR)
+        pen = QPen(color, 3)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+        painter.drawRoundedRect(QRectF(dl, top, w, h), r, r)
 
-        # Top-left: arc from 90°→180°  (top → left), center=(r, top+r)
-        pts = [(0, top), (r, top)]
-        cx, cy = r, top + r
-        for i in range(n + 1):
-            a = math.pi / 2 + (math.pi / 2) * i / n
-            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
-        self.cv.create_polygon(pts, fill=key, outline='')
-
-        # Top-right: arc from 90°→0°  (top → right), center=(w-r, top+r)
-        pts = [(w, top), (w - r, top)]
-        cx, cy = w - r, top + r
-        for i in range(n + 1):
-            a = math.pi / 2 - (math.pi / 2) * i / n
-            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
-        self.cv.create_polygon(pts, fill=key, outline='')
-
-        # Bottom-left: arc from 270°→180°  (bottom → left), center=(r, top+h-r)
-        pts = [(0, top + h), (r, top + h)]
-        cx, cy = r, top + h - r
-        for i in range(n + 1):
-            a = 3 * math.pi / 2 - (math.pi / 2) * i / n
-            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
-        self.cv.create_polygon(pts, fill=key, outline='')
-
-        # Bottom-right: arc from 270°→360°  (bottom → right), center=(w-r, top+h-r)
-        pts = [(w, top + h), (w - r, top + h)]
-        cx, cy = w - r, top + h - r
-        for i in range(n + 1):
-            a = 3 * math.pi / 2 + (math.pi / 2) * i / n
-            pts.append((cx + r * math.cos(a), cy - r * math.sin(a)))
-        self.cv.create_polygon(pts, fill=key, outline='')
-
-        # Clip the bottom edge to prevent fill bleed at y=top+h
-        self.cv.create_rectangle(0, top + h, self._canvas_w, top + h + 10, fill=key, outline='')
-
-    def _draw_outline(self):
-        r = self.r
-        w = self.w
-        top = self._dialog_top
-        h = self.h
-        color = BORDER_COLOR
-
-        self.cv.create_arc(0, top, r * 2, top + r * 2,
-                           start=90, extent=90, style=tk.ARC, outline=color, width=3)
-        self.cv.create_arc(w - r * 2, top, w, top + r * 2,
-                           start=0, extent=90, style=tk.ARC, outline=color, width=3)
-        self.cv.create_arc(0, top + h - r * 2, r * 2, top + h,
-                           start=180, extent=90, style=tk.ARC, outline=color, width=3)
-        self.cv.create_arc(w - r * 2, top + h - r * 2, w, top + h,
-                           start=270, extent=90, style=tk.ARC, outline=color, width=3)
-
-        self.cv.create_line(r, top + 1, w - r, top + 1, fill=color, width=3)
-        self.cv.create_line(r, top + h - 1, w - r, top + h - 1, fill=color, width=3)
-        self.cv.create_line(1, top + r, 1, top + h - r, fill=color, width=3)
-        self.cv.create_line(w - 1, top + r, w - 1, top + h - r, fill=color, width=3)
+    def _draw_triangle(self, painter, dl, top, w, h):
+        s = 16
+        tri_h = s * math.sqrt(3) / 2
+        tip_x = dl + w - 28
+        tip_y = top + h - 24
+        path = QPainterPath()
+        path.moveTo(tip_x, tip_y)
+        path.lineTo(tip_x - tri_h, tip_y - s / 2)
+        path.lineTo(tip_x - tri_h, tip_y + s / 2)
+        path.closeSubpath()
+        painter.setPen(Qt.NoPen)
+        painter.fillPath(path, QColor("#ffffff"))
 
     def _text_area_width(self):
         return self.w - 80
 
     def _wrap_line(self, text, font, max_w):
-        f = tkfont.Font(font=font)
-        if f.measure(text) <= max_w:
+        fm = QFontMetrics(font)
+        if fm.horizontalAdvance(text) <= max_w:
             return [text]
         lines = []
         current = ""
         for ch in text:
             test = current + ch
-            if f.measure(test) <= max_w:
+            if fm.horizontalAdvance(test) <= max_w:
                 current = test
             else:
                 if current:
@@ -324,13 +332,13 @@ class _DialogBox:
         return lines
 
     def _truncate_line(self, text, font, max_w):
-        f = tkfont.Font(font=font)
-        if f.measure(text) <= max_w:
+        fm = QFontMetrics(font)
+        if fm.horizontalAdvance(text) <= max_w:
             return text
         lo, hi = 0, len(text)
         while lo < hi:
             mid = (lo + hi + 1) // 2
-            if f.measure(text[:mid]) <= max_w:
+            if fm.horizontalAdvance(text[:mid]) <= max_w:
                 lo = mid
             else:
                 hi = mid - 1
@@ -347,131 +355,102 @@ class _DialogBox:
             return result
         if self._overflow_mode == "hide":
             return [self._truncate_line(line, font, max_w) for line in raw_lines]
+        return raw_lines
 
-    def _draw_text(self, msg):
-        if not msg:
-            return
+    def _layout_text_positions(self, lines):
         top = self._dialog_top
-        font = ("Microsoft YaHei", 20, "bold")
         line_h = 44
         pad_top = 40
         pad_x = 40
-
-        lines = self._process_lines(msg, font, self._text_area_width())
-
         pos = []
         for j, line in enumerate(lines):
             y = top + pad_top + line_h // 2 + j * line_h
             pos.append((pad_x, y, line))
+        return pos
 
-        if self._typewriter:
-            self._start_typewriter(pos, font)
-        else:
-            for px, py, line in pos:
-                self._draw_stroked(px, py, line, font)
-
-    def _start_typewriter(self, positions, font):
-        self._typing = True
-        self._typing_done = False
-        self._lines = []
-        self._pos = positions
-        self._font = font
-        self._cur_line = 0
-        self._cur_char = 0
-
-        self._line_data = []
-        sw = 4 if self._bold else 1
-        for px, py, full_text in positions:
-            stroke_ids = []
-            for step in range(24):
-                angle = 2 * math.pi * step / 24
-                dx = math.cos(angle) * sw
-                dy = math.sin(angle) * sw
-                sid = self.cv.create_text(px + dx, py + dy, text="",
-                                          font=font, fill="#000000", anchor="w")
-                stroke_ids.append(sid)
-            fid = self.cv.create_text(px, py, text="",
-                                      font=font, fill="#ffffff", anchor="w")
-            self._line_data.append((stroke_ids, fid, full_text))
-
-        self._type_tick()
-
-    def _type_tick(self):
-        if self._cur_line >= len(self._line_data):
-            self._typing = False
-            self._typing_done = True
-            self._after_id = None
+    def _draw_text(self, painter, dl, top):
+        msg = self._full_msg
+        if not msg:
             return
+        font = QFont("Microsoft YaHei", 20, QFont.Bold)
 
-        stroke_ids, fid, full_text = self._line_data[self._cur_line]
-        self._cur_char += 1
-        if self._cur_char > len(full_text):
-            self._cur_line += 1
-            self._cur_char = 0
-            self._type_tick()
-            return
+        if self._typewriter and self._typing:
+            positions = self._typewriter_positions
+            for j, (px, py, full_text) in enumerate(positions):
+                if j < self._cur_line:
+                    shown = full_text
+                elif j == self._cur_line:
+                    shown = full_text[:self._cur_char]
+                else:
+                    shown = ""
+                if shown:
+                    self._draw_stroked_text_left(painter, dl + px, py, shown, font)
+        elif not self._typing and self._typing_done:
+            lines = self._process_lines(msg, font, self._text_area_width())
+            positions = self._layout_text_positions(lines)
+            for px, py, line in positions:
+                self._draw_stroked_text_left(painter, dl + px, py, line, font)
 
-        current = full_text[:self._cur_char]
-        for sid in stroke_ids:
-            self.cv.itemconfig(sid, text=current)
-        self.cv.itemconfig(fid, text=current)
-
-        self._after_id = self.root.after(self._chardelay, self._type_tick)
-
-    def _draw_triangle(self):
-        s = 16
-        h = s * math.sqrt(3) / 2
-        tip_x = self.w - 28
-        tip_y = self._dialog_top + self.h - 24
-        self.cv.create_polygon(
-            tip_x, tip_y,
-            tip_x - h, tip_y - s / 2,
-            tip_x - h, tip_y + s / 2,
-            fill="#ffffff", outline=""
-        )
-
-    def _finish_typewriter(self):
-        if self._after_id:
-            self.root.after_cancel(self._after_id)
-            self._after_id = None
-        for stroke_ids, fid, full_text in self._line_data:
-            for sid in stroke_ids:
-                self.cv.itemconfig(sid, text=full_text)
-            self.cv.itemconfig(fid, text=full_text)
-        self._typing = False
-        self._typing_done = True
-
-    def _draw_stroked(self, x, y, text, font):
+    def _draw_stroked_text_left(self, painter, x, y, text, font):
         sw = 4 if self._bold else 1
+        painter.setFont(font)
+        fm = QFontMetrics(font)
+        text_y = int(y + fm.ascent() - fm.height() // 2)
         for step in range(24):
             angle = 2 * math.pi * step / 24
-            dx = math.cos(angle) * sw
-            dy = math.sin(angle) * sw
-            self.cv.create_text(x + dx, y + dy, text=text, font=font,
-                                fill="#000000", anchor="w")
-        self.cv.create_text(x, y, text=text, font=font,
-                            fill="#ffffff", anchor="w")
+            dx = int(math.cos(angle) * sw)
+            dy = int(math.sin(angle) * sw)
+            painter.setPen(QColor("#000000"))
+            painter.drawText(int(x) + dx, text_y + dy, text)
+        painter.setPen(QColor("#ffffff"))
+        painter.drawText(int(x), text_y, text)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._on_click()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self._done()
+
+    def _on_click(self):
+        if self._typewriter and self._typing:
+            self._finish_typewriter()
+        else:
+            self._done()
 
     def _done(self):
+        global _box, _dialogbox_loop
         if self._fdst:
             _destroy_box()
-        if self._ready is not None:
-            self._ready.set("done")
+        loop = _dialogbox_loop
+        _dialogbox_loop = None
+        if loop is not None:
+            loop.quit()
 
 
 def _destroy_box():
     global _box
     if _box is not None:
-        if _box._after_id:
-            _box.root.after_cancel(_box._after_id)
+        if _box._after_timer:
+            try:
+                _box._after_timer.stop()
+            except Exception:
+                pass
+            _box._after_timer.deleteLater()
+            _box._after_timer = None
         try:
-            _box.win.destroy()
-        except tk.TclError:
+            _box.hide()
+            _box.deleteLater()
+        except Exception:
             pass
         _box = None
 
 
-def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None, name: Optional[str] = None, typewriter: bool = True, chardelay: int = 50, bold: bool = False, pinned: bool = True, fdst: bool = False, overflow_mode: str = "wrap") -> None:
+def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
+              name: Optional[str] = None, typewriter: bool = True,
+              chardelay: int = 50, bold: bool = False, pinned: bool = True,
+              fdst: bool = False, overflow_mode: str = "wrap") -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -483,25 +462,30 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None, n
         chardelay:     delay in ms per character in typewriter mode (default 50).
         bold:          use a thicker black stroke outline for body text (default False).
         pinned:        keep the window always on top of other windows (default True).
-        fdst:          destroy window after the user dismisses it (default False, keeps window for reuse).
+        fdst:          destroy window after the user dismisses it (default False).
         overflow_mode: how to handle text exceeding the dialog width:
-                       'wrap'    – wrap text to the next line.
-                       'overflow' – expand the window so text can render past the dialog boundary (default).
+                       'wrap'    – wrap text to the next line (default).
+                       'overflow' – expand the window so text can render past the dialog boundary.
                        'hide'    – clip text at the boundary.
 
     Usage:
         dokibox.dialogbox("Hello!")
         dokibox.dialogbox("Hello!", name="Sayori", bold=True)
     """
-    global _box
+    global _box, _dialogbox_loop
+
     if _box is not None:
-        sw = _box.root.winfo_screenwidth()
-    else:
-        sw = _get_root().winfo_screenwidth()
+        _destroy_box()
+
+    _get_app()
+    sw = QApplication.primaryScreen().size().width()
+
     if w is None:
         w = min(int(sw * 0.7), 1200)
     if h is None:
         h = int(220 / _get_dpi_scale())
-    _ready = tk.StringVar(_get_root())
-    box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned, fdst=fdst, overflow_mode=overflow_mode, _ready=_ready)
-    _get_root().wait_variable(_ready)
+
+    _box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned,
+                      fdst=fdst, overflow_mode=overflow_mode)
+    _dialogbox_loop = QEventLoop()
+    _dialogbox_loop.exec()

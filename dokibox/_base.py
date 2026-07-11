@@ -1,157 +1,166 @@
 ﻿# -*- coding: utf-8 -*-
 """dokibox internal base class -- window / gradient border / stroked text / dragging"""
-import tkinter as tk
+import sys
 import math
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import Qt, QEventLoop, QPoint
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
 
 
-# --- default colors ---
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
 
 
 def _get_dpi_scale():
     try:
-        import ctypes
-        hdc = ctypes.windll.user32.GetDC(0)
-        dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88)
-        ctypes.windll.user32.ReleaseDC(0, hdc)
-        return dpi / 96.0
+        app = QApplication.instance()
+        if app:
+            screen = app.primaryScreen()
+            return screen.logicalDotsPerInch() / 96.0
     except Exception:
-        return 1.0
-
-
-# --- shared Tk root (NEVER destroyed, for Python 3.9 compat) ---
-_root_instance = None
-
-
-def _get_root():
-    global _root_instance
-    if _root_instance is not None:
-        return _root_instance
-    try:
-        existing = tk._default_root
-        if existing is not None:
-            _root_instance = existing
-            return _root_instance
-    except AttributeError:
         pass
-    _root_instance = tk.Tk()
-    _root_instance.withdraw()
-    return _root_instance
+    return 1.0
 
 
-class _DokiBase:
-    """Dialog base class. Subclasses only need to implement _calc_size / _draw_content / _on_click"""
+_app_instance = None
+
+
+def _get_app():
+    global _app_instance
+    if _app_instance is not None:
+        return _app_instance
+    existing = QApplication.instance()
+    if existing is not None:
+        _app_instance = existing
+        return _app_instance
+    _app_instance = QApplication(sys.argv)
+    return _app_instance
+
+
+def _hex_to_rgb(hex_color):
+    h = hex_color.lstrip('#')
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+class _DokiBase(QWidget):
+    """Dialog base class. Subclasses implement _calc_size / _draw_content / _on_click."""
 
     BORDER_W = 12
 
     def __init__(self, msg, title="", pinned=True):
+        super().__init__(None)
+        _get_app()
         self.result = None
-        self._px = 0
-        self._py = 0
-        self._ox = 0
-        self._oy = 0
+        self._msg = msg
+        self._pinned = pinned
+        self._drag_pos = QPoint()
+        self._drag_start = QPoint()
+        self._click_pos = QPoint()
 
-        self.root = tk.Toplevel(_get_root())
-        self.root.overrideredirect(True)
-        self.root.attributes('-topmost', pinned)
+        flags = Qt.FramelessWindowHint | Qt.Dialog
+        if pinned:
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
 
         self.w, self.h = self._calc_size(msg)
-        sw = self.root.winfo_screenwidth()
-        sh = self.root.winfo_screenheight()
+        sw = self.screen().size().width()
+        sh = self.screen().size().height()
         x = (sw - self.w) // 2
         y = (sh - self.h) // 2
-        self.root.geometry(f"{self.w}x{self.h}+{x}+{y}")
-
-        self.cv = tk.Canvas(
-            self.root, width=self.w, height=self.h,
-            bg=BODY_COLOR, highlightthickness=0
-        )
-        self.cv.pack()
-
-        self._draw_gradient_border()
-        self._draw_content(msg)
-
-        self.root.bind("<Escape>", lambda e: self._done(False))
-        self._make_draggable()
-        self.root.focus_force()
-
-    # ========== subclass must implement ==========
+        self.setGeometry(x, y, self.w, self.h)
+        self.setFixedSize(self.w, self.h)
 
     def _calc_size(self, msg):
         raise NotImplementedError
 
-    def _draw_content(self, msg):
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.fillRect(self.rect(), QColor(BODY_COLOR))
+        self._draw_gradient_border(painter)
+        self._draw_content(painter)
+        painter.end()
+
+    def _draw_content(self, painter):
         raise NotImplementedError
 
-    def _on_click(self, event):
+    def _on_click_local(self, event):
         pass
 
-    # ========== shared drawing utilities ==========
-
-    @staticmethod
-    def _hex_to_rgb(hex_color):
-        h = hex_color.lstrip('#')
-        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-
-    def _draw_gradient_border(self):
-        br, bg, bb = self._hex_to_rgb(BORDER_COLOR)
-        er, eg, eb = self._hex_to_rgb(BODY_COLOR)
+    def _draw_gradient_border(self, painter):
+        br, bg, bb = _hex_to_rgb(BORDER_COLOR)
+        er, eg, eb = _hex_to_rgb(BODY_COLOR)
         bw = self.BORDER_W
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3
             r = int(br + (er - br) * t)
             g = int(bg + (eg - bg) * t)
             b = int(bb + (eb - bb) * t)
-            color = f'#{r:02x}{g:02x}{b:02x}'
-            self.cv.create_rectangle(i, i, self.w - i, self.h - i,
-                                     outline=color, width=1)
+            painter.setPen(QPen(QColor(r, g, b), 1))
+            painter.drawRect(i, i, self.w - i * 2, self.h - i * 2)
 
-    def _draw_stroked_text(self, x, y, text, font, fill, stroke, stroke_w):
+    def _draw_stroked_text(self, painter, x, y, text, font, fill_color, stroke_color, stroke_w):
+        painter.setFont(font)
+        fm = QFontMetrics(font)
+        tw = fm.horizontalAdvance(text)
+        th = fm.height()
+        text_x = int(x - tw // 2)
+        text_y = int(y + fm.ascent() - th // 2)
         for step in range(24):
             angle = 2 * math.pi * step / 24
-            dx = stroke_w * math.cos(angle)
-            dy = stroke_w * math.sin(angle)
-            self.cv.create_text(x + dx, y + dy, text=text,
-                                font=font, fill=stroke, anchor="center")
-        self.cv.create_text(x, y, text=text, font=font,
-                            fill=fill, anchor="center")
+            dx = int(stroke_w * math.cos(angle))
+            dy = int(stroke_w * math.sin(angle))
+            painter.setPen(QColor(stroke_color))
+            painter.drawText(text_x + dx, text_y + dy, text)
+        painter.setPen(QColor(fill_color))
+        painter.drawText(text_x, text_y, text)
 
-    # ========== dragging ==========
+    def _draw_stroked_text_left(self, painter, x, y, text, font, fill_color, stroke_color, stroke_w):
+        painter.setFont(font)
+        fm = QFontMetrics(font)
+        text_y = int(y + fm.ascent() - fm.height() // 2)
+        for step in range(24):
+            angle = 2 * math.pi * step / 24
+            dx = int(stroke_w * math.cos(angle))
+            dy = int(stroke_w * math.sin(angle))
+            painter.setPen(QColor(stroke_color))
+            painter.drawText(int(x) + dx, text_y + dy, text)
+        painter.setPen(QColor(fill_color))
+        painter.drawText(int(x), text_y, text)
 
-    def _make_draggable(self):
-        self.cv.bind("<ButtonPress-1>", self._on_press, add='+')
-        self.cv.bind("<B1-Motion>", self._on_motion, add='+')
-        self.cv.bind("<ButtonRelease-1>", self._on_release, add='+')
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._click_pos = event.globalPosition().toPoint()
+            self._drag_pos = event.globalPosition().toPoint()
+            self._drag_start = self.pos()
 
-    def _on_press(self, event):
-        self._px = event.x_root
-        self._py = event.y_root
-        self._ox = event.x_root - self.root.winfo_x()
-        self._oy = event.y_root - self.root.winfo_y()
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            delta = event.globalPosition().toPoint() - self._drag_pos
+            self.move(self._drag_start + delta)
 
-    def _on_motion(self, event):
-        new_x = event.x_root - self._ox
-        new_y = event.y_root - self._oy
-        self.root.geometry(f"+{new_x}+{new_y}")
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            delta = (event.globalPosition().toPoint() - self._click_pos).manhattanLength()
+            if delta < 5:
+                self._on_click_local(event)
 
-    def _on_release(self, event):
-        dx = abs(event.x_root - self._px)
-        dy = abs(event.y_root - self._py)
-        if dx < 5 and dy < 5:
-            self._on_click(event)
-
-    # ========== lifecycle ==========
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self._done(False)
 
     def _done(self, value):
         self.result = value
-        try:
-            self.root.destroy()
-        except tk.TclError:
-            pass
+        self.hide()
+        self.deleteLater()
 
     @classmethod
-    def show(cls, *args, **kwargs):
+    def run(cls, *args, **kwargs):
         dialog = cls(*args, **kwargs)
-        _get_root().wait_window(dialog.root)
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+        loop = QEventLoop()
+        dialog.destroyed.connect(loop.quit)
+        loop.exec()
         return dialog.result

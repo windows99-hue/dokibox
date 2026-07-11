@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """dokibox.choicebox -- DDLC-style multi-choice dialog (floating windows per option)"""
-import tkinter as tk
-import tkinter.font as tkfont
 from typing import Optional, List
-from dokibox._base import _get_root
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics, QCursor
+from PySide6.QtWidgets import QApplication, QWidget, QToolTip
+from dokibox._base import _get_app, _hex_to_rgb
 
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
@@ -20,74 +21,38 @@ MSG_FONT_SIZE = 20
 MSG_PAD_Y = 16
 
 
-def _hex_to_rgb(hex_color):
-    h = hex_color.lstrip('#')
-    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+class _Panel(QWidget):
 
-
-class _Panel:
-
-    def __init__(self, master, text, index, pw, on_select, tooltip=False, pinned=True):
+    def __init__(self, index, text, pw, on_select, tooltip=False, pinned=True):
+        super().__init__(None)
         self.index = index
         self.text = text
         self._on_select = on_select
         self._tooltip = tooltip
-
-        self.win = tk.Toplevel(master)
-        self.win.overrideredirect(True)
-        self.win.attributes('-topmost', pinned)
-
-        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="normal")
-        th = f_opt.metrics('linespace')
-        self._font = ("Microsoft YaHei", OPT_FONT_SIZE, "normal")
+        self._hover = False
 
         self.pw = int(pw)
+        self._opt_font = QFont("Microsoft YaHei", OPT_FONT_SIZE, QFont.Normal)
+        fm = QFontMetrics(self._opt_font)
+        th = fm.lineSpacing()
         self.ph = int(th + OPT_PAD_Y * 2 + BORDER_W * 2)
 
-        self.win.geometry(f"{self.pw}x{self.ph}")
+        flags = Qt.FramelessWindowHint | Qt.Tool
+        if pinned:
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
 
-        self.cv = tk.Canvas(self.win, width=self.pw, height=self.ph,
-                            bg=BODY_COLOR, highlightthickness=0)
-        self.cv.pack()
+        self.setFixedSize(self.pw, self.ph)
 
-        self._draw_gradient_border()
-        self._draw_option(text)
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.fillRect(self.rect(), QColor(BODY_COLOR))
+        self._draw_gradient_border(painter)
+        self._draw_option(painter)
+        painter.end()
 
-        self.cv.bind("<Enter>", lambda e: self._set_hover(True))
-        self.cv.bind("<Leave>", lambda e: self._set_hover(False))
-        self.cv.bind("<Button-1>", lambda e: self._on_select(self.index))
-        self.win.bind("<Escape>", lambda e: self._on_select(None))
-
-        if self._tooltip:
-            self._add_tooltip()
-
-    def _add_tooltip(self):
-        tip = [None]
-
-        def show(event):
-            if tip[0]:
-                return
-            tw = tk.Toplevel(self.win)
-            tw.overrideredirect(True)
-            tw.attributes('-topmost', True)
-            label = tk.Label(tw, text=self.text, bg=BODY_COLOR, fg='#000000',
-                             font=("Microsoft YaHei", 12),
-                             relief='solid', bd=1, padx=6, pady=2)
-            label.pack()
-            x = event.x_root + 15
-            y = event.y_root + 15
-            tw.geometry(f"+{x}+{y}")
-            tip[0] = tw
-
-        def hide(event):
-            if tip[0]:
-                tip[0].destroy()
-                tip[0] = None
-
-        self.cv.bind("<Enter>", show, add='+')
-        self.cv.bind("<Leave>", hide, add='+')
-
-    def _draw_gradient_border(self):
+    def _draw_gradient_border(self, painter):
         br, bg, bb = _hex_to_rgb(BORDER_COLOR)
         er, eg, eb = _hex_to_rgb(BODY_COLOR)
         bw = BORDER_W
@@ -96,98 +61,110 @@ class _Panel:
             r = int(br + (er - br) * t)
             g = int(bg + (eg - bg) * t)
             b = int(bb + (eb - bb) * t)
-            color = f'#{r:02x}{g:02x}{b:02x}'
-            self.cv.create_rectangle(i, i, self.pw - i, self.ph - i,
-                                     outline=color, width=1)
+            painter.setPen(QPen(QColor(r, g, b), 1))
+            painter.drawRect(i, i, self.pw - i * 2, self.ph - i * 2)
 
-    def _draw_option(self, text):
+    def _draw_option(self, painter):
         cx = self.pw // 2
         cy = self.ph // 2
-        self.cv.create_text(cx, cy, text=text, font=self._font,
-                            fill=OPT_FILL_COLOR, anchor="center",
-                            tags=("opt", "opt_fill"))
+        painter.setFont(self._opt_font)
+        fm = QFontMetrics(self._opt_font)
+        tw = fm.horizontalAdvance(self.text)
+        color = OPT_HOVER_COLOR if self._hover else OPT_FILL_COLOR
+        painter.setPen(QColor(color))
+        text_x = cx - tw // 2
+        text_y = cy + fm.ascent() - fm.height() // 2
+        painter.drawText(int(text_x), int(text_y), self.text)
 
-    def _set_hover(self, hover):
-        items = self.cv.find_withtag("opt_fill")
-        color = OPT_HOVER_COLOR if hover else OPT_FILL_COLOR
-        for item in items:
-            self.cv.itemconfig(item, fill=color)
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._on_select(self.index)
+
+    def enterEvent(self, event):
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, event):
+        self._hover = False
+        self.update()
+
+    def mouseMoveEvent(self, event):
+        if self._tooltip:
+            gp = event.globalPosition().toPoint()
+            QToolTip.showText(gp, self.text, self)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self._on_select(None)
 
     def set_position(self, x, y):
-        self.win.geometry(f"+{x}+{y}")
-
-    def destroy(self):
-        try:
-            self.win.destroy()
-        except tk.TclError:
-            pass
+        self.move(x, y)
 
 
 class _ChoiceManager:
 
     def __init__(self, msg, choices, title, tooltip=False, force=None, pinned=True):
+        _get_app()
         self.result = None
         self._tooltip = tooltip
-        self._force = force
         self._pinned = pinned
-        self.root = _get_root()
-        self._master = tk.Toplevel(self.root)
-        self._master.withdraw()
 
-        f_opt = tkfont.Font(family="Microsoft YaHei", size=OPT_FONT_SIZE, weight="normal")
-        opt_widths = [f_opt.measure(c) for c in choices]
+        self._opt_font = QFont("Microsoft YaHei", OPT_FONT_SIZE, QFont.Normal)
+        fm = QFontMetrics(self._opt_font)
+        opt_widths = [fm.horizontalAdvance(c) for c in choices]
         max_opt_w = max(opt_widths) if opt_widths else 0
+
         unified_w = max(int(max_opt_w + OPT_PAD_X * 2 + BORDER_W * 2), UNIFIED_MIN_W)
-        screen_w = self.root.winfo_screenwidth()
+        screen_w = QApplication.primaryScreen().size().width()
         unified_w = min(unified_w, screen_w - BORDER_W * 2)
         self._unified_w = unified_w
 
         self._panels = []
         for i, choice in enumerate(choices):
-            panel = _Panel(self.root, choice, i, unified_w, self._on_select, self._tooltip, pinned=pinned)
+            panel = _Panel(i, choice, unified_w, self._on_select, tooltip, pinned=pinned)
             self._panels.append(panel)
 
+        self._msg_win = None
         if msg.strip():
             self._create_msg_label(msg)
 
         self._layout(msg)
 
+        for panel in self._panels:
+            panel.show()
+
+        if self._msg_win:
+            self._msg_win.show()
+
         if force is not None and 0 <= force < len(choices):
-            self._force_index = force
             p = self._panels[force]
-            cx = p.win.winfo_x() + p.pw // 2
-            cy = p.win.winfo_y() + p.ph // 2
-            self.root.after(50, lambda: p.win.event_generate(
-                '<Motion>', warp=True, x=p.pw // 2, y=p.ph // 2))
+            ctr = p.geometry().center()
+            QCursor.setPos(p.mapToGlobal(ctr))
 
     def _on_select(self, index):
         self.result = index
         for p in self._panels:
-            p.destroy()
-        if hasattr(self, '_msg_win'):
-            try:
-                self._msg_win.destroy()
-            except tk.TclError:
-                pass
-        try:
-            self._master.destroy()
-        except tk.TclError:
-            pass
+            p.close()
+            p.deleteLater()
+        if self._msg_win:
+            self._msg_win.close()
+            self._msg_win.deleteLater()
 
     def _create_msg_label(self, msg):
-        f = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="normal")
+        f = QFont("Microsoft YaHei", MSG_FONT_SIZE, QFont.Normal)
+        fm = QFontMetrics(f)
         max_lbl_w = max(self._unified_w - 40, 200)
 
         raw_lines = msg.split('\n')
         wrapped_lines = []
         for line in raw_lines:
-            if f.measure(line) <= max_lbl_w:
+            if fm.horizontalAdvance(line) <= max_lbl_w:
                 wrapped_lines.append(line)
             else:
                 current = ""
                 for ch in line:
                     test = current + ch
-                    if f.measure(test) <= max_lbl_w:
+                    if fm.horizontalAdvance(test) <= max_lbl_w:
                         current = test
                     else:
                         if current:
@@ -196,46 +173,33 @@ class _ChoiceManager:
                 if current:
                     wrapped_lines.append(current)
 
-        line_h = f.metrics('linespace')
+        line_h = fm.lineSpacing()
         total_h = line_h * len(wrapped_lines) + MSG_PAD_Y * 2
-        text_w = max(f.measure(line) for line in wrapped_lines)
+        text_w = max(fm.horizontalAdvance(line) for line in wrapped_lines) if wrapped_lines else 0
 
-        lbl = tk.Toplevel(self.root)
-        lbl.overrideredirect(True)
-        lbl.attributes('-topmost', self._pinned)
-        lbl.bind("<Escape>", lambda e: self._on_select(None))
-        self._msg_win = lbl
-        self._msg_w = max(int(text_w + 40), self._unified_w)
-        self._msg_h = int(total_h)
-        lbl.geometry(f"{self._msg_w}x{self._msg_h}")
-
-        cv = tk.Canvas(lbl, width=self._msg_w, height=self._msg_h,
-                       bg=BODY_COLOR, highlightthickness=0)
-        cv.pack()
-        cv.create_rectangle(0, 0, self._msg_w, self._msg_h,
-                            outline=BORDER_COLOR, width=4)
-        for j, line in enumerate(wrapped_lines):
-            y = MSG_PAD_Y + line_h // 2 + j * line_h
-            cv.create_text(self._msg_w // 2, y, text=line,
-                           font=("Microsoft YaHei", MSG_FONT_SIZE, "normal"),
-                           fill="#000000", anchor="center")
+        self._msg_win = _MsgLabel(wrapped_lines, f, line_h,
+                                   max(int(text_w + 40), self._unified_w),
+                                   int(total_h),
+                                   self._pinned, self._on_select)
+        self._msg_w = self._msg_win.width()
+        self._msg_h = self._msg_win.height()
 
     def _layout(self, msg):
-        sw = self.root.winfo_screenwidth()
-        sh = self.root.winfo_screenheight()
+        sw = QApplication.primaryScreen().size().width()
+        sh = QApplication.primaryScreen().size().height()
 
         if not self._panels:
             return
 
         total_h = sum(p.ph for p in self._panels) + OPT_GAP * (len(self._panels) - 1)
-        if hasattr(self, '_msg_win'):
+        if self._msg_win:
             total_h += self._msg_h + OPT_GAP
 
         start_y = (sh - total_h) // 2
 
-        if hasattr(self, '_msg_win'):
+        if self._msg_win:
             msg_x = (sw - self._msg_w) // 2
-            self._msg_win.geometry(f"+{msg_x}+{start_y}")
+            self._msg_win.move(msg_x, start_y)
             start_y += self._msg_h + OPT_GAP
 
         for panel in self._panels:
@@ -244,8 +208,45 @@ class _ChoiceManager:
             start_y += panel.ph + OPT_GAP
 
 
-def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "", tooltip: bool = False, force: Optional[int] = None, pinned: bool = True) -> Optional[str]:
-    """DDLC-style multi-choice dialog. Each option is a floating window. Returns the selected text, or None if cancelled.
+class _MsgLabel(QWidget):
+
+    def __init__(self, lines, font, line_h, w, h, pinned, on_cancel):
+        super().__init__(None)
+        self._lines = lines
+        self._font = font
+        self._line_h = line_h
+        self._on_cancel = on_cancel
+        flags = Qt.FramelessWindowHint | Qt.Tool
+        if pinned:
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
+        self.setFixedSize(w, h)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.fillRect(self.rect(), QColor(BODY_COLOR))
+        painter.setPen(QPen(QColor(BORDER_COLOR), 4))
+        painter.drawRect(2, 2, self.width() - 4, self.height() - 4)
+        painter.setFont(self._font)
+        painter.setPen(QColor("#000000"))
+        fm = QFontMetrics(self._font)
+        for j, line in enumerate(self._lines):
+            tw = fm.horizontalAdvance(line)
+            y = MSG_PAD_Y + self._line_h // 2 + j * self._line_h + fm.ascent() - self._line_h // 2
+            painter.drawText(int(self.width() // 2 - tw // 2), int(y), line)
+        painter.end()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self._on_cancel(None)
+
+
+def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "",
+              tooltip: bool = False, force: Optional[int] = None,
+              pinned: bool = True) -> Optional[str]:
+    """DDLC-style multi-choice dialog. Each option is a floating window.
+    Returns the selected text, or None if cancelled.
 
     Args:
         msg:      prompt text displayed above the options. No label shown if empty.
@@ -264,5 +265,13 @@ def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "
     if not choices:
         return None
     mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned)
-    _get_root().wait_window(mgr._master)
+
+    from PySide6.QtCore import QEventLoop
+    loop = QEventLoop()
+    for p in mgr._panels:
+        p.destroyed.connect(lambda obj=None, l=loop: l.quit())
+    if mgr._msg_win:
+        mgr._msg_win.destroyed.connect(lambda obj=None, l=loop: l.quit())
+    loop.exec()
+
     return choices[mgr.result] if mgr.result is not None else None

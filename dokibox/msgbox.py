@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """dokibox.msgbox -- DDLC-style message dialog (single OK button)"""
-import tkinter as tk
-import tkinter.font as tkfont
 import math
-from dokibox._base import _DokiBase, BODY_COLOR
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
+from PySide6.QtWidgets import QToolTip
+from dokibox._base import _DokiBase, _get_app, _hex_to_rgb, BODY_COLOR
 
 MSG_COLOR = "#000000"
 BTN_STROKE_COLOR = "#BD539D"
@@ -23,28 +24,22 @@ class _MsgDialog(_DokiBase):
 
     def __init__(self, msg, title="", tooltip=False, pinned=True):
         self._tooltip = tooltip
+        self._btn_ok_hover = False
+        self._btn_ok_rect = None
         super().__init__(msg, title, pinned=pinned)
 
-    def _calc_size(self, msg):
-        f_msg = tkfont.Font(family="Microsoft YaHei", size=MSG_FONT_SIZE, weight="bold")
-        f_btn = tkfont.Font(family="Microsoft YaHei", size=BTN_FONT_SIZE, weight="bold")
-
-        self._msg_font = ("Microsoft YaHei", MSG_FONT_SIZE, "bold")
-        self._btn_font = ("Microsoft YaHei", BTN_FONT_SIZE, "bold")
-
-        screen_w = self.root.winfo_screenwidth()
-        max_msg_w = max(screen_w - PAD_X * 2, 200)
-
-        raw_lines = msg.split('\n')
+    def _wrap_lines(self, text, font, max_w):
+        raw_lines = text.split('\n')
         wrapped_lines = []
         for line in raw_lines:
-            if f_msg.measure(line) <= max_msg_w:
+            fm = QFontMetrics(font)
+            if fm.horizontalAdvance(line) <= max_w:
                 wrapped_lines.append(line)
             else:
                 current = ""
                 for ch in line:
                     test = current + ch
-                    if f_msg.measure(test) <= max_msg_w:
+                    if fm.horizontalAdvance(test) <= max_w:
                         current = test
                     else:
                         if current:
@@ -52,95 +47,109 @@ class _MsgDialog(_DokiBase):
                         current = ch
                 if current:
                     wrapped_lines.append(current)
+        return wrapped_lines
 
-        self._wrapped_msg = '\n'.join(wrapped_lines)
-        self._msg_line_h = f_msg.metrics('linespace')
-        self._msg_total_h = self._msg_line_h * len(wrapped_lines)
-        self._btn_line_h = f_btn.metrics('linespace')
+    def _calc_size(self, msg):
+        self._msg_font = QFont("Microsoft YaHei", MSG_FONT_SIZE, QFont.Bold)
+        self._btn_font = QFont("Microsoft YaHei", BTN_FONT_SIZE, QFont.Bold)
 
-        msg_w = max(f_msg.measure(line) for line in wrapped_lines)
+        fm_msg = QFontMetrics(self._msg_font)
+        fm_btn = QFontMetrics(self._btn_font)
+
+        screen_w = self.screen().size().width()
+        max_msg_w = max(screen_w - PAD_X * 2, 200)
+
+        wrapped = self._wrap_lines(msg, self._msg_font, max_msg_w)
+        self._wrapped_msg = wrapped
+        self._msg_line_h = fm_msg.lineSpacing()
+        self._msg_total_h = self._msg_line_h * len(wrapped)
+        self._btn_line_h = fm_btn.lineSpacing()
+
+        msg_w = max(fm_msg.horizontalAdvance(line) for line in wrapped) if wrapped else 0
         w = max(int(msg_w + PAD_X * 2), 250)
         w = min(w, screen_w - 24)
         h = max(PAD_TOP + self._msg_total_h + PAD_BTNS
                 + self._btn_line_h + BTN_STROKE_W * 2 + PAD_BOT, 150)
         return w, h
 
-    def _draw_content(self, msg):
+    def _draw_content(self, painter):
         msg_y = PAD_TOP + self._msg_total_h // 2
-        self.cv.create_text(
-            self.w // 2, msg_y, text=self._wrapped_msg, font=self._msg_font,
-            fill=MSG_COLOR, anchor="center"
-        )
+        self._draw_msg_lines(painter, msg_y)
 
         btn_y = self.h - PAD_BOT - self._btn_line_h // 2
-        self._draw_button(self.w // 2, btn_y, "OK", "btn_ok")
+        self._draw_button(painter, self.w // 2, btn_y, "OK", self._btn_ok_hover)
 
-        self.cv.tag_bind("btn_ok", "<Enter>",
-                         lambda e: self._set_hover("btn_ok", True))
-        self.cv.tag_bind("btn_ok", "<Leave>",
-                         lambda e: self._set_hover("btn_ok", False))
+    def _draw_msg_lines(self, painter, msg_y):
+        painter.setFont(self._msg_font)
+        fm = QFontMetrics(self._msg_font)
+        painter.setPen(QColor(MSG_COLOR))
+        for j, line in enumerate(self._wrapped_msg):
+            tw = fm.horizontalAdvance(line)
+            x = self.w // 2 - tw // 2
+            y = msg_y - self._msg_total_h // 2 + self._msg_line_h // 2 + j * self._msg_line_h + fm.ascent() - self._msg_line_h // 2
+            painter.drawText(int(x), int(y), line)
 
-        if self._tooltip:
-            self._add_tooltip("btn_ok", "OK")
+    def _draw_button(self, painter, x, y, text, hover):
+        sw = BTN_STROKE_W
+        self._btn_font.setPointSize(BTN_FONT_SIZE)
+        painter.setFont(self._btn_font)
+        fm = QFontMetrics(self._btn_font)
+        tw = fm.horizontalAdvance(text)
+        th = fm.height()
+        text_x = int(x - tw // 2)
+        text_y = int(y + fm.ascent() - th // 2)
 
-        self.root.bind("<Return>", lambda e: self._done(True))
-        self.root.bind("<Escape>", lambda e: self._done(True))
+        fill_color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
+        fill_rgb = _hex_to_rgb(fill_color)
+        stroke_rgb = _hex_to_rgb(BTN_STROKE_COLOR)
 
-    def _on_click(self, event):
-        items = self.cv.find_overlapping(
-            event.x - 15, event.y - 15, event.x + 15, event.y + 15
-        )
-        for item in items:
-            tags = self.cv.gettags(item)
-            if "btn_ok" in tags:
+        for step in range(36):
+            angle = 2 * math.pi * step / 36
+            dx = int(sw * math.cos(angle))
+            dy = int(sw * math.sin(angle))
+            painter.setPen(QColor(*stroke_rgb))
+            painter.drawText(text_x + dx, text_y + dy, text)
+
+        painter.setPen(QColor(*fill_rgb))
+        painter.drawText(text_x, text_y, text)
+
+        self._btn_ok_rect = (text_x - sw, text_y - fm.ascent(), tw + sw * 2, th + sw * 2)
+
+    def _on_click_local(self, event):
+        if self._btn_ok_rect:
+            rx, ry, rw, rh = self._btn_ok_rect
+            pos = event.position().toPoint()
+            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
                 self._done(True)
                 return
 
-    def _draw_button(self, x, y, text, tag):
-        sw = BTN_STROKE_W
-        for step in range(36):
-            angle = 2 * math.pi * step / 36
-            dx = sw * math.cos(angle)
-            dy = sw * math.sin(angle)
-            self.cv.create_text(x + dx, y + dy, text=text,
-                                font=self._btn_font, fill=BTN_STROKE_COLOR,
-                                anchor="center",
-                                tags=(tag, tag + "_stroke"))
-        self.cv.create_text(x, y, text=text, font=self._btn_font,
-                            fill=BTN_FILL_COLOR, anchor="center",
-                            tags=(tag, tag + "_fill"))
+    def enterEvent(self, event):
+        if self._btn_ok_rect:
+            pos = event.position().toPoint()
+            rx, ry, rw, rh = self._btn_ok_rect
+            self._btn_ok_hover = rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+            self.update()
 
-    def _set_hover(self, tag, hover):
-        items = self.cv.find_withtag(tag + "_fill")
-        color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
-        for item in items:
-            self.cv.itemconfig(item, fill=color)
+    def leaveEvent(self, event):
+        self._btn_ok_hover = False
+        self.update()
 
-    def _add_tooltip(self, tag, text):
-        tip = [None]
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        if self._btn_ok_rect:
+            pos = event.position().toPoint()
+            rx, ry, rw, rh = self._btn_ok_rect
+            hover = rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+            if hover != self._btn_ok_hover:
+                self._btn_ok_hover = hover
+                self.update()
+        if self._tooltip and self._btn_ok_hover:
+            gp = event.globalPosition().toPoint()
+            QToolTip.showText(gp, "OK", self)
 
-        def show(event):
-            if tip[0]:
-                return
-            tw = tk.Toplevel(self.root)
-            tw.overrideredirect(True)
-            tw.attributes('-topmost', True)
-            label = tk.Label(tw, text=text, bg=BODY_COLOR, fg='#000000',
-                             font=("Microsoft YaHei", 12),
-                             relief='solid', bd=1, padx=6, pady=2)
-            label.pack()
-            x = event.x_root + 15
-            y = event.y_root + 15
-            tw.geometry(f"+{x}+{y}")
-            tip[0] = tw
-
-        def hide(event):
-            if tip[0]:
-                tip[0].destroy()
-                tip[0] = None
-
-        self.cv.tag_bind(tag, "<Enter>", show, add='+')
-        self.cv.tag_bind(tag, "<Leave>", hide, add='+')
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key_Escape, Qt.Key_Return, Qt.Key_Enter):
+            self._done(True)
 
 
 def msgbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True) -> bool:
@@ -158,4 +167,4 @@ def msgbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool =
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
-    return _MsgDialog.show(msg, title, tooltip=tooltip, pinned=pinned)
+    return _MsgDialog.run(msg, title, tooltip=tooltip, pinned=pinned)
