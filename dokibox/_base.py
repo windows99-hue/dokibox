@@ -93,7 +93,7 @@ class _DokiBase(QWidget):
     def _draw_gradient_border(self, painter):
         br, bg, bb = _hex_to_rgb(BORDER_COLOR)
         er, eg, eb = _hex_to_rgb(BODY_COLOR)
-        bw = self.BORDER_W
+        bw = max(self.BORDER_W, 8)
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3
             r = int(br + (er - br) * t)

@@ -57,7 +57,7 @@ class _Panel(QWidget):
     def _draw_gradient_border(self, painter):
         br, bg, bb = _hex_to_rgb(BORDER_COLOR)
         er, eg, eb = _hex_to_rgb(BODY_COLOR)
-        bw = self._border_w
+        bw = max(self._border_w, 6)
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3
             r = int(br + (er - br) * t)
