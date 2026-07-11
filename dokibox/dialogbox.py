@@ -23,6 +23,8 @@ DOT_GAP_Y = 6
 DOT_COLOR = "#FB94C1"
 
 DWMWA_BORDER_COLOR = 34
+# 新增：窗口阴影透明度属性ID
+DWMWA_SHADOW_OPACITY = 33
 
 
 def _hex_to_rgb(h):
@@ -34,7 +36,7 @@ def _blend(c1, c2, t):
     r1, g1, b1 = _hex_to_rgb(c1)
     r2, g2, b2 = _hex_to_rgb(c2)
     r = int(r1 * t + r2 * (1 - t))
-    g = int(g1 * t + g2 * (1 - t))
+    g = int(g1 * t + r2 * (1 - t))
     b = int(b1 * t + b2 * (1 - t))
     return QColor(r, g, b)
 
@@ -49,6 +51,16 @@ class MARGINS(ctypes.Structure):
 def remove_dwm_frame(hwnd):
     margins = MARGINS(-1, -1, -1, -1)
     ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
+
+# 新增函数：关闭指定窗口阴影
+def remove_window_shadow(hwnd):
+    zero_val = ctypes.c_uint(0)
+    ctypes.windll.dwmapi.DwmSetWindowAttribute(
+        hwnd,
+        DWMWA_SHADOW_OPACITY,
+        ctypes.byref(zero_val),
+        ctypes.sizeof(zero_val)
+    )
 
 _box = None
 _dialogbox_loop = None
@@ -138,6 +150,9 @@ class _DialogBox(QWidget):
         try:
             hwnd = int(self.winId())
             remove_dwm_frame(hwnd)
+            # 新增关闭窗口阴影
+            remove_window_shadow(hwnd)
+            
             ctypes.windll.dwmapi.DwmSetWindowAttribute(
                 hwnd,
                 DWMWA_BORDER_COLOR,
