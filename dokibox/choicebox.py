@@ -4,7 +4,7 @@ from typing import Optional, List
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics, QCursor
 from PySide6.QtWidgets import QApplication, QWidget, QToolTip
-from dokibox._base import _get_app, _hex_to_rgb
+from dokibox._base import _get_app, _hex_to_rgb, _get_dpi_scale
 
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
@@ -23,19 +23,21 @@ MSG_PAD_Y = 16
 
 class _Panel(QWidget):
 
-    def __init__(self, index, text, pw, on_select, tooltip=False, pinned=True):
+    def __init__(self, index, text, pw, opt_fs, opt_pad_y, border_w,
+                 on_select, tooltip=False, pinned=True):
         super().__init__(None)
         self.index = index
         self.text = text
         self._on_select = on_select
         self._tooltip = tooltip
         self._hover = False
+        self._border_w = border_w
 
         self.pw = int(pw)
-        self._opt_font = QFont("Microsoft YaHei", OPT_FONT_SIZE, QFont.Normal)
+        self._opt_font = QFont("Microsoft YaHei", opt_fs, QFont.Normal)
         fm = QFontMetrics(self._opt_font)
         th = fm.lineSpacing()
-        self.ph = int(th + OPT_PAD_Y * 2 + BORDER_W * 2)
+        self.ph = int(th + opt_pad_y * 2 + border_w * 2)
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
@@ -55,7 +57,7 @@ class _Panel(QWidget):
     def _draw_gradient_border(self, painter):
         br, bg, bb = _hex_to_rgb(BORDER_COLOR)
         er, eg, eb = _hex_to_rgb(BODY_COLOR)
-        bw = BORDER_W
+        bw = self._border_w
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3
             r = int(br + (er - br) * t)
@@ -109,19 +111,32 @@ class _ChoiceManager:
         self._tooltip = tooltip
         self._pinned = pinned
 
-        self._opt_font = QFont("Microsoft YaHei", OPT_FONT_SIZE, QFont.Normal)
+        s = 1.0 / _get_dpi_scale()
+        opt_fs = max(12, int(OPT_FONT_SIZE * s))
+        opt_pad_x = int(OPT_PAD_X * s)
+        opt_pad_y = int(OPT_PAD_Y * s)
+        border_w = int(BORDER_W * s)
+        unified_min_w = int(UNIFIED_MIN_W * s)
+        opt_gap = int(OPT_GAP * s)
+
+        self._opt_font = QFont("Microsoft YaHei", opt_fs, QFont.Normal)
         fm = QFontMetrics(self._opt_font)
         opt_widths = [fm.horizontalAdvance(c) for c in choices]
         max_opt_w = max(opt_widths) if opt_widths else 0
 
-        unified_w = max(int(max_opt_w + OPT_PAD_X * 2 + BORDER_W * 2), UNIFIED_MIN_W)
+        unified_w = max(int(max_opt_w + opt_pad_x * 2 + border_w * 2), unified_min_w)
         screen_w = QApplication.primaryScreen().size().width()
-        unified_w = min(unified_w, screen_w - BORDER_W * 2)
+        unified_w = min(unified_w, screen_w - border_w * 2)
         self._unified_w = unified_w
+
+        self._opt_gap = opt_gap
+        self._border_w = border_w
+        self._opt_pad_y = opt_pad_y
 
         self._panels = []
         for i, choice in enumerate(choices):
-            panel = _Panel(i, choice, unified_w, self._on_select, tooltip, pinned=pinned)
+            panel = _Panel(i, choice, unified_w, opt_fs, opt_pad_y, border_w,
+                          self._on_select, tooltip, pinned=pinned)
             self._panels.append(panel)
 
         self._msg_win = None
@@ -151,9 +166,12 @@ class _ChoiceManager:
             self._msg_win.deleteLater()
 
     def _create_msg_label(self, msg):
-        f = QFont("Microsoft YaHei", MSG_FONT_SIZE, QFont.Normal)
+        s = 1.0 / _get_dpi_scale()
+        msg_fs = max(12, int(MSG_FONT_SIZE * s))
+        msg_pad_y = int(MSG_PAD_Y * s)
+        f = QFont("Microsoft YaHei", msg_fs, QFont.Normal)
         fm = QFontMetrics(f)
-        max_lbl_w = max(self._unified_w - 40, 200)
+        max_lbl_w = max(self._unified_w - int(40 * s), 200)
 
         raw_lines = msg.split('\n')
         wrapped_lines = []
@@ -174,11 +192,11 @@ class _ChoiceManager:
                     wrapped_lines.append(current)
 
         line_h = fm.lineSpacing()
-        total_h = line_h * len(wrapped_lines) + MSG_PAD_Y * 2
+        total_h = line_h * len(wrapped_lines) + msg_pad_y * 2
         text_w = max(fm.horizontalAdvance(line) for line in wrapped_lines) if wrapped_lines else 0
 
-        self._msg_win = _MsgLabel(wrapped_lines, f, line_h,
-                                   max(int(text_w + 40), self._unified_w),
+        self._msg_win = _MsgLabel(wrapped_lines, f, line_h, msg_pad_y,
+                                   max(int(text_w + int(40 * s)), self._unified_w),
                                    int(total_h),
                                    self._pinned, self._on_select)
         self._msg_w = self._msg_win.width()
@@ -191,30 +209,32 @@ class _ChoiceManager:
         if not self._panels:
             return
 
-        total_h = sum(p.ph for p in self._panels) + OPT_GAP * (len(self._panels) - 1)
+        gap = self._opt_gap
+        total_h = sum(p.ph for p in self._panels) + gap * (len(self._panels) - 1)
         if self._msg_win:
-            total_h += self._msg_h + OPT_GAP
+            total_h += self._msg_h + gap
 
         start_y = (sh - total_h) // 2
 
         if self._msg_win:
             msg_x = (sw - self._msg_w) // 2
             self._msg_win.move(msg_x, start_y)
-            start_y += self._msg_h + OPT_GAP
+            start_y += self._msg_h + gap
 
         for panel in self._panels:
             px = (sw - panel.pw) // 2
             panel.set_position(px, start_y)
-            start_y += panel.ph + OPT_GAP
+            start_y += panel.ph + gap
 
 
 class _MsgLabel(QWidget):
 
-    def __init__(self, lines, font, line_h, w, h, pinned, on_cancel):
+    def __init__(self, lines, font, line_h, msg_pad_y, w, h, pinned, on_cancel):
         super().__init__(None)
         self._lines = lines
         self._font = font
         self._line_h = line_h
+        self._msg_pad_y = msg_pad_y
         self._on_cancel = on_cancel
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
@@ -233,7 +253,7 @@ class _MsgLabel(QWidget):
         fm = QFontMetrics(self._font)
         for j, line in enumerate(self._lines):
             tw = fm.horizontalAdvance(line)
-            y = MSG_PAD_Y + self._line_h // 2 + j * self._line_h + fm.ascent() - self._line_h // 2
+            y = self._msg_pad_y + self._line_h // 2 + j * self._line_h + fm.ascent() - self._line_h // 2
             painter.drawText(int(self.width() // 2 - tw // 2), int(y), line)
         painter.end()
 
