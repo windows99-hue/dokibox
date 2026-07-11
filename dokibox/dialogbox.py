@@ -150,6 +150,62 @@ class _DialogBox(QWidget):
 
         _box = self
 
+    def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode):
+        if self._after_timer:
+            try:
+                self._after_timer.stop()
+            except Exception:
+                pass
+            self._after_timer.deleteLater()
+            self._after_timer = None
+
+        self._overflow_mode = overflow_mode
+        self._typewriter = typewriter
+        self._chardelay = chardelay
+        self._bold = bold
+        self._typing = False
+        self._typing_done = False
+
+        f_name = QFont("Microsoft YaHei", 20, QFont.Bold)
+        name_h = 0
+        if self._name:
+            fm = QFontMetrics(f_name)
+            name_h = fm.lineSpacing() + 28
+
+        canvas_w = self.w
+        if self._overflow_mode == "overflow" and msg:
+            f_body = QFont("Microsoft YaHei", 20, QFont.Bold)
+            fm = QFontMetrics(f_body)
+            max_line_w = max(fm.horizontalAdvance(line) for line in msg.split('\n'))
+            needed_w = int(max_line_w + 80)
+            if needed_w > canvas_w:
+                canvas_w = needed_w
+        canvas_w += INSET * 2
+        self._canvas_w = canvas_w
+        if self._overflow_mode == "overflow":
+            self._dialog_left = INSET
+        else:
+            self._dialog_left = (canvas_w - self.w) // 2
+
+        cv_h = self.h + name_h + 24 if self._name else self.h
+        cv_h += INSET
+        self._cv_h = cv_h
+        self._dialog_top = (name_h + 20 if self._name else 0) + INSET
+
+        sw = QApplication.primaryScreen().size().width()
+        sh = QApplication.primaryScreen().size().height()
+        x = (sw - canvas_w) // 2
+        if self._overflow_mode == "overflow":
+            x = (sw - self.w) // 2 - self._dialog_left
+        dialog_screen_y = sh - self.h - 60
+        win_y = dialog_screen_y - self._dialog_top
+
+        self.setGeometry(x, win_y, canvas_w, cv_h)
+        self.setFixedSize(canvas_w, cv_h)
+
+        self._init_typewriter_state(msg)
+        self.update()
+
     def showEvent(self, event):
         super().showEvent(event)
         try:
@@ -528,18 +584,25 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     """
     global _box, _dialogbox_loop
 
-    if _box is not None:
-        _destroy_box()
-
     _get_app()
     sw = QApplication.primaryScreen().size().width()
-
     if w is None:
         w = min(int(sw * 0.7), 1200)
     if h is None:
         h = int(220 / _get_dpi_scale())
 
-    _box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned,
-                      fdst=fdst, overflow_mode=overflow_mode)
+    if _box is not None:
+        try:
+            if bool(_box._name) == bool(name) and _box.w == w and _box.h == h:
+                _box._update_content(msg, typewriter, chardelay, bold, overflow_mode)
+            else:
+                _destroy_box()
+        except Exception:
+            _destroy_box()
+
+    if _box is None:
+        _box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned,
+                          fdst=fdst, overflow_mode=overflow_mode)
+
     _dialogbox_loop = QEventLoop()
     _dialogbox_loop.exec()
