@@ -58,7 +58,7 @@ class _MsgDialog(_DokiBase):
         pad_bot = int(PAD_BOT * s)
         msg_fs = max(12, int(MSG_FONT_SIZE * s))
         btn_fs = max(12, int(BTN_FONT_SIZE * s))
-        btn_stroke = int(BTN_STROKE_W * s)
+        btn_stroke = max(3, int(BTN_STROKE_W * s))
 
         self._msg_font = QFont("Microsoft YaHei", msg_fs, QFont.Bold)
         self._btn_font = QFont("Microsoft YaHei", btn_fs, QFont.Bold)
@@ -115,7 +115,7 @@ class _MsgDialog(_DokiBase):
         fill_rgb = _hex_to_rgb(fill_color)
         stroke_rgb = _hex_to_rgb(BTN_STROKE_COLOR)
 
-        for step in range(36):
+        for step in range(48):
             angle = 2 * math.pi * step / 36
             dx = int(sw * math.cos(angle))
             dy = int(sw * math.sin(angle))

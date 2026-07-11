@@ -109,7 +109,7 @@ class _DokiBase(QWidget):
         th = fm.height()
         text_x = int(x - tw // 2)
         text_y = int(y + fm.ascent() - th // 2)
-        for step in range(24):
+        for step in range(48):
             angle = 2 * math.pi * step / 24
             dx = int(stroke_w * math.cos(angle))
             dy = int(stroke_w * math.sin(angle))
@@ -122,7 +122,7 @@ class _DokiBase(QWidget):
         painter.setFont(font)
         fm = QFontMetrics(font)
         text_y = int(y + fm.ascent() - fm.height() // 2)
-        for step in range(24):
+        for step in range(48):
             angle = 2 * math.pi * step / 24
             dx = int(stroke_w * math.cos(angle))
             dy = int(stroke_w * math.sin(angle))

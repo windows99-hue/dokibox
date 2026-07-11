@@ -106,8 +106,10 @@ class _DialogBox(QWidget):
         self._dot_gap_y = int(DOT_GAP_Y * s)
         self._corner_radius = max(8, int(CORNER_RADIUS * s))
         self._inset = max(2, int(INSET * s))
-        self._stroke_w = 4 if bold else 1
+        sw_raw = 4 if bold else 1
+        self._stroke_w = max(1, int(sw_raw * s))
         self._triangle_s = int(16 * s)
+        self.r = self._corner_radius
         self.r = self._corner_radius
 
         f_name = QFont("Microsoft YaHei", self._name_fs, QFont.Bold)
@@ -378,10 +380,12 @@ class _DialogBox(QWidget):
         text_x = int(cx - tw_text // 2)
         text_y = int(cy + fm.ascent() - fm.height() // 2)
 
-        for step in range(24):
-            angle = 2 * math.pi * step / 24
-            dx = int(math.cos(angle) * 2)
-            dy = int(math.sin(angle) * 2)
+        dpi = _get_dpi_scale()
+        name_stroke = max(1, int(2 / dpi))
+        for step in range(48):
+            angle = 2 * math.pi * step / 48
+            dx = int(math.cos(angle) * name_stroke)
+            dy = int(math.sin(angle) * name_stroke)
             painter.setPen(QColor("#BD539D"))
             painter.drawText(text_x + dx, text_y + dy, self._name)
         painter.setPen(QColor("#ffffff"))
@@ -524,7 +528,7 @@ class _DialogBox(QWidget):
         painter.setFont(font)
         fm = QFontMetrics(font)
         text_y = int(y + fm.ascent() - fm.height() // 2)
-        for step in range(24):
+        for step in range(48):
             angle = 2 * math.pi * step / 24
             dx = int(math.cos(angle) * sw)
             dy = int(math.sin(angle) * sw)
