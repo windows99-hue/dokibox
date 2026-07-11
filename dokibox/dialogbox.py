@@ -124,11 +124,16 @@ class _DialogBox(QWidget):
                 canvas_w = needed_w
         canvas_w += INSET * 2
         self._canvas_w = canvas_w
-        self._dialog_left = (canvas_w - w) // 2
+        if self._overflow_mode == "overflow":
+            self._dialog_left = INSET
+        else:
+            self._dialog_left = (canvas_w - w) // 2
 
         sw = QApplication.primaryScreen().size().width()
         sh = QApplication.primaryScreen().size().height()
-        x = (sw - w) // 2
+        x = (sw - canvas_w) // 2
+        if self._overflow_mode == "overflow":
+            x = (sw - w) // 2 - self._dialog_left
         dialog_screen_y = sh - h - 60
         win_y = dialog_screen_y - self._dialog_top
 
