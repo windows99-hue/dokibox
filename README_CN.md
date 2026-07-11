@@ -1,6 +1,6 @@
 # dokibox
 
-这是一个《心跳文学部》的粉丝二创python库，用`tkinter`实现了游戏内的各种提示框
+这是一个《心跳文学部》的粉丝二创python库，用`PySide6`实现了游戏内的各种提示框
 
 >  ### ⚠️ 鸣谢与二创准则声明 / Credit & IP Guidelines 
 >  `dokibox` 是基于《心跳文学部》（Doki Doki Literature Club）的粉丝衍生创作，与 Team Salvato 无官方关联。原版游戏可以在[这里](https://ddlc.moe/)或者[Steam商店链接](https://store.steampowered.com/app/698780/Doki_Doki_Literature_Club/)下载
@@ -27,8 +27,6 @@ import dokibox
 
 ### ynbox — 是/否 对话框
 
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/d40c9881-14bd-4876-877c-1d2008805c06" />
-
 ```python
 dokibox.ynbox(msg="确认删除？", tooltip=False) → bool
 ```
@@ -50,8 +48,6 @@ if dokibox.ynbox("确认删除？"):
 
 ### msgbox — 消息提示框
 
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/da5064d3-8d90-47ec-9b9e-20e87faf0fdc" />
-
 ```python
 dokibox.msgbox(msg="操作成功！", tooltip=False) → True
 ```
@@ -70,8 +66,6 @@ dokibox.msgbox("保存成功！")
 ---
 
 ### choicebox — 多选对话框
-
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/a33088b1-363b-48f5-8509-44a5d3ef5f4d" />
 
 ```python
 dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | None
@@ -95,7 +89,6 @@ print(char)  # "优里"
 
 ### dialogbox — 底部对话框
 
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/3817a140-66eb-496d-988d-7b728289a1ca" />
 
 ```python
 dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False)
@@ -121,6 +114,15 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 dokibox.dialogbox("其实你叫Administrator对吧", name="莫妮卡")
 dokibox.dialogbox("慢一点……", speed=80, bold=True)
 dokibox.dialogbox("一下全出来", typewriter=False)
+```
+
+### garbled - 生成混乱文本
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `n` | int | `200` | 混乱文本的长度 |
+
+```python
+dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True,chardelay=5,bold=True,overflow_mode="overflow")
 ```
 
 ## 在最后

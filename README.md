@@ -1,6 +1,6 @@
 # dokibox
 
-A fan-made Python library for *Doki Doki Literature Club*, implementing various in-game prompt boxes using `tkinter`.
+A fan-made Python library for *Doki Doki Literature Club*, implementing various in-game prompt boxes using `PySide6`.
 
 > ### ⚠️ Credit & IP Guidelines
 > `dokibox` is a fan derivative work based on *Doki Doki Literature Club* (DDLC) and is not officially affiliated with Team Salvato. The original game can be downloaded [here](https://ddlc.moe/) or from the [Steam store page](https://store.steampowered.com/app/698780/Doki_Doki_Literature_Club/).
@@ -27,8 +27,6 @@ import dokibox
 
 ### ynbox — Yes/No Dialog
 
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/d40c9881-14bd-4876-877c-1d2008805c06" />
-
 ```python
 dokibox.ynbox(msg="Delete?", tooltip=False) → bool
 ```
@@ -50,8 +48,6 @@ if dokibox.ynbox("Delete?"):
 
 ### msgbox — Message Box
 
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/da5064d3-8d90-47ec-9b9e-20e87faf0fdc" />
-
 ```python
 dokibox.msgbox(msg="Operation successful!", tooltip=False) → True
 ```
@@ -70,8 +66,6 @@ dokibox.msgbox("Saved successfully!")
 ---
 
 ### choicebox — Multiple Choice Dialog
-
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/a33088b1-363b-48f5-8509-44a5d3ef5f4d" />
 
 ```python
 dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | None
@@ -95,8 +89,6 @@ print(char)  # "Yuri"
 
 ### dialogbox — Bottom Dialog Box
 
-<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/3817a140-66eb-496d-988d-7b728289a1ca" />
-
 ```python
 dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False)
 ```
@@ -118,9 +110,19 @@ In typewriter mode:
 - Second click → closes
 
 ```python
-dokibox.dialogbox("You're actually Administrator, right?", name="Monika")
+dokibox.dialogbox("Do you actually go by Administrator or something?", name="Monika")
 dokibox.dialogbox("Slower...", speed=80, bold=True)
 dokibox.dialogbox("All at once", typewriter=False)
+```
+
+### garbled — Generate Garbled String
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `n` | int | `200` | the length of garbled string |
+
+```python
+dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True,chardelay=5,bold=True,overflow_mode="overflow")
 ```
 
 ## Finally
