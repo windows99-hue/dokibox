@@ -48,8 +48,8 @@ class _DialogBox(QWidget):
             raise ValueError(
                 f"overflow_mode must be 'wrap', 'overflow', or 'hide', got {overflow_mode!r}"
             )
-        super().__init__(None)
         _get_app()
+        super().__init__(None)
 
         self._overflow_mode = overflow_mode
         self.w = w

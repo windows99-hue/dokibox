@@ -48,8 +48,8 @@ class _DokiBase(QWidget):
     BORDER_W = 12
 
     def __init__(self, msg, title="", pinned=True):
-        super().__init__(None)
         _get_app()
+        super().__init__(None)
         self.result = None
         self._msg = msg
         self._pinned = pinned
