@@ -397,7 +397,7 @@ class _DialogBox(QWidget):
 
             offset_x = (step_x // 2) if row % 2 == 1 else 0
             x = dl + max(0, offset_x)
-            while x + dr <= dl + w:
+            while x < dl + w + step_x:
                 color = _blend(DOT_COLOR, FADE_TO, opacity)
                 painter.setBrush(color)
                 painter.setPen(Qt.NoPen)
