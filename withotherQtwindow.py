@@ -40,15 +40,11 @@ class DdlcBlockTest(QWidget):
         
     def on_button_click(self):
         self.label.setText("等待用户选择...")
-        
-        # 1. 直接用变量接收返回值，代码会在这里“暂停”等待弹窗关闭
-        result = dokibox.ynbox("你喜欢文学部吗？")
-        
-        # 2. 弹窗关闭后，代码继续向下执行，直接判断结果
-        if result:
-            self.label.setText("用户选择了：Yes！太好了。")
-        else:
-            self.label.setText("用户选择了：No... (Just Monika?)")
+        QTimer.singleShot(0, self._show_dialogbox)
+
+    def _show_dialogbox(self):
+        dokibox.dialogbox("你喜欢文学部吗？")
+        dokibox.dialogbox("你喜欢文学部吗111111111？",fdst=True)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

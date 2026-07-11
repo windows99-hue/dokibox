@@ -4,7 +4,7 @@ import math
 import sys
 import ctypes
 from typing import Optional
-from PySide6.QtCore import Qt, QTimer, QEventLoop, QRectF, QPointF
+from PySide6.QtCore import Qt, QTimer, QEventLoop, QRectF, QPointF, Signal
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
 )
@@ -64,10 +64,11 @@ def remove_window_shadow(hwnd):
     )
 
 _box = None
-_dialogbox_loop = None
 
 
 class _DialogBox(QWidget):
+
+    dismissed = Signal()
 
     def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50,
                  bold=False, pinned=True, fdst=False, overflow_mode="wrap",
@@ -169,6 +170,10 @@ class _DialogBox(QWidget):
         self.show()
 
         _box = self
+
+        QApplication.processEvents()
+        self.raise_()
+        self.activateWindow()
 
     def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,
                         font_family=None, font_size=None):
@@ -568,13 +573,7 @@ class _DialogBox(QWidget):
             self._done()
 
     def _done(self):
-        global _box, _dialogbox_loop
-        if self._fdst:
-            _destroy_box()
-        loop = _dialogbox_loop
-        _dialogbox_loop = None
-        if loop is not None:
-            loop.quit()
+        self.dismissed.emit()
 
 
 def _destroy_box():
@@ -621,7 +620,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         dokibox.dialogbox("Hello!")
         dokibox.dialogbox("Hello!", name="Sayori", bold=True)
     """
-    global _box, _dialogbox_loop
+    global _box
 
     _get_app()
     sw = QApplication.primaryScreen().size().width()
@@ -646,4 +645,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                           font_family=font_family, font_size=font_size)
 
     _dialogbox_loop = QEventLoop()
+    _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)
     _dialogbox_loop.exec()
+
+    if fdst:
+        _destroy_box()
