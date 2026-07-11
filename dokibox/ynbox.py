@@ -74,6 +74,7 @@ class _YnDialog(_DokiBase):
         self._btn_no_hover = False
         self._btn_yes_rect = None
         self._btn_no_rect = None
+        self._tooltip_text = None
         super().__init__(msg, title, pinned=pinned)
 
     def _wrap_lines(self, text, font, max_w):
@@ -224,22 +225,25 @@ class _YnDialog(_DokiBase):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         hovering = self._update_hover(event.position().toPoint())
-        if self._tooltip and hovering:
-            gp = event.globalPosition().toPoint()
-            pos = event.position().toPoint()
-            text = ""
-            if self._btn_yes_rect:
-                rx, ry, rw, rh = self._btn_yes_rect
-                if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
-                    text = self._yes_text
-            if self._btn_no_rect and not text:
-                rx, ry, rw, rh = self._btn_no_rect
-                if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
-                    text = self._no_text
-            if text:
-                QToolTip.showText(gp, text, self)
-        else:
-            QToolTip.hideText()
+        if self._tooltip:
+            if hovering:
+                pos = event.position().toPoint()
+                text = ""
+                if self._btn_yes_rect:
+                    rx, ry, rw, rh = self._btn_yes_rect
+                    if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                        text = self._yes_text
+                if self._btn_no_rect and not text:
+                    rx, ry, rw, rh = self._btn_no_rect
+                    if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                        text = self._no_text
+                if text and text != self._tooltip_text:
+                    self._tooltip_text = text
+                    gp = event.globalPosition().toPoint()
+                    QToolTip.showText(gp, text, self)
+            else:
+                self._tooltip_text = None
+                QToolTip.hideText()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:

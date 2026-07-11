@@ -26,6 +26,7 @@ class _MsgDialog(_DokiBase):
         self._tooltip = tooltip
         self._btn_ok_hover = False
         self._btn_ok_rect = None
+        self._tooltip_shown = False
         super().__init__(msg, title, pinned=pinned)
 
     def _wrap_lines(self, text, font, max_w):
@@ -146,9 +147,14 @@ class _MsgDialog(_DokiBase):
             if hover != self._btn_ok_hover:
                 self._btn_ok_hover = hover
                 self.update()
-        if self._tooltip and self._btn_ok_hover:
-            gp = event.globalPosition().toPoint()
-            QToolTip.showText(gp, "OK", self)
+        if self._tooltip:
+            if self._btn_ok_hover and not self._tooltip_shown:
+                self._tooltip_shown = True
+                gp = event.globalPosition().toPoint()
+                QToolTip.showText(gp, "OK", self)
+            elif not self._btn_ok_hover:
+                self._tooltip_shown = False
+                QToolTip.hideText()
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Escape, Qt.Key_Return, Qt.Key_Enter):
