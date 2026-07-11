@@ -9,6 +9,8 @@
 >
 >  特别感谢 Team Salvato 的 Joseph 在邮件中对本项目的支持与解答！
 
+<img width="2560" height="1392" alt="image" src="https://github.com/user-attachments/assets/a25345b9-28a3-4415-9d14-4090bbb3ee51" />
+
 ## 安装
 
 从PyPI下载安装
@@ -26,6 +28,8 @@ import dokibox
 ---
 
 ### ynbox — 是/否 对话框
+
+<img width="300" height="246" alt="image" src="https://github.com/user-attachments/assets/283ffc50-17c5-4095-85aa-ac9af918ab6e" />
 
 ```python
 dokibox.ynbox(msg="确认删除？", tooltip=False) → bool
@@ -48,6 +52,8 @@ if dokibox.ynbox("确认删除？"):
 
 ### msgbox — 消息提示框
 
+<img width="440" height="246" alt="image" src="https://github.com/user-attachments/assets/50aaa9b7-b972-4fa4-8508-90620626a4a1" />
+
 ```python
 dokibox.msgbox(msg="操作成功！", tooltip=False) → True
 ```
@@ -66,6 +72,8 @@ dokibox.msgbox("保存成功！")
 ---
 
 ### choicebox — 多选对话框
+
+<img width="609" height="415" alt="image" src="https://github.com/user-attachments/assets/a20b59e2-25c3-4f29-8625-4608f34e487b" />
 
 ```python
 dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | None
@@ -89,6 +97,7 @@ print(char)  # "优里"
 
 ### dialogbox — 底部对话框
 
+<img width="1206" height="317" alt="image" src="https://github.com/user-attachments/assets/a6ccdf71-abd8-44c1-a774-4a3d77e38fc0" />
 
 ```python
 dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False)
@@ -117,6 +126,9 @@ dokibox.dialogbox("一下全出来", typewriter=False)
 ```
 
 ### garbled - 生成混乱文本
+
+<img width="1649" height="308" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `n` | int | `200` | 混乱文本的长度 |
