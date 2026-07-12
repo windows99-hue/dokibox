@@ -30,7 +30,7 @@ DOT_COLOR = "#FB94C1"
 DWMWA_BORDER_COLOR = 34
 DWMWA_SHADOW_OPACITY = 33
 
-SPRITE_BASE_HEIGHT_RATIO = 0.60
+SPRITE_BASE_HEIGHT_RATIO = 0.95
 SPRITE_SPEAKER_SCALE = 1.15
 SPRITE_SILENT_SCALE = 1.0
 SPRITE_SILENT_OPACITY = 1.0
@@ -152,7 +152,7 @@ class Avatar:
         self.name = name
         self.emotes = emotes
 
-    def __call__(self, position, emote):
+    def __call__(self, position, emote, width=None, height=None):
         images = self.emotes.get(emote)
         if images is None:
             raise ValueError(
@@ -161,7 +161,7 @@ class Avatar:
             )
         if isinstance(images, str):
             images = [images]
-        return _SpriteSlot(self, position, images)
+        return _SpriteSlot(self, position, images, width=width, height=height)
 
     def hide(self):
         return _HideSlot(self)
@@ -169,12 +169,14 @@ class Avatar:
 
 class _SpriteSlot:
     """Internal: a character placed on stage at a position with an emote."""
-    __slots__ = ("avatar", "position", "images")
+    __slots__ = ("avatar", "position", "images", "width", "height")
 
-    def __init__(self, avatar, position, images):
+    def __init__(self, avatar, position, images, width=None, height=None):
         self.avatar = avatar
         self.position = position
         self.images = images
+        self.width = width
+        self.height = height
 
 
 class _HideSlot:
@@ -218,6 +220,8 @@ class _SpriteWindow(QWidget):
         self._pinned = pinned
         self._opacity_val = 1.0
         self._avatar = None
+        self._width_override = None
+        self._height_override = None
 
         self._pixmap = _load_pixmap(image_data)
 
@@ -253,18 +257,33 @@ class _SpriteWindow(QWidget):
         screen = QApplication.primaryScreen()
         sh = screen.size().height()
         sw = screen.size().width()
-        base_h = int(sh * SPRITE_BASE_HEIGHT_RATIO)
-        if self._is_speaker:
-            h = int(base_h * SPRITE_SPEAKER_SCALE)
-        else:
-            h = int(base_h * SPRITE_SILENT_SCALE)
         pw = self._pixmap.width()
         ph = self._pixmap.height()
-        if ph > 0:
-            w = int(h * pw / ph)
+
+        both_overrides = (self._width_override is not None and self._height_override is not None)
+
+        if both_overrides:
+            w = self._width_override
+            h = self._height_override
         else:
-            w = h
-        if pw > 0 and w > sw * 0.5:
+            if self._height_override is not None:
+                base_h = self._height_override
+            else:
+                base_h = int(sh * SPRITE_BASE_HEIGHT_RATIO)
+
+            if self._is_speaker:
+                h = int(base_h * SPRITE_SPEAKER_SCALE)
+            else:
+                h = int(base_h * SPRITE_SILENT_SCALE)
+
+            if self._width_override is not None:
+                w = self._width_override
+            elif ph > 0:
+                w = int(h * pw / ph)
+            else:
+                w = h
+
+        if pw > 0 and self._width_override is None and w > sw * 0.5:
             w = int(sw * 0.5)
             h = int(w * ph / pw)
         x = int(sw * self._x_frac - w // 2)
@@ -1106,6 +1125,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     display_name = name.name if isinstance(name, Avatar) else name
     avatar = name if isinstance(name, Avatar) else None
     avatar_sprite_map = []
+    sprite_size_map = []
 
     if sprites is not None:
         is_new_api = False
@@ -1125,10 +1145,12 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                     processed_sprites.append(_composite_sprite_pixmaps(chunk.images))
                 processed_positions.append(chunk.position)
                 avatar_sprite_map.append(chunk.avatar)
+                sprite_size_map.append((chunk.width, chunk.height))
                 if avatar is not None and chunk.avatar is avatar and auto_speaker_idx is None:
                     auto_speaker_idx = len(processed_sprites) - 1
             else:
                 processed_sprites.append(chunk)
+                sprite_size_map.append((None, None))
 
         if is_new_api:
             sprites = processed_sprites if processed_sprites else []
@@ -1166,6 +1188,9 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     for i, sw in enumerate(_box._sprites):
         if i < len(avatar_sprite_map):
             sw._avatar = avatar_sprite_map[i]
+        if i < len(sprite_size_map):
+            sw._width_override, sw._height_override = sprite_size_map[i]
+            sw._apply_geometry(animate=False)
 
     _dialogbox_loop = QEventLoop()
     _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)
