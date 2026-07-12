@@ -134,6 +134,24 @@ dokibox.dialogbox("Slower...", speed=80, bold=True)
 dokibox.dialogbox("All at once", typewriter=False)
 ```
 
+### enterbox - Text Enter Box
+
+~~~python
+cmd = dokibox.enterbox("Enter your name:")
+print(cmd) #The user input string
+~~~
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| `msg` | str | `""` | Prompt text |
+| `default` | str | `""` | Auto-filled content |
+| `tooltip` | bool | `False` | Tooltip text |
+| `pinned` | bool | `True` | Whether to pin to the top |
+| `font_family` | str | `None` | Font name (default "Microsoft YaHei"); pass `None` to use the default |
+| `font_size` | int | `None` | Font size (in points, default 20); pass `None` to use the default |
+| `max_length` | int | `None` | Maximum input character length |
+
+
 ### garbled — Generate Garbled String
 
 <img width="1649" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />

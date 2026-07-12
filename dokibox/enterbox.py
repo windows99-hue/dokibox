@@ -147,7 +147,7 @@ class _CustomLineEdit(QLineEdit):
 
 class _EnterDialog(_DokiBase):
 
-    def __init__(self, msg, default="", title="", tooltip=False, pinned=True,
+    def __init__(self, msg, default="", tooltip=False, pinned=True,
                  font_family=None, font_size=None, max_length=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
@@ -157,7 +157,7 @@ class _EnterDialog(_DokiBase):
         self._tooltip_shown = False
         self._default = default
         self._max_length = max_length
-        super().__init__(msg, title, pinned=pinned)
+        super().__init__(msg, pinned=pinned)
         self._setup_input()
 
     def _setup_input(self):
@@ -334,7 +334,7 @@ class _EnterDialog(_DokiBase):
             self._done(self._input.text())
 
 
-def enterbox(msg: str = "", default: str = "", title: str = "",
+def enterbox(msg: str = "", default: str = "",
              tooltip: bool = False, pinned: bool = True,
              font_family: str = None, font_size: int = None,
              max_length: int = None) -> str | None:
@@ -343,7 +343,6 @@ def enterbox(msg: str = "", default: str = "", title: str = "",
     Args:
         msg:        prompt text to display above the input field.
         default:    default value in the input field.
-        title:      window title (unused in borderless mode).
         tooltip:    show a floating tooltip when hovering over the button.
         pinned:     keep the window always on top of other windows.
         font_family: custom font family name.
@@ -356,6 +355,6 @@ def enterbox(msg: str = "", default: str = "", title: str = "",
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
-    return _EnterDialog.run(msg, default=default, title=title, tooltip=tooltip,
+    return _EnterDialog.run(msg, default=default, tooltip=tooltip,
                             pinned=pinned, font_family=font_family,
                             font_size=font_size, max_length=max_length)

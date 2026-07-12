@@ -134,6 +134,24 @@ dokibox.dialogbox("慢一点……", speed=80, bold=True)
 dokibox.dialogbox("一下全出来", typewriter=False)
 ```
 
+### enterbox - 文本输入框
+
+~~~python
+cmd = dokibox.enterbox("Enter your name:")
+print(cmd) #用户输入的字符串
+~~~
+
+| 参数  | 类型 | 默认 | 说明   |
+| ----- | ---- | ---- | ------ |
+| `msg` | str  | `""` | 提示词 |
+| `default` | str | `""` | 自动填充的内容 |
+| `tooltip` | bool | `False` | 悬浮文字提示 |
+| `pinned` | bool | `True` | 是否置顶 |
+| `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
+| `font_size` | int | `None` | 字号（磅值，默认 20），传 `None` 使用默认 |
+| `max_length` | int | `None` | 限制输入字符长度 |
+
+
 ### garbled - 生成混乱文本
 
 <img width="1649" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />
