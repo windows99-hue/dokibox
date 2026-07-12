@@ -106,7 +106,7 @@ print(char)  # "优里"
 
 ### dialogbox — 底部对话框
 
-<img width="1206" alt="image" src="https://github.com/user-attachments/assets/a6ccdf71-abd8-44c1-a774-4a3d77e38fc0" />
+<img width="1206" alt="image" src="https://github.com/user-attachments/assets/db7c4489-aa32-4cc0-a6fd-d702bcc77417" />
 
 ```python
 dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False)
