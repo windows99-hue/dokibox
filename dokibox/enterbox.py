@@ -4,6 +4,7 @@ import math
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
 from PySide6.QtWidgets import QToolTip, QLineEdit
+from typing import Optional
 from dokibox._base import _DokiBase, _get_app, _hex_to_rgb, BODY_COLOR
 
 MSG_COLOR = "#000000"
@@ -337,7 +338,7 @@ class _EnterDialog(_DokiBase):
 def enterbox(msg: str = "", default: str = "",
              tooltip: bool = False, pinned: bool = True,
              font_family: str = None, font_size: int = None,
-             max_length: int = None) -> str | None:
+             max_length: int = None) -> Optional[str]:
     """DDLC-style input dialog. Returns the entered text or None if cancelled.
 
     Args:
