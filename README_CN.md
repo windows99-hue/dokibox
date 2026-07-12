@@ -125,6 +125,8 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号（磅值，默认 20），传 `None` 使用默认 |
 | `fdst` | bool | `False` | 若设为 True，则在关闭时销毁该窗口。请在对话场景或剧情分支的最后一行使用此设置，以确保窗口彻底关闭。 |
+| `transparent` | bool | `True` | 从上到下应用透明度渐变，使对话框主体看起来半透明 |
+| `glare` | bool | `True` | 在对话框底部绘制白色半圆高光 |
 | `pinned` | bool | `True` | 是否置顶 |
 
 打字机模式下：
