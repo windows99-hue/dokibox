@@ -42,6 +42,7 @@ dokibox.ynbox(msg="Delete?", tooltip=False) → bool
 | `btn_texts` | tuple | None | Confirm button prompt. When set to None, `dokibox` will automatically detect the system language. To modify, please pass in a tuple, replacing "Yes" with the first parameter and "No" with the second parameter. English is used by default when the language is unknown. |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` or unset to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` or unset to use default. |
+| `pinned` | bool | `True` | Whether to pin |
 
 Return value: clicking "Yes" returns `True`; clicking "No" or pressing Esc returns `False`.
 
@@ -66,6 +67,7 @@ dokibox.msgbox(msg="Operation successful!", tooltip=False) → True
 | `tooltip` | bool | `False` | Tooltip text |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` to use default. |
+| `pinned` | bool | `True` | Whether to pin |
 
 Single OK button. Closes on click, Enter, or Esc; returns `True`.
 
@@ -91,6 +93,7 @@ dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | Non
 | `force` | int | `None` | Force-select an index (0-based); cursor moves to the center of that choice |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` to use default. |
+| `pinned` | bool | `True` | Whether to pin |
 
 Return value: the selected text content; Esc returns `None`.
 
@@ -122,6 +125,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points (default: 20). Set to `None` to use default. |
 | `fdst` | bool | `False` | If True, destroys the window when dismissed. Use this for the final line of a dialogue scene or story branch to ensure the window closes completely. |
+| `pinned` | bool | `True` | Whether to pin |
 
 In typewriter mode:
 - Text appears character by character
@@ -152,19 +156,20 @@ print(cmd) #The user input string
 | `font_family` | str | `None` | Font name (default "Microsoft YaHei"); pass `None` to use the default |
 | `font_size` | int | `None` | Font size (in points, default 20); pass `None` to use the default |
 | `max_length` | int | `None` | Maximum input character length |
+| `pinned` | bool | `True` | Whether to pin |
 
 
 ### garbled — Generate Garbled String
 
 <img width="1649" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `n` | int | `200` | the length of garbled string |
-
 ```python
 dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True,chardelay=5,bold=True,overflow_mode="overflow")
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `n` | int | `200` | the length of garbled string |
 
 ## Finally
 

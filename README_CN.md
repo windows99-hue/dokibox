@@ -39,9 +39,10 @@ dokibox.ynbox(msg="确认删除？", tooltip=False) → bool
 |------|------|------|------|
 | `msg` | str | `""` | 正文 |
 | `tooltip` | bool | `False` | 悬浮文字提示 |
-| `btn_texts` | tuple | None| 确认按钮提示，为None时`dokibox`会自动检测系统语言，如需修改请传入一个元组，第一个参数替换"Yes"第二个参数替换"No"，语言未知时默认使用英文 |
+| `btn_texts` | tuple | `None` | 确认按钮提示，为None时`dokibox`会自动检测系统语言，如需修改请传入一个元组，第一个参数替换"Yes"第二个参数替换"No"，语言未知时默认使用英文 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 或不填使用默认 |
 | `font_size` | int | `None` | 字号，传 `None` 或不填使用默认 |
+| `pinned` | bool | `True` | 是否置顶 |
 
 返回值：点击"是"返回 `True`，点击"否"或 Esc 返回 `False`。
 
@@ -66,6 +67,7 @@ dokibox.msgbox(msg="操作成功！", tooltip=False) → True
 | `tooltip` | bool | `False` | 悬浮文字提示 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号，传 `None` 使用默认 |
+| `pinned` | bool | `True` | 是否置顶 |
 
 单 OK 按钮。点击、Enter 或 Esc 关闭，返回 `True`。
 
@@ -91,6 +93,7 @@ dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | Non
 | `force` | int | `None` | 指定索引（0 开始），鼠标自动移到该选项中央 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号，传 `None` 使用默认 |
+| `pinned` | bool | `True` | 是否置顶 |
 
 返回值：选中的文字内容，Esc 返回 `None`。
 
@@ -122,6 +125,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号（磅值，默认 20），传 `None` 使用默认 |
 | `fdst` | bool | `False` | 若设为 True，则在关闭时销毁该窗口。请在对话场景或剧情分支的最后一行使用此设置，以确保窗口彻底关闭。 |
+| `pinned` | bool | `True` | 是否置顶 |
 
 打字机模式下：
 - 文字逐个出现
@@ -152,19 +156,20 @@ print(cmd) #用户输入的字符串
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号（磅值，默认 20），传 `None` 使用默认 |
 | `max_length` | int | `None` | 限制输入字符长度 |
+| `pinned` | bool | `True` | 是否置顶 |
 
 
 ### garbled - 生成混乱文本
 
 <img width="1649" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `n` | int | `200` | 混乱文本的长度 |
-
 ```python
 dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True,chardelay=5,bold=True,overflow_mode="overflow")
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `n` | int | `200` | 混乱文本的长度 |
 
 ## 在最后
 
