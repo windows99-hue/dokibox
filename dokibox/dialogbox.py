@@ -355,6 +355,7 @@ class _DialogBox(QWidget):
 
         self._draw_fill(painter, dl, top, w, h)
         self._draw_dots(painter, dl, top, w, h)
+        self._draw_glare(painter, dl, top, w, h)
         painter.setClipping(False)
 
         self._draw_outline(painter, dl, top, w, h, r)
@@ -428,6 +429,25 @@ class _DialogBox(QWidget):
             gradient.setColorAt(1, _blend(BODY_COLOR, FADE_TO, 0.5))
         painter.setBrush(gradient)
         painter.drawRect(QRectF(dl, top, w, h))
+
+    def _draw_glare(self, painter, dl, top, w, h):
+        rx = w / 2 + 30
+        ry = h * 0.40
+        cx = dl + w / 2
+        cy = top + h
+
+        gradient = QLinearGradient(0, cy - ry, 0, cy)
+        gradient.setColorAt(0.0, QColor(255, 255, 255, 100))
+        gradient.setColorAt(0.4, QColor(255, 255, 255, 60))
+        gradient.setColorAt(0.7, QColor(255, 255, 255, 15))
+        gradient.setColorAt(1.0, QColor(255, 255, 255, 0))
+
+        path = QPainterPath()
+        path.moveTo(dl, cy)
+        path.arcTo(QRectF(cx - rx, cy - ry, rx * 2, ry * 2), 180, -180)
+
+        painter.setBrush(gradient)
+        painter.drawPath(path)
 
     def _draw_dots(self, painter, dl, top, w, h):
         dr = self._dot_radius
