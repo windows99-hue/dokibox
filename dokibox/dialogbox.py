@@ -451,6 +451,7 @@ class _DialogBox(QWidget):
         path.moveTo(dl, cy)
         path.arcTo(QRectF(cx - rx, cy - ry, rx * 2, ry * 2), 180, -180)
 
+        painter.setPen(Qt.NoPen)
         painter.setBrush(gradient)
         painter.drawPath(path)
 
