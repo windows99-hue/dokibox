@@ -72,7 +72,7 @@ class _DialogBox(QWidget):
 
     def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50,
                  bold=False, pinned=True, fdst=False, overflow_mode="wrap",
-                 font_family=None, font_size=None):
+                 font_family=None, font_size=None, transparent=False):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -94,6 +94,7 @@ class _DialogBox(QWidget):
         self._typing = False
         self._typing_done = False
         self._after_timer = None
+        self._transparent = transparent
 
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size or 20
@@ -176,7 +177,7 @@ class _DialogBox(QWidget):
         self.activateWindow()
 
     def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,
-                        font_family=None, font_size=None):
+                        font_family=None, font_size=None, transparent=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -191,6 +192,8 @@ class _DialogBox(QWidget):
         self._bold = bold
         self._typing = False
         self._typing_done = False
+        if transparent is not None:
+            self._transparent = transparent
 
         self._name = name
 
@@ -414,11 +417,15 @@ class _DialogBox(QWidget):
 
     def _draw_fill(self, painter, dl, top, w, h):
         gradient = QLinearGradient(0, top, 0, top + h)
-        c_top = QColor(BODY_COLOR)
-        c_bot = QColor(BODY_COLOR)
-        c_bot.setAlpha(int(255 * 0.45))
-        gradient.setColorAt(0, c_top)
-        gradient.setColorAt(1, c_bot)
+        if self._transparent:
+            c_top = QColor(BODY_COLOR)
+            c_bot = QColor(BODY_COLOR)
+            c_bot.setAlpha(int(255 * 0.45))
+            gradient.setColorAt(0, c_top)
+            gradient.setColorAt(1, c_bot)
+        else:
+            gradient.setColorAt(0, _blend(BODY_COLOR, FADE_TO, 1.0))
+            gradient.setColorAt(1, _blend(BODY_COLOR, FADE_TO, 0.5))
         painter.setBrush(gradient)
         painter.drawRect(QRectF(dl, top, w, h))
 
@@ -433,13 +440,17 @@ class _DialogBox(QWidget):
         y = top + dr
         while y < top + h + row_h:
             t = max(0, min(1, (y - top) / h))
-            alpha_f = 1.0 - 0.55 * t
 
             offset_x = (step_x // 2) if row % 2 == 1 else 0
             x = dl + max(0, offset_x)
             while x < dl + w + step_x:
-                color = QColor(DOT_COLOR)
-                color.setAlphaF(alpha_f)
+                if self._transparent:
+                    alpha_f = 1.0 - 0.55 * t
+                    color = QColor(DOT_COLOR)
+                    color.setAlphaF(alpha_f)
+                else:
+                    opacity = 1.0 - 0.5 * t
+                    color = _blend(DOT_COLOR, FADE_TO, opacity)
                 painter.setBrush(color)
                 painter.setPen(Qt.NoPen)
                 painter.drawEllipse(QPointF(x, y), dr, dr)
@@ -602,7 +613,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               name: Optional[str] = None, typewriter: bool = True,
               chardelay: int = 50, bold: bool = False, pinned: bool = True,
               fdst: bool = False, overflow_mode: str = "wrap",
-              font_family: str = None, font_size: int = None) -> None:
+              font_family: str = None, font_size: int = None,
+              transparent: bool = False) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -619,6 +631,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                        'wrap'    – wrap text to the next line (default).
                        'overflow' – expand the window so text can render past the dialog boundary.
                        'hide'    – clip text at the boundary.
+        transparent:   apply alpha gradient from top to bottom, making the body see-through (default False).
 
     Usage:
         dokibox.dialogbox("Hello!")
@@ -637,7 +650,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         try:
             if _box.w == w and _box.h == h:
                 _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, name,
-                                     font_family=font_family, font_size=font_size)
+                                     font_family=font_family, font_size=font_size,
+                                     transparent=transparent)
             else:
                 _destroy_box()
         except Exception:
@@ -646,7 +660,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     if _box is None:
         _box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned,
                           fdst=fdst, overflow_mode=overflow_mode,
-                          font_family=font_family, font_size=font_size)
+                          font_family=font_family, font_size=font_size,
+                          transparent=transparent)
 
     _dialogbox_loop = QEventLoop()
     _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)
