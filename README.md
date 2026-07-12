@@ -136,8 +136,10 @@ dokibox.dialogbox("All at once", typewriter=False)
 
 ### enterbox - Text Enter Box
 
+<img width="452" alt="image" src="https://github.com/user-attachments/assets/03f7d34e-d76f-4921-97ce-ab18a43969e5" />
+
 ~~~python
-cmd = dokibox.enterbox("Enter your name:")
+cmd = dokibox.enterbox("Please enter your name")
 print(cmd) #The user input string
 ~~~
 
