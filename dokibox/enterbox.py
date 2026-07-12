@@ -50,16 +50,12 @@ class _EnterDialog(_DokiBase):
         self._input.setStyleSheet(f"""
             QLineEdit {{
                 background-color: {INPUT_BG};
-                border: 2px solid {INPUT_BORDER};
-                border-radius: 6px;
+                border: none;
                 padding: 4px 8px;
                 color: {MSG_COLOR};
                 caret-color: {CURSOR_COLOR};
                 selection-background-color: {BTN_STROKE_COLOR};
                 selection-color: #ffffff;
-            }}
-            QLineEdit:focus {{
-                border: 2px solid {BTN_STROKE_COLOR};
             }}
         """)
         self._input.setFocus()
