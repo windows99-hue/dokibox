@@ -674,12 +674,8 @@ class _DialogBox(QWidget):
 
         if sprites is not None:
             self._update_sprites(sprites, sprite_pos, speaker_idx)
-            for sw in self._sprites:
-                try:
-                    sw.raise_()
-                except Exception:
-                    pass
             QApplication.processEvents()
+            self.raise_()
         elif speaker_idx is not None:
             self._update_sprites_state_only(speaker_idx)
 
