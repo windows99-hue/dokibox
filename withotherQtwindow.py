@@ -43,14 +43,34 @@ class DdlcBlockTest(QWidget):
         QTimer.singleShot(0, self._show_dialogbox)
 
     def _show_dialogbox(self):
-        dokibox.dialogbox("你喜欢文学部吗？")
-        dokibox.ynbox("你喜欢文学部吗？", tooltip=True)
-        dokibox.dialogbox("你喜欢文学部吗111111111？")
-
+        self.label.setText("等待用户输入名字...")
+        
+        # 1. 先获取名字（单独一行，获取返回值）
+        username = dokibox.enterbox("请输入你的名字：", default="MC")
+        
+        # 如果用户点取消或直接关闭了 enterbox，做个防御，避免返回 None 导致拼接报错
+        if not username:
+            username = "MC"
+            
+        self.label.setText("等待用户确认喜好...")
+        
+        # 2. 名字获取到了，再展示欢迎对话框
+        dokibox.dialogbox(f"哈喽 {username}！你喜欢文学部吗？", name="Monika")
+        
+        # 3. 询问 YN
+        cmd = dokibox.ynbox("你喜欢文学部吗？", tooltip=True)
+        
+        # 4. 根据结果响应
+        if cmd:
+            dokibox.dialogbox("你喜欢文学部！谢谢！", name="Monika", fdst=True)
+        else:
+            dokibox.dialogbox("你竟然不喜欢文学部！", name="Monika")
+            dokibox.dialogbox(
+                dokibox.garbled(100) + "\n" + dokibox.garbled(20),
+                name="Monika", typewriter=True, chardelay=5, bold=True, overflow_mode="overflow", fdst=True
+            )
+            
         self.label.setText("用户已选择，继续执行主循环。")
-        dokibox.dialogbox("你喜欢文学部吗222222222？")
-        dokibox.dialogbox("你喜欢文学部吗333333333？",fdst=True)
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = DdlcBlockTest()
