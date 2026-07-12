@@ -443,9 +443,10 @@ class _DialogBox(QWidget):
 
         gradient = QLinearGradient(0, cy - ry, 0, cy)
         gradient.setColorAt(0.0, QColor(255, 255, 255, 100))
-        gradient.setColorAt(0.4, QColor(255, 255, 255, 60))
-        gradient.setColorAt(0.7, QColor(255, 255, 255, 15))
-        gradient.setColorAt(1.0, QColor(255, 255, 255, 0))
+        gradient.setColorAt(0.2, QColor(255, 255, 255, 60))
+        gradient.setColorAt(0.3, QColor(255, 255, 255, 30))
+        gradient.setColorAt(0.4, QColor(255, 255, 255, 15))
+        gradient.setColorAt(1, QColor(255, 255, 255, 10))
 
         path = QPainterPath()
         path.moveTo(dl, cy)
