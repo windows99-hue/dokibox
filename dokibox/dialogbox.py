@@ -72,7 +72,7 @@ class _DialogBox(QWidget):
 
     def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50,
                  bold=False, pinned=True, fdst=False, overflow_mode="wrap",
-                 font_family=None, font_size=None, transparent=False, glare=True):
+                 font_family=None, font_size=None, transparent=True, glare=True):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -425,7 +425,7 @@ class _DialogBox(QWidget):
         if self._transparent:
             c_top = QColor(BODY_COLOR)
             c_bot = QColor(BODY_COLOR)
-            c_bot.setAlpha(int(255 * 0.45))
+            c_bot.setAlpha(int(255 * 0.60))
             gradient.setColorAt(0, c_top)
             gradient.setColorAt(1, c_bot)
         else:
@@ -469,7 +469,7 @@ class _DialogBox(QWidget):
             x = dl + max(0, offset_x)
             while x < dl + w + step_x:
                 if self._transparent:
-                    alpha_f = 1.0 - 0.55 * t
+                    alpha_f = 1.0 - 0.30 * t
                     color = QColor(DOT_COLOR)
                     color.setAlphaF(alpha_f)
                 else:
@@ -638,7 +638,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               chardelay: int = 50, bold: bool = False, pinned: bool = True,
               fdst: bool = False, overflow_mode: str = "wrap",
               font_family: str = None, font_size: int = None,
-              transparent: bool = False, glare: bool = True) -> None:
+              transparent: bool = True, glare: bool = True) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -655,7 +655,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                        'wrap'    – wrap text to the next line (default).
                        'overflow' – expand the window so text can render past the dialog boundary.
                        'hide'    – clip text at the boundary.
-        transparent:   apply alpha gradient from top to bottom, making the body see-through (default False).
+        transparent:   apply alpha gradient from top to bottom, making the body see-through (default True).
         glare:         draw a white semicircular highlight at the bottom of the dialog (default True).
 
     Usage:
