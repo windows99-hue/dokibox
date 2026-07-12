@@ -148,7 +148,7 @@ class _CustomLineEdit(QLineEdit):
 class _EnterDialog(_DokiBase):
 
     def __init__(self, msg, default="", title="", tooltip=False, pinned=True,
-                 font_family=None, font_size=None):
+                 font_family=None, font_size=None, max_length=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
         self._tooltip = tooltip
@@ -156,6 +156,7 @@ class _EnterDialog(_DokiBase):
         self._btn_ok_rect = None
         self._tooltip_shown = False
         self._default = default
+        self._max_length = max_length
         super().__init__(msg, title, pinned=pinned)
         self._setup_input()
 
@@ -168,6 +169,8 @@ class _EnterDialog(_DokiBase):
             int(self._pad_x), int(self._input_y), int(input_w), int(self._input_h)
         )
         self._input.setStyleSheet("border: none; padding: 0px;")
+        if self._max_length is not None:
+            self._input.setMaxLength(self._max_length)
         self._input.setFocus()
         self._input.returnPressed.connect(self._on_submit)
 
@@ -333,7 +336,8 @@ class _EnterDialog(_DokiBase):
 
 def enterbox(msg: str = "", default: str = "", title: str = "",
              tooltip: bool = False, pinned: bool = True,
-             font_family: str = None, font_size: int = None) -> str | None:
+             font_family: str = None, font_size: int = None,
+             max_length: int = None) -> str | None:
     """DDLC-style input dialog. Returns the entered text or None if cancelled.
 
     Args:
@@ -344,13 +348,14 @@ def enterbox(msg: str = "", default: str = "", title: str = "",
         pinned:     keep the window always on top of other windows.
         font_family: custom font family name.
         font_size:  base font size (automatically scaled by DPI).
+        max_length: maximum number of characters allowed.
 
     Usage:
         import dokibox
-        name = dokibox.enterbox("Enter your name:")
+        name = dokibox.enterbox("Enter your name:", max_length=10)
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
     return _EnterDialog.run(msg, default=default, title=title, tooltip=tooltip,
                             pinned=pinned, font_family=font_family,
-                            font_size=font_size)
+                            font_size=font_size, max_length=max_length)

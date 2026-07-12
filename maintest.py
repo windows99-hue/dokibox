@@ -429,7 +429,8 @@ print("\n[37] enterbox 中文")
 
 result = dokibox.enterbox(
     "请输入你的名字：",
-    default="勇者"
+    default="MC",
+    max_length=12
 )
 print(repr(result))
 
