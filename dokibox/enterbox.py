@@ -23,7 +23,7 @@ PAD_BOT = 70
 BTN_STROKE_W = 6
 MSG_FONT_SIZE = 22
 BTN_FONT_SIZE = 26
-INPUT_HEIGHT = 36
+INPUT_HEIGHT = 42
 INPUT_GAP = 18
 INPUT_BTN_GAP = 22
 
@@ -92,8 +92,9 @@ class _CustomLineEdit(QLineEdit):
         rect = self.rect()
         fm = QFontMetrics(self.font())
         text = self.text()
-        text_h = fm.height()
-        text_y = rect.top() + (rect.height() - text_h) // 2 + fm.ascent()
+        body_h = fm.ascent() + fm.descent()
+        down_shift = 2
+        text_y = rect.top() + (rect.height() - body_h) // 2 + fm.ascent() + down_shift
 
         p.fillRect(rect, QColor(INPUT_BG))
 
@@ -123,8 +124,8 @@ class _CustomLineEdit(QLineEdit):
             if before:
                 self._draw_stroked(p, int(self._base_x), text_y, before)
 
-            sel_y = rect.top() + (rect.height() - text_h) // 2
-            p.fillRect(int(self._base_x + bw), int(sel_y), int(sw), int(text_h), QColor(BTN_STROKE_COLOR))
+            sel_y = rect.top() + (rect.height() - body_h) // 2
+            p.fillRect(int(self._base_x + bw), int(sel_y), int(sw), int(body_h), QColor(BTN_STROKE_COLOR))
 
             self._draw_stroked(p, int(self._base_x + bw), text_y, sel_text)
 
@@ -135,7 +136,7 @@ class _CustomLineEdit(QLineEdit):
 
         if self.hasFocus() and self._cursor_visible:
             cursor_x = self._base_x + cursor_rel_x
-            cursor_h = text_h
+            cursor_h = body_h + 1
             cursor_y = rect.top() + (rect.height() - cursor_h) // 2
 
             p.setPen(QPen(QColor(CURSOR_COLOR), 2))
