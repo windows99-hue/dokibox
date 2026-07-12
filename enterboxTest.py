@@ -2,6 +2,8 @@
 # enterbox
 # ==========================================================
 
+import dokibox
+
 print("\n[32] enterbox 默认")
 
 result = dokibox.enterbox("Enter your name:")
@@ -46,6 +48,6 @@ print("\n[37] enterbox 中文")
 
 result = dokibox.enterbox(
     "请输入你的名字：",
-    default="勇者"
+    default="MC"
 )
 print(repr(result))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """dokibox.enterbox -- DDLC-style input dialog with text entry"""
 import math
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
 from PySide6.QtWidgets import QToolTip, QLineEdit
 from dokibox._base import _DokiBase, _get_app, _hex_to_rgb, BODY_COLOR
@@ -12,7 +12,7 @@ BTN_FILL_COLOR = "#ffffff"
 BTN_HOVER_COLOR = "#ffd0e8"
 INPUT_BORDER = "#FFBBE3"
 INPUT_BG = "#FEE6F4"
-CURSOR_COLOR = "#BD539D"
+CURSOR_COLOR = "#CF80B5"
 
 PAD_X = 80
 PAD_TOP = 38
@@ -23,6 +23,86 @@ BTN_FONT_SIZE = 26
 INPUT_HEIGHT = 36
 INPUT_GAP = 18
 INPUT_BTN_GAP = 22
+
+
+class _CustomLineEdit(QLineEdit):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._cursor_visible = True
+        self._blink_timer = QTimer(self)
+        self._blink_timer.timeout.connect(self._toggle_cursor)
+        self._blink_timer.start(530)
+        self.textChanged.connect(self.update)
+        self.cursorPositionChanged.connect(self.update)
+        self.selectionChanged.connect(self.update)
+
+    def _toggle_cursor(self):
+        if self.hasFocus():
+            self._cursor_visible = not self._cursor_visible
+            self.update()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self._cursor_visible = True
+        if not self._blink_timer.isActive():
+            self._blink_timer.start()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self._blink_timer.stop()
+        self._cursor_visible = False
+        self.update()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+
+        rect = self.rect()
+        fm = QFontMetrics(self.font())
+        text = self.text()
+        text_h = fm.height()
+        text_y = rect.top() + (rect.height() - text_h) // 2 + fm.ascent() - 1
+
+        p.fillRect(rect, QColor(INPUT_BG))
+
+        cursor_pos = self.cursorPosition()
+
+        if self.hasSelectedText():
+            sel_start = self.selectionStart()
+            sel_end = sel_start + len(self.selectedText())
+
+            before = text[:sel_start]
+            sel_text = text[sel_start:sel_end]
+            after = text[sel_end:]
+
+            bw = fm.horizontalAdvance(before)
+            sw = fm.horizontalAdvance(sel_text)
+
+            p.setPen(QColor(MSG_COLOR))
+            p.drawText(8, text_y, before)
+
+            sel_y = rect.top() + (rect.height() - text_h) // 2
+            p.fillRect(int(8 + bw), int(sel_y), int(sw), int(text_h), QColor(BTN_STROKE_COLOR))
+
+            p.setPen(QColor("#ffffff"))
+            p.drawText(int(8 + bw), text_y, sel_text)
+
+            p.setPen(QColor(MSG_COLOR))
+            p.drawText(int(8 + bw + sw), text_y, after)
+        else:
+            p.setPen(QColor(MSG_COLOR))
+            p.drawText(8, text_y, text)
+
+        if self.hasFocus() and self._cursor_visible:
+            cursor_x = 8 + fm.horizontalAdvance(text[:cursor_pos])
+            cursor_h = text_h
+            cursor_y = rect.top() + (rect.height() - cursor_h) // 2
+
+            p.setPen(QPen(QColor(CURSOR_COLOR), 2))
+            p.drawLine(int(cursor_x), int(cursor_y), int(cursor_x), int(cursor_y + cursor_h))
+
+        p.end()
 
 
 class _EnterDialog(_DokiBase):
@@ -41,23 +121,13 @@ class _EnterDialog(_DokiBase):
 
     def _setup_input(self):
         input_w = self.w - self._pad_x * 2
-        self._input = QLineEdit(self)
+        self._input = _CustomLineEdit(self)
         self._input.setText(self._default)
         self._input.setFont(self._msg_font)
         self._input.setGeometry(
             int(self._pad_x), int(self._input_y), int(input_w), int(self._input_h)
         )
-        self._input.setStyleSheet(f"""
-            QLineEdit {{
-                background-color: {INPUT_BG};
-                border: none;
-                padding: 4px 8px;
-                color: {MSG_COLOR};
-                caret-color: {CURSOR_COLOR};
-                selection-background-color: {BTN_STROKE_COLOR};
-                selection-color: #ffffff;
-            }}
-        """)
+        self._input.setStyleSheet("border: none; padding: 0px;")
         self._input.setFocus()
         self._input.returnPressed.connect(self._on_submit)
 
