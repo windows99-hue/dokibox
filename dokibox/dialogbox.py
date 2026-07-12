@@ -138,6 +138,53 @@ def _load_pixmap(data):
     return pix
 
 
+class Avatar:
+    """Character avatar definition with name and emotion image sets.
+
+    Usage:
+        sayori = Avatar(name="Sayori", emotes={"happy": ["sayori_happy.png"],
+                                                "sad": ["sayori_sad.png"]})
+        sayori("left", "happy")   -> SpriteSlot on the left with happy emote
+        sayori.hide()             -> HideSlot to remove from stage
+    """
+
+    def __init__(self, name, emotes):
+        self.name = name
+        self.emotes = emotes
+
+    def __call__(self, position, emote):
+        images = self.emotes.get(emote)
+        if images is None:
+            raise ValueError(
+                f"Emote '{emote}' not found for avatar '{self.name}'. "
+                f"Available: {list(self.emotes.keys())}"
+            )
+        if isinstance(images, str):
+            images = [images]
+        return _SpriteSlot(self, position, images)
+
+    def hide(self):
+        return _HideSlot(self)
+
+
+class _SpriteSlot:
+    """Internal: a character placed on stage at a position with an emote."""
+    __slots__ = ("avatar", "position", "images")
+
+    def __init__(self, avatar, position, images):
+        self.avatar = avatar
+        self.position = position
+        self.images = images
+
+
+class _HideSlot:
+    """Internal: mark an avatar as leaving the stage."""
+    __slots__ = ("avatar",)
+
+    def __init__(self, avatar):
+        self.avatar = avatar
+
+
 class _SpriteWindow(QWidget):
     """Single standing-picture (立绘) window displayed above the dialog."""
 
@@ -147,6 +194,7 @@ class _SpriteWindow(QWidget):
         self._is_speaker = is_speaker
         self._pinned = pinned
         self._opacity_val = 1.0
+        self._avatar = None
 
         self._pixmap = _load_pixmap(image_data)
 
@@ -582,14 +630,17 @@ class _DialogBox(QWidget):
 
         self._init_typewriter_state(msg)
 
-        self._update_sprites(sprites, sprite_pos, speaker_idx)
-        for sw in self._sprites:
-            try:
-                sw.raise_()
-            except Exception:
-                pass
+        if sprites is not None:
+            self._update_sprites(sprites, sprite_pos, speaker_idx)
+            for sw in self._sprites:
+                try:
+                    sw.raise_()
+                except Exception:
+                    pass
+            QApplication.processEvents()
+        elif speaker_idx is not None:
+            self._update_sprites_state_only(speaker_idx)
 
-        QApplication.processEvents()
         self.update()
 
     def showEvent(self, event):
@@ -1013,8 +1064,12 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 
     Usage:
         dokibox.dialogbox("Hello!", name="Sayori", sprites="sayori.png", sprite_pos="center")
-        dokibox.dialogbox("Hi!", name="Monika", sprites=["sayori.png", "monika.png"],
-                           sprite_pos=["left", "right"], speaker_idx=1)
+
+        # New Avatar API:
+        sayori = Avatar(name="Sayori", emotes={"happy": ["sayori_happy.png"]})
+        yuri = Avatar(name="Yuri", emotes={"shocked": ["yuri_shocked.png"]})
+        dokibox.dialogbox("Hello!", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "shocked")])
+        dokibox.dialogbox("Hi!", name=yuri)  # sprites persist
     """
     global _box
 
@@ -1025,10 +1080,46 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     if h is None:
         h = int(220 / _get_dpi_scale())
 
+    display_name = name.name if isinstance(name, Avatar) else name
+    avatar = name if isinstance(name, Avatar) else None
+    avatar_sprite_map = []
+
+    if sprites is not None:
+        is_new_api = False
+        processed_sprites = []
+        processed_positions = []
+        auto_speaker_idx = None
+
+        for chunk in sprites:
+            if isinstance(chunk, _HideSlot):
+                is_new_api = True
+                continue
+            elif isinstance(chunk, _SpriteSlot):
+                is_new_api = True
+                processed_sprites.append(chunk.images[0])
+                processed_positions.append(chunk.position)
+                avatar_sprite_map.append(chunk.avatar)
+                if avatar is not None and chunk.avatar is avatar and auto_speaker_idx is None:
+                    auto_speaker_idx = len(processed_sprites) - 1
+            else:
+                processed_sprites.append(chunk)
+
+        if is_new_api:
+            sprites = processed_sprites if processed_sprites else []
+            sprite_pos = processed_positions
+            if speaker_idx is None:
+                speaker_idx = auto_speaker_idx
+
+    if sprites is None and avatar is not None and _box is not None:
+        for i, sw in enumerate(_box._sprites):
+            if getattr(sw, '_avatar', None) is avatar:
+                speaker_idx = i
+                break
+
     if _box is not None:
         try:
             if _box.w == w and _box.h == h:
-                _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, name,
+                _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, display_name,
                                      font_family=font_family, font_size=font_size,
                                      transparent=transparent, glare=glare,
                                      sprites=sprites, sprite_pos=sprite_pos,
@@ -1039,12 +1130,16 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
             _destroy_box()
 
     if _box is None:
-        _box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned,
+        _box = _DialogBox(msg, w, h, display_name, typewriter, chardelay, bold, pinned=pinned,
                           fdst=fdst, overflow_mode=overflow_mode,
                           font_family=font_family, font_size=font_size,
                           transparent=transparent, glare=glare,
                           sprites=sprites, sprite_pos=sprite_pos,
                           speaker_idx=speaker_idx)
+
+    for i, sw in enumerate(_box._sprites):
+        if i < len(avatar_sprite_map):
+            sw._avatar = avatar_sprite_map[i]
 
     _dialogbox_loop = QEventLoop()
     _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)
