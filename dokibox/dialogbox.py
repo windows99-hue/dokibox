@@ -3,10 +3,14 @@
 import math
 import sys
 import ctypes
-from typing import Optional
-from PySide6.QtCore import Qt, QTimer, QEventLoop, QRectF, QPointF, Signal
+from typing import Optional, Union, List
+from PySide6.QtCore import (
+    Qt, QTimer, QEventLoop, QRectF, QPointF, Signal,
+    QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, Property, QRect,
+)
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
+    QPixmap,
 )
 from PySide6.QtWidgets import QWidget, QApplication
 from dokibox._base import _get_app, _get_dpi_scale
@@ -24,8 +28,13 @@ DOT_GAP_Y = 6
 DOT_COLOR = "#FB94C1"
 
 DWMWA_BORDER_COLOR = 34
-# 新增：窗口阴影透明度属性ID
 DWMWA_SHADOW_OPACITY = 33
+
+SPRITE_BASE_HEIGHT_RATIO = 0.60
+SPRITE_SPEAKER_SCALE = 1.08
+SPRITE_SILENT_SCALE = 0.92
+SPRITE_SILENT_OPACITY = 0.55
+SPRITE_ANIM_DURATION = 350
 
 
 def _hex_to_rgb(h):
@@ -41,6 +50,7 @@ def _blend(c1, c2, t):
     b = int(b1 * t + b2 * (1 - t))
     return QColor(r, g, b)
 
+
 class MARGINS(ctypes.Structure):
     _fields_ = [
         ("cxLeftWidth", ctypes.c_int),
@@ -49,11 +59,12 @@ class MARGINS(ctypes.Structure):
         ("cxBottomHeight", ctypes.c_int),
     ]
 
+
 def remove_dwm_frame(hwnd):
     margins = MARGINS(-1, -1, -1, -1)
     ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
 
-# 新增函数：关闭指定窗口阴影
+
 def remove_window_shadow(hwnd):
     zero_val = ctypes.c_uint(0)
     ctypes.windll.dwmapi.DwmSetWindowAttribute(
@@ -63,7 +74,196 @@ def remove_window_shadow(hwnd):
         ctypes.sizeof(zero_val)
     )
 
+
 _box = None
+
+
+def _normalize_sprites(sprites):
+    if sprites is None:
+        return []
+    if isinstance(sprites, (str, bytes)):
+        return [sprites]
+    return list(sprites)
+
+
+def _normalize_sprite_pos(sprite_pos, count):
+    if count == 0:
+        return []
+    if sprite_pos is None:
+        if count == 1:
+            return [0.5]
+        if count == 2:
+            return [0.25, 0.75]
+        if count == 3:
+            return [0.15, 0.50, 0.85]
+        if count == 4:
+            return [0.08, 0.35, 0.65, 0.92]
+        return [i / max(count - 1, 1) for i in range(count)]
+    if isinstance(sprite_pos, (str, float, int)):
+        pos_list = [sprite_pos]
+    else:
+        pos_list = list(sprite_pos)
+    result = []
+    for i, p in enumerate(pos_list):
+        if isinstance(p, str):
+            p_lower = p.strip().lower()
+            if p_lower == "left":
+                result.append(0.15)
+            elif p_lower == "center":
+                result.append(0.50)
+            elif p_lower == "right":
+                result.append(0.85)
+            else:
+                result.append(float(p))
+        else:
+            result.append(float(p))
+    while len(result) < count:
+        result.append(0.5 + (len(result) - count / 2) * 0.1)
+    return result[:count]
+
+
+def _load_pixmap(data):
+    if isinstance(data, bytes):
+        pix = QPixmap()
+        pix.loadFromData(data)
+    elif isinstance(data, QPixmap):
+        return data
+    else:
+        pix = QPixmap(data)
+    return pix
+
+
+class _SpriteWindow(QWidget):
+    """Single standing-picture (立绘) window displayed above the dialog."""
+
+    def __init__(self, image_data, x_frac, is_speaker, pinned):
+        super().__init__(None)
+        self._x_frac = x_frac
+        self._is_speaker = is_speaker
+        self._pinned = pinned
+        self._opacity_val = 1.0
+
+        self._pixmap = _load_pixmap(image_data)
+
+        flags = Qt.FramelessWindowHint | Qt.Tool
+        if pinned:
+            flags |= Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+
+        self._apply_geometry(animate=False)
+        self.show()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if sys.platform != 'win32':
+            return
+        try:
+            hwnd = int(self.winId())
+            remove_dwm_frame(hwnd)
+            remove_window_shadow(hwnd)
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                DWMWA_BORDER_COLOR,
+                ctypes.byref(ctypes.c_int(0xFFFFFFFE)),
+                ctypes.sizeof(ctypes.c_int),
+            )
+        except Exception:
+            pass
+
+    def _compute_geometry(self):
+        screen = QApplication.primaryScreen()
+        sh = screen.size().height()
+        sw = screen.size().width()
+        base_h = int(sh * SPRITE_BASE_HEIGHT_RATIO)
+        if self._is_speaker:
+            h = int(base_h * SPRITE_SPEAKER_SCALE)
+        else:
+            h = int(base_h * SPRITE_SILENT_SCALE)
+        pw = self._pixmap.width()
+        ph = self._pixmap.height()
+        if ph > 0:
+            w = int(h * pw / ph)
+        else:
+            w = h
+        if pw > 0 and w > sw * 0.5:
+            w = int(sw * 0.5)
+            h = int(w * ph / pw)
+        x = int(sw * self._x_frac - w // 2)
+        x = max(0, min(x, sw - w))
+        y = sh - h
+        return QRect(x, y, w, h)
+
+    def _apply_geometry(self, animate=True):
+        target_geom = self._compute_geometry()
+        target_opacity = 1.0 if self._is_speaker else SPRITE_SILENT_OPACITY
+        if animate and self.isVisible():
+            geom_anim = QPropertyAnimation(self, b"geometry")
+            geom_anim.setDuration(SPRITE_ANIM_DURATION)
+            geom_anim.setStartValue(self.geometry())
+            geom_anim.setEndValue(target_geom)
+            geom_anim.setEasingCurve(QEasingCurve.InOutCubic)
+
+            op_anim = QPropertyAnimation(self, b"opacity")
+            op_anim.setDuration(SPRITE_ANIM_DURATION)
+            op_anim.setStartValue(self._opacity_val)
+            op_anim.setEndValue(target_opacity)
+            op_anim.setEasingCurve(QEasingCurve.InOutCubic)
+
+            self._anim_group = QParallelAnimationGroup()
+            self._anim_group.addAnimation(geom_anim)
+            self._anim_group.addAnimation(op_anim)
+            self._anim_group.start()
+        else:
+            self.setGeometry(target_geom)
+            self._opacity_val = target_opacity
+            self.update()
+
+    def update_state(self, image_data=None, x_frac=None, is_speaker=None):
+        changed = False
+        if image_data is not None:
+            self._pixmap = _load_pixmap(image_data)
+            changed = True
+        if x_frac is not None:
+            self._x_frac = x_frac
+            changed = True
+        if is_speaker is not None:
+            self._is_speaker = is_speaker
+            changed = True
+        if changed:
+            self._apply_geometry(animate=True)
+
+    def get_opacity(self):
+        return self._opacity_val
+
+    def set_opacity(self, val):
+        self._opacity_val = val
+        self.update()
+
+    opacity = Property(float, get_opacity, set_opacity)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
+        painter.setOpacity(self._opacity_val)
+        scaled = self._pixmap.scaled(
+            self.width(), self.height(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+        x = (self.width() - scaled.width()) // 2
+        y = self.height() - scaled.height()
+        painter.drawPixmap(x, y, scaled)
+        painter.end()
+
+    def destroy_sprite(self):
+        try:
+            self.hide()
+            self.deleteLater()
+        except Exception:
+            pass
 
 
 class _DialogBox(QWidget):
@@ -72,7 +272,8 @@ class _DialogBox(QWidget):
 
     def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50,
                  bold=False, pinned=True, fdst=False, overflow_mode="wrap",
-                 font_family=None, font_size=None, transparent=True, glare=True):
+                 font_family=None, font_size=None, transparent=True, glare=True,
+                 sprites=None, sprite_pos=None, speaker_idx=None):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -96,6 +297,7 @@ class _DialogBox(QWidget):
         self._after_timer = None
         self._transparent = transparent
         self._glare = glare
+        self._sprites = []
 
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size or 20
@@ -116,7 +318,6 @@ class _DialogBox(QWidget):
         sw_raw = 4 if bold else 1
         self._stroke_w = max(1, int(sw_raw * s))
         self._triangle_s = int(16 * s)
-        self.r = self._corner_radius
         self.r = self._corner_radius
 
         f_name = QFont(self._font_family, self._name_fs, QFont.Bold)
@@ -181,12 +382,101 @@ class _DialogBox(QWidget):
 
         _box = self
 
+        self._init_sprites(sprites, sprite_pos, speaker_idx)
+
         QApplication.processEvents()
         self.raise_()
         self.activateWindow()
 
+    def _init_sprites(self, sprites, sprite_pos, speaker_idx):
+        raw = _normalize_sprites(sprites)
+        count = len(raw)
+        if count == 0:
+            return
+        positions = _normalize_sprite_pos(sprite_pos, count)
+        for i in range(count):
+            is_speaker = (speaker_idx is not None and i == speaker_idx) or count == 1
+            sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
+            self._sprites.append(sw)
+
+    def _update_sprites(self, sprites, sprite_pos, speaker_idx):
+        raw = _normalize_sprites(sprites)
+        new_count = len(raw)
+        old_count = len(self._sprites)
+
+        if new_count == 0:
+            self._destroy_sprites()
+            return
+
+        if old_count == 0 and new_count > 0:
+            positions = _normalize_sprite_pos(sprite_pos, new_count)
+            for i in range(new_count):
+                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
+                self._sprites.append(sw)
+            return
+
+        positions = _normalize_sprite_pos(sprite_pos, new_count)
+
+        if new_count == old_count:
+            for i in range(new_count):
+                same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
+                image_data = raw[i] if not same_image else None
+                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                self._sprites[i].update_state(
+                    image_data=image_data,
+                    x_frac=positions[i],
+                    is_speaker=is_speaker
+                )
+                if image_data is not None:
+                    self._sprites[i]._pixmap_data_ref = raw[i]
+        elif new_count > old_count:
+            for i in range(old_count):
+                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                self._sprites[i].update_state(
+                    image_data=raw[i],
+                    x_frac=positions[i],
+                    is_speaker=is_speaker
+                )
+                self._sprites[i]._pixmap_data_ref = raw[i]
+            for i in range(old_count, new_count):
+                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
+                sw._pixmap_data_ref = raw[i]
+                self._sprites.append(sw)
+        else:
+            for i in range(new_count):
+                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                self._sprites[i].update_state(
+                    image_data=raw[i],
+                    x_frac=positions[i],
+                    is_speaker=is_speaker
+                )
+                self._sprites[i]._pixmap_data_ref = raw[i]
+            for i in range(new_count, old_count):
+                self._sprites[i].destroy_sprite()
+            self._sprites = self._sprites[:new_count]
+
+    def _update_sprites_state_only(self, speaker_idx):
+        count = len(self._sprites)
+        if count == 0:
+            return
+        for i in range(count):
+            is_speaker = (speaker_idx is not None and i == speaker_idx) or count == 1
+            self._sprites[i].update_state(is_speaker=is_speaker)
+
+    def _destroy_sprites(self):
+        for sw in self._sprites:
+            sw.destroy_sprite()
+        self._sprites = []
+
+    def closeEvent(self, event):
+        self._destroy_sprites()
+        super().closeEvent(event)
+
     def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,
-                        font_family=None, font_size=None, transparent=None, glare=None):
+                        font_family=None, font_size=None, transparent=None, glare=None,
+                        sprites=None, sprite_pos=None, speaker_idx=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -275,6 +565,9 @@ class _DialogBox(QWidget):
         self.setFixedSize(canvas_w, cv_h)
 
         self._init_typewriter_state(msg)
+
+        self._update_sprites(sprites, sprite_pos, speaker_idx)
+
         self.update()
 
     def showEvent(self, event):
@@ -651,6 +944,10 @@ def _destroy_box():
             _box._after_timer.deleteLater()
             _box._after_timer = None
         try:
+            _box._destroy_sprites()
+        except Exception:
+            pass
+        try:
             _box.hide()
             _box.deleteLater()
         except Exception:
@@ -663,7 +960,10 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               chardelay: int = 50, bold: bool = False, pinned: bool = True,
               fdst: bool = False, overflow_mode: str = "wrap",
               font_family: str = None, font_size: int = None,
-              transparent: bool = True, glare: bool = True) -> None:
+              transparent: bool = True, glare: bool = True,
+              sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
+              sprite_pos: Optional[Union[str, float, List[Union[str, float]]]] = None,
+              speaker_idx: Optional[int] = None) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -675,17 +975,24 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         chardelay:     delay in ms per character in typewriter mode (default 50).
         bold:          use a thicker black stroke outline for body text (default False).
         pinned:        keep the window always on top of other windows (default True).
-        fdst:          If True, destroys the window when dismissed. Use this for the final line of a dialogue scene or story branch to ensure the window closes completely. (default: False)
+        fdst:          If True, destroys the window when dismissed. Use this for the final line
+                       of a dialogue scene or story branch to ensure the window closes completely.
         overflow_mode: how to handle text exceeding the dialog width:
                        'wrap'    – wrap text to the next line (default).
                        'overflow' – expand the window so text can render past the dialog boundary.
                        'hide'    – clip text at the boundary.
         transparent:   apply alpha gradient from top to bottom, making the body see-through (default True).
         glare:         draw a white semicircular highlight at the bottom of the dialog (default True).
+        sprites:       standing picture path(s) or bytes. Single str/bytes or list for multiple characters.
+        sprite_pos:    position(s) for sprites: 'left'/'center'/'right', float 0.0-1.0 (screen ratio),
+                       or a list matching sprites. Auto-layout if None.
+        speaker_idx:   index (0-based) of the currently speaking sprite. Speaker is highlighted/larger,
+                       others are dimmed. Ignored when only 1 sprite is present.
 
     Usage:
-        dokibox.dialogbox("Hello!")
-        dokibox.dialogbox("Hello!", name="Sayori", bold=True)
+        dokibox.dialogbox("Hello!", name="Sayori", sprites="sayori.png", sprite_pos="center")
+        dokibox.dialogbox("Hi!", name="Monika", sprites=["sayori.png", "monika.png"],
+                           sprite_pos=["left", "right"], speaker_idx=1)
     """
     global _box
 
@@ -701,7 +1008,9 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
             if _box.w == w and _box.h == h:
                 _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, name,
                                      font_family=font_family, font_size=font_size,
-                                     transparent=transparent, glare=glare)
+                                     transparent=transparent, glare=glare,
+                                     sprites=sprites, sprite_pos=sprite_pos,
+                                     speaker_idx=speaker_idx)
             else:
                 _destroy_box()
         except Exception:
@@ -711,7 +1020,9 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         _box = _DialogBox(msg, w, h, name, typewriter, chardelay, bold, pinned=pinned,
                           fdst=fdst, overflow_mode=overflow_mode,
                           font_family=font_family, font_size=font_size,
-                          transparent=transparent, glare=glare)
+                          transparent=transparent, glare=glare,
+                          sprites=sprites, sprite_pos=sprite_pos,
+                          speaker_idx=speaker_idx)
 
     _dialogbox_loop = QEventLoop()
     _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)
