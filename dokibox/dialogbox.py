@@ -425,7 +425,7 @@ class _DialogBox(QWidget):
             gradient = QLinearGradient(0, top + h * 0.333, 0, top + h)
             c_top = QColor(BODY_COLOR)
             c_bot = QColor(BODY_COLOR)
-            c_bot.setAlpha(int(255 * 0.80))
+            c_bot.setAlpha(int(255 * 0.65))
             gradient.setColorAt(0, c_top)
             gradient.setColorAt(1, c_bot)
         else:
@@ -470,8 +470,12 @@ class _DialogBox(QWidget):
             x = dl + max(0, offset_x)
             while x < dl + w + step_x:
                 if self._transparent:
-                    alpha_f = 1.0 if t < 0.333 else 1.0 - 0.30 * (t - 0.333)
-                    color = QColor(DOT_COLOR)
+                    alpha_f = 1.0 if t < 0.333 else 1.0 - 0.55 * (t - 0.333)
+                    if t < 0.333:
+                        color = QColor(DOT_COLOR)
+                    else:
+                        blend_t = (t - 0.333) / 0.667 * 0.15
+                        color = _blend(DOT_COLOR, "#000000", 1.0 - blend_t)
                     color.setAlphaF(alpha_f)
                 else:
                     opacity = 1.0 - 0.5 * t
