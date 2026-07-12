@@ -6,7 +6,7 @@ import dokibox
 
 print("\n[32] enterbox 默认")
 
-result = dokibox.enterbox("Enter your name:")
+result = dokibox.enterbox("Please enter your name")
 print(repr(result))
 
 
