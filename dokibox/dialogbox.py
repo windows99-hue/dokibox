@@ -130,6 +130,11 @@ def _load_pixmap(data):
         return data
     else:
         pix = QPixmap(data)
+    if pix.isNull():
+        if isinstance(data, bytes):
+            raise ValueError("Cannot load sprite image from bytes data")
+        else:
+            raise FileNotFoundError(f"Cannot load sprite image: {data!r}")
     return pix
 
 
@@ -393,6 +398,11 @@ class _DialogBox(QWidget):
         count = len(raw)
         if count == 0:
             return
+        if count > 1 and speaker_idx is None:
+            raise ValueError(
+                "speaker_idx must be specified when there are multiple sprites. "
+                "Use speaker_idx=0 for the first sprite, speaker_idx=1 for the second, etc."
+            )
         positions = _normalize_sprite_pos(sprite_pos, count)
         for i in range(count):
             is_speaker = (speaker_idx is not None and i == speaker_idx) or count == 1
@@ -407,6 +417,12 @@ class _DialogBox(QWidget):
         if new_count == 0:
             self._destroy_sprites()
             return
+
+        if new_count > 1 and speaker_idx is None:
+            raise ValueError(
+                "speaker_idx must be specified when there are multiple sprites. "
+                "Use speaker_idx=0 for the first sprite, speaker_idx=1 for the second, etc."
+            )
 
         if old_count == 0 and new_count > 0:
             positions = _normalize_sprite_pos(sprite_pos, new_count)
@@ -567,7 +583,13 @@ class _DialogBox(QWidget):
         self._init_typewriter_state(msg)
 
         self._update_sprites(sprites, sprite_pos, speaker_idx)
+        for sw in self._sprites:
+            try:
+                sw.raise_()
+            except Exception:
+                pass
 
+        QApplication.processEvents()
         self.update()
 
     def showEvent(self, event):
