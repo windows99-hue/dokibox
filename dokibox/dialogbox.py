@@ -421,14 +421,15 @@ class _DialogBox(QWidget):
         painter.drawText(text_x, text_y, self._name)
 
     def _draw_fill(self, painter, dl, top, w, h):
-        gradient = QLinearGradient(0, top, 0, top + h)
         if self._transparent:
+            gradient = QLinearGradient(0, top + h * 0.333, 0, top + h)
             c_top = QColor(BODY_COLOR)
             c_bot = QColor(BODY_COLOR)
-            c_bot.setAlpha(int(255 * 0.60))
+            c_bot.setAlpha(int(255 * 0.80))
             gradient.setColorAt(0, c_top)
             gradient.setColorAt(1, c_bot)
         else:
+            gradient = QLinearGradient(0, top, 0, top + h)
             gradient.setColorAt(0, _blend(BODY_COLOR, FADE_TO, 1.0))
             gradient.setColorAt(1, _blend(BODY_COLOR, FADE_TO, 0.5))
         painter.setBrush(gradient)
@@ -469,7 +470,7 @@ class _DialogBox(QWidget):
             x = dl + max(0, offset_x)
             while x < dl + w + step_x:
                 if self._transparent:
-                    alpha_f = 1.0 - 0.30 * t
+                    alpha_f = 1.0 if t < 0.333 else 1.0 - 0.30 * (t - 0.333)
                     color = QColor(DOT_COLOR)
                     color.setAlphaF(alpha_f)
                 else:
