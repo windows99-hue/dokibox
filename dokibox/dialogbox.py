@@ -414,8 +414,11 @@ class _DialogBox(QWidget):
 
     def _draw_fill(self, painter, dl, top, w, h):
         gradient = QLinearGradient(0, top, 0, top + h)
-        gradient.setColorAt(0, _blend(BODY_COLOR, FADE_TO, 1.0))
-        gradient.setColorAt(1, _blend(BODY_COLOR, FADE_TO, 0.5))
+        c_top = QColor(BODY_COLOR)
+        c_bot = QColor(BODY_COLOR)
+        c_bot.setAlpha(int(255 * 0.45))
+        gradient.setColorAt(0, c_top)
+        gradient.setColorAt(1, c_bot)
         painter.setBrush(gradient)
         painter.drawRect(QRectF(dl, top, w, h))
 
@@ -430,12 +433,13 @@ class _DialogBox(QWidget):
         y = top + dr
         while y < top + h + row_h:
             t = max(0, min(1, (y - top) / h))
-            opacity = 1.0 - 0.5 * t
+            alpha_f = 1.0 - 0.55 * t
 
             offset_x = (step_x // 2) if row % 2 == 1 else 0
             x = dl + max(0, offset_x)
             while x < dl + w + step_x:
-                color = _blend(DOT_COLOR, FADE_TO, opacity)
+                color = QColor(DOT_COLOR)
+                color.setAlphaF(alpha_f)
                 painter.setBrush(color)
                 painter.setPen(Qt.NoPen)
                 painter.drawEllipse(QPointF(x, y), dr, dr)
