@@ -138,6 +138,7 @@ class _DialogBox(QWidget):
         self._dialog_top = name_h + int(20 * s) + self._inset
 
         canvas_w = w
+        vert_overflow = 0
         if self._overflow_mode == "overflow" and msg:
             f_body = QFont(self._font_family, self._body_fs, QFont.Bold)
             fm = QFontMetrics(f_body)
@@ -145,6 +146,13 @@ class _DialogBox(QWidget):
             needed_w = int(max_line_w + int(80 * s))
             if needed_w > canvas_w:
                 canvas_w = needed_w
+            num_lines = len(msg.split('\n'))
+            text_h_needed = self._pad_top + num_lines * self._line_h
+            if text_h_needed > h:
+                vert_overflow = int(text_h_needed - h + self._pad_top)
+                cv_h += vert_overflow
+                self._cv_h = cv_h
+        self._vert_overflow = vert_overflow
         canvas_w += self._inset * 2
         self._canvas_w = canvas_w
         if self._overflow_mode == "overflow":
@@ -233,6 +241,7 @@ class _DialogBox(QWidget):
         self._dialog_top = name_h + int(20 * s) + self._inset
 
         canvas_w = self.w
+        vert_overflow = 0
         if self._overflow_mode == "overflow" and msg:
             f_body = QFont(self._font_family, self._body_fs, QFont.Bold)
             fm = QFontMetrics(f_body)
@@ -240,6 +249,13 @@ class _DialogBox(QWidget):
             needed_w = int(max_line_w + int(80 * s))
             if needed_w > canvas_w:
                 canvas_w = needed_w
+            num_lines = len(msg.split('\n'))
+            text_h_needed = self._pad_top + num_lines * self._line_h
+            if text_h_needed > self.h:
+                vert_overflow = int(text_h_needed - self.h + self._pad_top)
+                cv_h += vert_overflow
+                self._cv_h = cv_h
+        self._vert_overflow = vert_overflow
         canvas_w += self._inset * 2
         self._canvas_w = canvas_w
         if self._overflow_mode == "overflow":
@@ -363,8 +379,11 @@ class _DialogBox(QWidget):
         painter.setClipping(False)
 
         self._draw_outline(painter, dl, top, w, h, r)
-        self._draw_text(painter, dl, top)
         self._draw_triangle(painter, dl, top, w, h)
+
+        if self._overflow_mode != "overflow":
+            painter.setClipPath(path)
+        self._draw_text(painter, dl, top)
 
         painter.end()
 
