@@ -33,7 +33,7 @@ class _CustomLineEdit(QLineEdit):
         self._blink_timer = QTimer(self)
         self._blink_timer.timeout.connect(self._toggle_cursor)
         self._blink_timer.start(530)
-        self._scroll_offset = 0
+        self._base_x = 0
         self.textChanged.connect(self.update)
         self.cursorPositionChanged.connect(self.update)
         self.selectionChanged.connect(self.update)
@@ -57,7 +57,7 @@ class _CustomLineEdit(QLineEdit):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            click_x = event.pos().x() - 8 + self._scroll_offset
+            click_x = event.pos().x() - self._base_x
             fm = QFontMetrics(self.font())
             text = self.text()
             new_pos = len(text)
@@ -80,22 +80,21 @@ class _CustomLineEdit(QLineEdit):
         fm = QFontMetrics(self.font())
         text = self.text()
         text_h = fm.height()
-        text_y = rect.top() + (rect.height() - text_h) // 2 + fm.ascent() - 1
+        text_y = rect.top() + (rect.height() - text_h) // 2 + fm.ascent()
 
         p.fillRect(rect, QColor(INPUT_BG))
 
         cursor_pos = self.cursorPosition()
         text_width = fm.horizontalAdvance(text)
-        visible_text_width = rect.width() - 16
+        visible_width = rect.width() - 16
+        cursor_rel_x = fm.horizontalAdvance(text[:cursor_pos])
 
-        if text_width > visible_text_width:
-            cursor_rel_x = fm.horizontalAdvance(text[:cursor_pos])
-            self._scroll_offset = max(0, cursor_rel_x - visible_text_width)
-            self._scroll_offset = min(self._scroll_offset, text_width - visible_text_width)
+        if text_width <= visible_width:
+            self._base_x = 8 + (visible_width - text_width) / 2
         else:
-            self._scroll_offset = 0
-
-        base_x = 8 - self._scroll_offset
+            scroll = max(0, cursor_rel_x - visible_width)
+            scroll = min(scroll, text_width - visible_width)
+            self._base_x = 8 - scroll
 
         if self.hasSelectedText():
             sel_start = self.selectionStart()
@@ -109,23 +108,22 @@ class _CustomLineEdit(QLineEdit):
             sw = fm.horizontalAdvance(sel_text)
 
             p.setPen(QColor(MSG_COLOR))
-            p.drawText(int(base_x), text_y, before)
+            p.drawText(int(self._base_x), text_y, before)
 
             sel_y = rect.top() + (rect.height() - text_h) // 2
-            p.fillRect(int(base_x + bw), int(sel_y), int(sw), int(text_h), QColor(BTN_STROKE_COLOR))
+            p.fillRect(int(self._base_x + bw), int(sel_y), int(sw), int(text_h), QColor(BTN_STROKE_COLOR))
 
             p.setPen(QColor("#ffffff"))
-            p.drawText(int(base_x + bw), text_y, sel_text)
+            p.drawText(int(self._base_x + bw), text_y, sel_text)
 
             p.setPen(QColor(MSG_COLOR))
-            p.drawText(int(base_x + bw + sw), text_y, after)
+            p.drawText(int(self._base_x + bw + sw), text_y, after)
         else:
             p.setPen(QColor(MSG_COLOR))
-            p.drawText(int(base_x), text_y, text)
+            p.drawText(int(self._base_x), text_y, text)
 
         if self.hasFocus() and self._cursor_visible:
-            cursor_rel_x = fm.horizontalAdvance(text[:cursor_pos])
-            cursor_x = base_x + cursor_rel_x
+            cursor_x = self._base_x + cursor_rel_x
             cursor_h = text_h
             cursor_y = rect.top() + (rect.height() - cursor_h) // 2
 
