@@ -455,6 +455,9 @@ class _DialogBox(QWidget):
         painter.drawPath(path)
 
     def _draw_dots(self, painter, dl, top, w, h):
+        painter.save()
+        painter.setCompositionMode(QPainter.CompositionMode_SourceAtop)
+
         dr = self._dot_radius
         gap_x = self._dot_gap_x
         gap_y = self._dot_gap_y
@@ -470,13 +473,7 @@ class _DialogBox(QWidget):
             x = dl + max(0, offset_x)
             while x < dl + w + step_x:
                 if self._transparent:
-                    alpha_f = 1.0 if t < 0.333 else 1.0 - 0.55 * (t - 0.333)
-                    if t < 0.333:
-                        color = QColor(DOT_COLOR)
-                    else:
-                        blend_t = (t - 0.333) / 0.667 * 0.15
-                        color = _blend(DOT_COLOR, "#000000", 1.0 - blend_t)
-                    color.setAlphaF(alpha_f)
+                    color = QColor(DOT_COLOR)
                 else:
                     opacity = 1.0 - 0.5 * t
                     color = _blend(DOT_COLOR, FADE_TO, opacity)
@@ -486,6 +483,8 @@ class _DialogBox(QWidget):
                 x += step_x
             y += row_h
             row += 1
+
+        painter.restore()
 
     def _draw_outline(self, painter, dl, top, w, h, r):
         color = QColor(BORDER_COLOR)
