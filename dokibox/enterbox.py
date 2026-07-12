@@ -13,6 +13,9 @@ BTN_HOVER_COLOR = "#ffd0e8"
 INPUT_BORDER = "#FFBBE3"
 INPUT_BG = "#FEE6F4"
 CURSOR_COLOR = "#CF80B5"
+INPUT_STROKE = "#000000"
+INPUT_FILL = "#ffffff"
+INPUT_STROKE_W = 2
 
 PAD_X = 80
 PAD_TOP = 38
@@ -72,6 +75,16 @@ class _CustomLineEdit(QLineEdit):
             return
         super().mousePressEvent(event)
 
+    def _draw_stroked(self, painter, x, y, text):
+        for step in range(24):
+            angle = 2 * math.pi * step / 24
+            dx = int(INPUT_STROKE_W * math.cos(angle))
+            dy = int(INPUT_STROKE_W * math.sin(angle))
+            painter.setPen(QColor(INPUT_STROKE))
+            painter.drawText(int(x) + dx, y + dy, text)
+        painter.setPen(QColor(INPUT_FILL))
+        painter.drawText(int(x), y, text)
+
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
@@ -107,20 +120,18 @@ class _CustomLineEdit(QLineEdit):
             bw = fm.horizontalAdvance(before)
             sw = fm.horizontalAdvance(sel_text)
 
-            p.setPen(QColor(MSG_COLOR))
-            p.drawText(int(self._base_x), text_y, before)
+            if before:
+                self._draw_stroked(p, int(self._base_x), text_y, before)
 
             sel_y = rect.top() + (rect.height() - text_h) // 2
             p.fillRect(int(self._base_x + bw), int(sel_y), int(sw), int(text_h), QColor(BTN_STROKE_COLOR))
 
-            p.setPen(QColor("#ffffff"))
-            p.drawText(int(self._base_x + bw), text_y, sel_text)
+            self._draw_stroked(p, int(self._base_x + bw), text_y, sel_text)
 
-            p.setPen(QColor(MSG_COLOR))
-            p.drawText(int(self._base_x + bw + sw), text_y, after)
+            if after:
+                self._draw_stroked(p, int(self._base_x + bw + sw), text_y, after)
         else:
-            p.setPen(QColor(MSG_COLOR))
-            p.drawText(int(self._base_x), text_y, text)
+            self._draw_stroked(p, int(self._base_x), text_y, text)
 
         if self.hasFocus() and self._cursor_visible:
             cursor_x = self._base_x + cursor_rel_x
