@@ -31,9 +31,9 @@ DWMWA_BORDER_COLOR = 34
 DWMWA_SHADOW_OPACITY = 33
 
 SPRITE_BASE_HEIGHT_RATIO = 0.60
-SPRITE_SPEAKER_SCALE = 1.08
-SPRITE_SILENT_SCALE = 0.92
-SPRITE_SILENT_OPACITY = 0.55
+SPRITE_SPEAKER_SCALE = 1.15
+SPRITE_SILENT_SCALE = 1.0
+SPRITE_SILENT_OPACITY = 1.0
 SPRITE_ANIM_DURATION = 350
 
 
@@ -183,6 +183,29 @@ class _HideSlot:
 
     def __init__(self, avatar):
         self.avatar = avatar
+
+
+def _composite_sprite_pixmaps(images):
+    """Load multiple images and composite them into a single pixmap (layers stacked)."""
+    pixmaps = []
+    max_w = 0
+    max_h = 0
+    for img in images:
+        pix = _load_pixmap(img)
+        pixmaps.append(pix)
+        max_w = max(max_w, pix.width())
+        max_h = max(max_h, pix.height())
+    if len(pixmaps) == 1:
+        return pixmaps[0]
+    composite = QPixmap(max_w, max_h)
+    composite.fill(QColor(0, 0, 0, 0))
+    painter = QPainter(composite)
+    for pix in pixmaps:
+        x = (max_w - pix.width()) // 2
+        y = max_h - pix.height()
+        painter.drawPixmap(x, y, pix)
+    painter.end()
+    return composite
 
 
 class _SpriteWindow(QWidget):
@@ -1096,7 +1119,10 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                 continue
             elif isinstance(chunk, _SpriteSlot):
                 is_new_api = True
-                processed_sprites.append(chunk.images[0])
+                if len(chunk.images) == 1:
+                    processed_sprites.append(chunk.images[0])
+                else:
+                    processed_sprites.append(_composite_sprite_pixmaps(chunk.images))
                 processed_positions.append(chunk.position)
                 avatar_sprite_map.append(chunk.avatar)
                 if avatar is not None and chunk.avatar is avatar and auto_speaker_idx is None:
