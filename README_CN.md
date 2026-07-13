@@ -147,7 +147,7 @@ dokibox.dialogbox("一下全出来", typewriter=False)
 
 在`v2.3.0`之后的版本中，`dokibox`的`dialogbox`带有了渲染立绘功能！
 
-[图片们]
+<img width="2560" alt="3f95a52f629bc382f2d1dc18cfcf4d9d" src="https://github.com/user-attachments/assets/3fe03e28-0e68-487d-9749-a72a1bc39fb5" />
 
 立绘功能的API如下
 
@@ -212,19 +212,19 @@ sayori(position="center", emote="happy", animation="shocked", width=200, height=
 dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
 ~~~
 
-[三人图片]
+<img width="2560" height="1440" alt="c132a913e95bacec0c50898a6b06a875" src="https://github.com/user-attachments/assets/0d037bbb-2bdc-474e-b7d7-3280e2e6df4a" />
 
 ~~~python
 dokibox.dialogbox("是啊，这么治愈的地方，值得大家一同前来。看来我们默契十足呢～",name=monika, sprites=[sayori("center", "happy"),monika("center", "happy2"),yuri("center", "shocked"),natsuki("center", "mild")])
 ~~~
 
-[四人图片]
+<img width="2560" alt="3b5d931976ecf83a23869e02cd51b40f" src="https://github.com/user-attachments/assets/c74ce6a9-a0a2-4b9a-a289-7c056ff2648e" />
 
 ~~~python
-dokibox.dialogbox("哈喽！",name=monika,sprites=[sayori("left", "shocked"),monika("center", "normal"),yuri("right", "shocked"),natsuki("right", "shocked")])
+dokibox.dialogbox("看来大家都不约而同找到了这个好去处呢。哈喽，各位。",name=monika,sprites=[sayori("left", "shocked"),monika("center", "normal", sprite_allow_cover=True),yuri("right", "shocked"),natsuki("center", "shocked")])
 ~~~
 
-[sprite_allow_cover为True]演示图片
+<img width="2556" alt="114fe540dc7259e95b1ac144294dfa74" src="https://github.com/user-attachments/assets/916184de-6fdd-4763-944a-90c8f0a5552c" />
 
 #### 关于连续调用
 
