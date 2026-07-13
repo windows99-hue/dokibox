@@ -6,7 +6,8 @@ import ctypes
 from typing import Optional, Union, List
 from PySide6.QtCore import (
     Qt, QTimer, QEventLoop, QRectF, QPointF, Signal,
-    QPropertyAnimation, QEasingCurve, QParallelAnimationGroup, Property, QRect,
+    QPropertyAnimation, QVariantAnimation, QEasingCurve,
+    QParallelAnimationGroup, Property, QRect,
 )
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
@@ -34,7 +35,7 @@ SPRITE_BASE_HEIGHT_RATIO = 0.95
 SPRITE_SPEAKER_SCALE = 1.10
 SPRITE_SILENT_SCALE = 1.0
 SPRITE_SILENT_OPACITY = 1.0
-SPRITE_ANIM_DURATION = 350
+SPRITE_ANIM_DURATION = 450
 
 
 def _hex_to_rgb(h):
@@ -304,17 +305,43 @@ class _SpriteWindow(QWidget):
         target_geom = self._compute_geometry()
         target_opacity = 1.0 if self._is_speaker else SPRITE_SILENT_OPACITY
         if animate and self.isVisible():
-            geom_anim = QPropertyAnimation(self, b"geometry")
+            start_geom = self.geometry()
+            start_w, start_h = start_geom.width(), start_geom.height()
+            target_w, target_h = target_geom.width(), target_geom.height()
+            start_opacity = self._opacity_val
+            target_x_frac = self._x_frac
+
+            screen_sw = QApplication.primaryScreen().size().width()
+            screen_sh = QApplication.primaryScreen().size().height()
+
+            if start_w > 0:
+                start_x_frac = (start_geom.x() + start_w / 2.0) / screen_sw
+            else:
+                start_x_frac = target_x_frac
+
+            geom_anim = QVariantAnimation(self)
             geom_anim.setDuration(SPRITE_ANIM_DURATION)
-            geom_anim.setStartValue(self.geometry())
-            geom_anim.setEndValue(target_geom)
-            geom_anim.setEasingCurve(QEasingCurve.InOutCubic)
+            geom_anim.setStartValue(0.0)
+            geom_anim.setEndValue(1.0)
+            geom_anim.setEasingCurve(QEasingCurve.OutCubic)
+
+            def on_geom_changed(val):
+                t = val
+                w = int(start_w + (target_w - start_w) * t)
+                h = int(start_h + (target_h - start_h) * t)
+                cur_x_frac = start_x_frac + (target_x_frac - start_x_frac) * t
+                x = int(screen_sw * cur_x_frac - w // 2)
+                x = max(0, min(x, screen_sw - w))
+                y = screen_sh - h
+                self.setGeometry(x, y, w, h)
+
+            geom_anim.valueChanged.connect(on_geom_changed)
 
             op_anim = QPropertyAnimation(self, b"opacity")
             op_anim.setDuration(SPRITE_ANIM_DURATION)
-            op_anim.setStartValue(self._opacity_val)
+            op_anim.setStartValue(start_opacity)
             op_anim.setEndValue(target_opacity)
-            op_anim.setEasingCurve(QEasingCurve.InOutCubic)
+            op_anim.setEasingCurve(QEasingCurve.OutCubic)
 
             self._anim_group = QParallelAnimationGroup()
             self._anim_group.addAnimation(geom_anim)
