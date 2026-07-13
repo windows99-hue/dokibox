@@ -243,7 +243,7 @@ class Avatar:
         self.name = name
         self.emotes = emotes
 
-    def __call__(self, position, emote, width=None, height=None):
+    def __call__(self, position, emote, animation=None, width=None, height=None):
         images = self.emotes.get(emote)
         if images is None:
             raise ValueError(
@@ -252,7 +252,7 @@ class Avatar:
             )
         if isinstance(images, str):
             images = [images]
-        return _SpriteSlot(self, position, images, width=width, height=height)
+        return _SpriteSlot(self, position, images, animation=animation, width=width, height=height)
 
     def hide(self):
         return _HideSlot(self)
@@ -260,12 +260,13 @@ class Avatar:
 
 class _SpriteSlot:
     """Internal: a character placed on stage at a position with an emote."""
-    __slots__ = ("avatar", "position", "images", "width", "height")
+    __slots__ = ("avatar", "position", "images", "animation", "width", "height")
 
-    def __init__(self, avatar, position, images, width=None, height=None):
+    def __init__(self, avatar, position, images, animation=None, width=None, height=None):
         self.avatar = avatar
         self.position = position
         self.images = images
+        self.animation = animation
         self.width = width
         self.height = height
 
@@ -321,6 +322,8 @@ class _SpriteWindow(QWidget):
         self._avatar = None
         self._width_override = None
         self._height_override = None
+        self._offset_y = 0.0
+        self._offset_anim = None
 
         self._pixmap = _load_pixmap(image_data)
         self._pixmap_source = image_data
@@ -503,6 +506,11 @@ class _SpriteWindow(QWidget):
     def update_state(self, image_data=None, x_frac=None, is_speaker=None):
         changed = False
         if image_data is not None:
+            if self._offset_anim is not None:
+                self._offset_anim.stop()
+                self._offset_anim.deleteLater()
+                self._offset_anim = None
+            self._offset_y = 0.0
             self._pixmap = _load_pixmap(image_data)
             self._pixmap_source = image_data
             changed = True
@@ -536,7 +544,7 @@ class _SpriteWindow(QWidget):
         paint_w = int(w * ratio)
         paint_h = int(h * ratio)
         ox = (w - paint_w) // 2
-        oy = h - paint_h
+        oy = h - paint_h + int(self._offset_y)
 
         scaled = self._pixmap.scaled(paint_w, paint_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         sx = ox + (paint_w - scaled.width()) // 2
@@ -554,6 +562,10 @@ class _SpriteWindow(QWidget):
                 self._fade_timer.stop()
                 self._fade_timer.deleteLater()
                 self._fade_timer = None
+            if self._offset_anim is not None:
+                self._offset_anim.stop()
+                self._offset_anim.deleteLater()
+                self._offset_anim = None
 
             num_ticks = SPRITE_FADE_DURATION // 10
             easing = QEasingCurve(QEasingCurve.OutCubic)
@@ -592,10 +604,63 @@ class _SpriteWindow(QWidget):
                 self._fade_timer.stop()
                 self._fade_timer.deleteLater()
                 self._fade_timer = None
+            if self._offset_anim is not None:
+                self._offset_anim.stop()
+                self._offset_anim.deleteLater()
+                self._offset_anim = None
             self.hide()
             self.deleteLater()
         except Exception:
             pass
+
+    def _get_offset_y(self):
+        return self._offset_y
+
+    def _set_offset_y(self, val):
+        self._offset_y = val
+        self.repaint()
+
+    anim_offset_y = Property(float, _get_offset_y, _set_offset_y)
+
+    def _play_animation(self, anim_type):
+        if self._offset_anim is not None:
+            self._offset_anim.stop()
+            self._offset_anim.deleteLater()
+            self._offset_anim = None
+        self._offset_y = 0.0
+        self.repaint()
+
+        if anim_type is None:
+            return
+
+        anim = QPropertyAnimation(self, b"anim_offset_y")
+        self._offset_anim = anim
+
+        if anim_type == "shocked":
+            anim.setDuration(400)
+            anim.setEasingCurve(QEasingCurve.OutBounce)
+            anim.setStartValue(0.0)
+            anim.setKeyValueAt(0.12, -65.0)
+            anim.setEndValue(0.0)
+        elif anim_type == "sad":
+            anim.setDuration(900)
+            anim.setEasingCurve(QEasingCurve.InOutCubic)
+            anim.setStartValue(0.0)
+            anim.setKeyValueAt(0.3, 35.0)
+            anim.setKeyValueAt(0.7, 35.0)
+            anim.setEndValue(0.0)
+        elif anim_type == "thanks":
+            anim.setDuration(900)
+            anim.setEasingCurve(QEasingCurve.InOutCubic)
+            anim.setStartValue(0.0)
+            anim.setKeyValueAt(0.3, 35.0)
+            anim.setKeyValueAt(0.7, 35.0)
+            anim.setEndValue(0.0)
+        else:
+            self._offset_anim = None
+            return
+
+        anim.start()
 
 
 class _DialogBox(QWidget):
@@ -1430,6 +1495,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     speaker_idx = None
     avatar_sprite_map = []
     sprite_size_map = []
+    sprite_animation_map = []
     sprite_pos = None
 
     if sprites is not None:
@@ -1450,11 +1516,13 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                 processed_positions.append(chunk.position)
                 avatar_sprite_map.append(chunk.avatar)
                 sprite_size_map.append((chunk.width, chunk.height))
+                sprite_animation_map.append(chunk.animation)
                 if avatar is not None and chunk.avatar is avatar and speaker_idx is None:
                     speaker_idx = len(processed_sprites) - 1
             else:
                 processed_sprites.append(chunk)
                 sprite_size_map.append((None, None))
+                sprite_animation_map.append(None)
 
         if is_new_api:
             sprites = processed_sprites if processed_sprites else []
@@ -1502,6 +1570,10 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                 sw._width_override = w_ov
                 sw._height_override = h_ov
                 sw._apply_geometry(animate=False)
+        if i < len(sprite_animation_map):
+            anim = sprite_animation_map[i]
+            if anim is not None:
+                sw._play_animation(anim)
 
     _dialogbox_loop = QEventLoop()
     _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)

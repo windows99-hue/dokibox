@@ -91,3 +91,8 @@ dokibox.dialogbox("哈喽！",name=monika,sprites=[natsuki("center", "shocked"),
                                                                 sayori("left", "shocked"),
                                                                 monika("center", "normal"),
                                                                 yuri("right", "shocked")])
+
+dokibox.dialogbox("莫妮卡！？你也来啦！？",name="", sprites=[natsuki("center", "shocked"),
+                                                                sayori("left", "suprised","shocked"),
+                                                                monika("center", "normal"),
+                                                                yuri("right", "shocked")])
