@@ -226,8 +226,9 @@ class _SpriteWindow(QWidget):
         self._x_frac = x_frac
         self._is_speaker = is_speaker
         self._pinned = pinned
-        self._opacity_val = 1.0
+        self._opacity_val = 0.0
         self._anim_timer = None
+        self._fade_timer = None
         self._avatar = None
         self._width_override = None
         self._height_override = None
@@ -247,6 +248,7 @@ class _SpriteWindow(QWidget):
 
         self._apply_geometry(animate=False)
         self.show()
+        self._start_fade_in()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -317,6 +319,10 @@ class _SpriteWindow(QWidget):
             self._anim_timer.stop()
             self._anim_timer.deleteLater()
             self._anim_timer = None
+        if self._fade_timer is not None:
+            self._fade_timer.stop()
+            self._fade_timer.deleteLater()
+            self._fade_timer = None
 
         target_geom = self._compute_max_geometry()
         target_scale = SPRITE_SPEAKER_SCALE if self._is_speaker else SPRITE_SILENT_SCALE
@@ -368,8 +374,36 @@ class _SpriteWindow(QWidget):
         else:
             self.setGeometry(target_geom)
             self._anim_scale = target_scale
-            self._opacity_val = target_opacity
             self.update()
+
+    def _start_fade_in(self):
+        target = 1.0 if self._is_speaker else SPRITE_SILENT_OPACITY
+        if self._fade_timer is not None:
+            self._fade_timer.stop()
+            self._fade_timer.deleteLater()
+            self._fade_timer = None
+
+        elapsed = QElapsedTimer()
+        elapsed.start()
+        duration = SPRITE_ANIM_DURATION
+        easing = QEasingCurve(QEasingCurve.OutCubic)
+        start_opacity = 0.0
+
+        self._fade_timer = QTimer(self)
+        self._fade_timer.setInterval(10)
+
+        def on_tick():
+            progress = min(elapsed.elapsed() / duration, 1.0)
+            t = easing.valueForProgress(progress)
+            self._opacity_val = start_opacity + (target - start_opacity) * t
+            self.update()
+            if progress >= 1.0:
+                self._fade_timer.stop()
+                self._fade_timer.deleteLater()
+                self._fade_timer = None
+
+        self._fade_timer.timeout.connect(on_tick)
+        self._fade_timer.start()
 
     def update_state(self, image_data=None, x_frac=None, is_speaker=None):
         changed = False
@@ -421,6 +455,46 @@ class _SpriteWindow(QWidget):
                 self._anim_timer.stop()
                 self._anim_timer.deleteLater()
                 self._anim_timer = None
+            if self._fade_timer is not None:
+                self._fade_timer.stop()
+                self._fade_timer.deleteLater()
+                self._fade_timer = None
+
+            elapsed = QElapsedTimer()
+            elapsed.start()
+            duration = SPRITE_ANIM_DURATION
+            easing = QEasingCurve(QEasingCurve.OutCubic)
+            start_opacity = self._opacity_val
+
+            timer = QTimer(self)
+            timer.setInterval(10)
+
+            def on_tick():
+                progress = min(elapsed.elapsed() / duration, 1.0)
+                t = easing.valueForProgress(progress)
+                self._opacity_val = start_opacity + (0.0 - start_opacity) * t
+                self.update()
+                if progress >= 1.0:
+                    timer.stop()
+                    timer.deleteLater()
+                    self.hide()
+                    self.deleteLater()
+
+            timer.timeout.connect(on_tick)
+            timer.start()
+        except Exception:
+            pass
+
+    def _instant_destroy(self):
+        try:
+            if self._anim_timer is not None:
+                self._anim_timer.stop()
+                self._anim_timer.deleteLater()
+                self._anim_timer = None
+            if self._fade_timer is not None:
+                self._fade_timer.stop()
+                self._fade_timer.deleteLater()
+                self._fade_timer = None
             self.hide()
             self.deleteLater()
         except Exception:
@@ -676,7 +750,7 @@ class _DialogBox(QWidget):
 
     def _destroy_sprites(self):
         for sw in self._sprites:
-            sw.destroy_sprite()
+            sw._instant_destroy()
         self._sprites = []
 
     def closeEvent(self, event):
