@@ -93,14 +93,29 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
         return []
     if sprite_pos is None:
         if count == 1:
-            return [0.5]
-        if count == 2:
-            return [0.25, 0.75]
-        if count == 3:
-            return [0.25, 0.50, 0.75]
-        if count == 4:
-            return [0.12, 0.37, 0.63, 0.88]
-        return [i / max(count - 1, 1) for i in range(count)]
+            result = [0.5]
+        elif count == 2:
+            result = [0.25, 0.75]
+        elif count == 3:
+            result = [0.25, 0.50, 0.75]
+        elif count == 4:
+            result = [0.12, 0.37, 0.63, 0.88]
+        else:
+            result = [i / max(count - 1, 1) for i in range(count)]
+        if isinstance(allow_cover, list) and len(allow_cover) >= count:
+            pos_indices = []
+            pos_values = []
+            for i in range(count):
+                if not allow_cover[i]:
+                    pos_indices.append(i)
+                    pos_values.append(result[i])
+            if pos_values and len(pos_values) > 1:
+                resolved = _resolve_overlapping_positions(pos_values)
+                for idx, val in enumerate(resolved):
+                    result[pos_indices[idx]] = val
+        elif not allow_cover:
+            result = _resolve_overlapping_positions(result)
+        return result
     if isinstance(sprite_pos, (str, float, int)):
         pos_list = [sprite_pos]
     else:
@@ -122,7 +137,19 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
     while len(result) < count:
         result.append(0.5 + (len(result) - count / 2) * 0.1)
     result = result[:count]
-    if not allow_cover:
+
+    if isinstance(allow_cover, list) and len(allow_cover) >= count:
+        pos_indices = []
+        pos_values = []
+        for i in range(count):
+            if not allow_cover[i]:
+                pos_indices.append(i)
+                pos_values.append(result[i])
+        if pos_values and len(pos_values) > 1:
+            resolved = _resolve_overlapping_positions(pos_values)
+            for idx, val in enumerate(resolved):
+                result[pos_indices[idx]] = val
+    elif not allow_cover:
         result = _resolve_overlapping_positions(result)
     return result
 
@@ -243,7 +270,8 @@ class Avatar:
         self.name = name
         self.emotes = emotes
 
-    def __call__(self, position, emote, animation=None, width=None, height=None):
+    def __call__(self, position, emote, animation=None, width=None, height=None,
+                 sprite_allow_cover=False):
         images = self.emotes.get(emote)
         if images is None:
             raise ValueError(
@@ -252,7 +280,8 @@ class Avatar:
             )
         if isinstance(images, str):
             images = [images]
-        return _SpriteSlot(self, position, images, animation=animation, width=width, height=height)
+        return _SpriteSlot(self, position, images, animation=animation, width=width, height=height,
+                           allow_cover=sprite_allow_cover)
 
     def hide(self):
         return _HideSlot(self)
@@ -260,15 +289,17 @@ class Avatar:
 
 class _SpriteSlot:
     """Internal: a character placed on stage at a position with an emote."""
-    __slots__ = ("avatar", "position", "images", "animation", "width", "height")
+    __slots__ = ("avatar", "position", "images", "animation", "width", "height", "allow_cover")
 
-    def __init__(self, avatar, position, images, animation=None, width=None, height=None):
+    def __init__(self, avatar, position, images, animation=None, width=None, height=None,
+                 allow_cover=False):
         self.avatar = avatar
         self.position = position
         self.images = images
         self.animation = animation
         self.width = width
         self.height = height
+        self.allow_cover = allow_cover
 
 
 class _HideSlot:
@@ -665,7 +696,7 @@ class _DialogBox(QWidget):
                  bold=False, pinned=True, fdst=False, overflow_mode="wrap",
                  font_family=None, font_size=None, transparent=True, glare=True,
                  sprites=None, sprite_pos=None, speaker_idx=None,
-                 sprite_allow_cover=False):
+                 sprite_allow_cover=False, sprite_allow_cover_list=None):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -691,6 +722,7 @@ class _DialogBox(QWidget):
         self._glare = glare
         self._sprites = []
         self._sprite_allow_cover = sprite_allow_cover
+        self._sprite_allow_cover_list = sprite_allow_cover_list
 
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size or 20
@@ -786,7 +818,8 @@ class _DialogBox(QWidget):
         count = len(raw)
         if count == 0:
             return
-        positions = _normalize_sprite_pos(sprite_pos, count, self._sprite_allow_cover)
+        allow_cover = self._sprite_allow_cover_list if self._sprite_allow_cover_list is not None else self._sprite_allow_cover
+        positions = _normalize_sprite_pos(sprite_pos, count, allow_cover)
         for i in range(count):
             is_speaker = (i == speaker_idx)
             sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
@@ -802,14 +835,16 @@ class _DialogBox(QWidget):
             return
 
         if old_count == 0 and new_count > 0:
-            positions = _normalize_sprite_pos(sprite_pos, new_count, self._sprite_allow_cover)
+            allow_cover = self._sprite_allow_cover_list if self._sprite_allow_cover_list is not None else self._sprite_allow_cover
+            positions = _normalize_sprite_pos(sprite_pos, new_count, allow_cover)
             for i in range(new_count):
                 is_speaker = (i == speaker_idx)
                 sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
                 self._sprites.append(sw)
             return
 
-        positions = _normalize_sprite_pos(sprite_pos, new_count, self._sprite_allow_cover)
+        allow_cover = self._sprite_allow_cover_list if self._sprite_allow_cover_list is not None else self._sprite_allow_cover
+        positions = _normalize_sprite_pos(sprite_pos, new_count, allow_cover)
 
         if avatar_map is not None and len(avatar_map) > 0 and old_count > 0:
             old_x_frac = {}
@@ -823,7 +858,13 @@ class _DialogBox(QWidget):
                 assigned = {}
                 old_chars = []
                 new_chars = []
+                allow_cover_list = self._sprite_allow_cover_list
                 for new_i in range(new_count):
+                    if allow_cover_list is not None and new_i < len(allow_cover_list) and allow_cover_list[new_i]:
+                        assigned[new_i] = positions[new_i]
+                        if positions[new_i] in sorted_remaining:
+                            sorted_remaining.remove(positions[new_i])
+                        continue
                     av = avatar_map[new_i] if new_i < len(avatar_map) else None
                     ox = old_x_frac.get(av) if av is not None else None
                     if ox is not None:
@@ -950,7 +991,8 @@ class _DialogBox(QWidget):
     def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,
                         font_family=None, font_size=None, transparent=None, glare=None,
                         sprites=None, sprite_pos=None, speaker_idx=None,
-                        avatar_sprite_map=None, sprite_allow_cover=None):
+                        avatar_sprite_map=None, sprite_allow_cover=None,
+                        sprite_allow_cover_list=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -971,6 +1013,8 @@ class _DialogBox(QWidget):
             self._glare = glare
         if sprite_allow_cover is not None:
             self._sprite_allow_cover = sprite_allow_cover
+        if sprite_allow_cover_list is not None:
+            self._sprite_allow_cover_list = sprite_allow_cover_list
 
         self._name = name
 
@@ -1490,6 +1534,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     avatar_sprite_map = []
     sprite_size_map = []
     sprite_animation_map = []
+    sprite_allow_cover_list = []
     sprite_pos = None
 
     if sprites is not None:
@@ -1511,12 +1556,14 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                 avatar_sprite_map.append(chunk.avatar)
                 sprite_size_map.append((chunk.width, chunk.height))
                 sprite_animation_map.append(chunk.animation)
+                sprite_allow_cover_list.append(chunk.allow_cover)
                 if avatar is not None and chunk.avatar is avatar and speaker_idx is None:
                     speaker_idx = len(processed_sprites) - 1
             else:
                 processed_sprites.append(chunk)
                 sprite_size_map.append((None, None))
                 sprite_animation_map.append(None)
+                sprite_allow_cover_list.append(False)
 
         if is_new_api:
             sprites = processed_sprites if processed_sprites else []
@@ -1540,7 +1587,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                                      sprites=sprites, sprite_pos=sprite_pos,
                                      speaker_idx=speaker_idx,
                                      avatar_sprite_map=avatar_sprite_map,
-                                     sprite_allow_cover=sprite_allow_cover)
+                                     sprite_allow_cover=sprite_allow_cover,
+                                     sprite_allow_cover_list=sprite_allow_cover_list)
             else:
                 _destroy_box()
         except Exception:
@@ -1553,7 +1601,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                           transparent=transparent, glare=glare,
                           sprites=sprites, sprite_pos=sprite_pos,
                           speaker_idx=speaker_idx,
-                          sprite_allow_cover=sprite_allow_cover)
+                          sprite_allow_cover=sprite_allow_cover,
+                          sprite_allow_cover_list=sprite_allow_cover_list)
 
     for i, sw in enumerate(_box._sprites):
         if i < len(avatar_sprite_map):

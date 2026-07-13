@@ -179,8 +179,23 @@ dokibox.dialogbox("哇，这里的风景也太舒服啦！",name=sayori,sprites=
 | 参数 | 类型 | 默认 | 说明 |
 |------|------|------|------|
 | `name` | str或`dokibox.Avatar` | `""` | 若传入类型为`dokibox.Avatar`，则dialogbox会将这个对象视为说话者，并放大10% |
-| `sprites` | 列表 | None | 该列表可传入任意数量（不推荐超过6个）的`dokibox.Avatar`对象，直接将变量作为**魔术函数**调用，第一个参数为角色在屏幕上的位置，第二个参数为角色的表情，第三个参数（可选）为角色说话时的动作，目前有`shocked` `sad` `thanks`三种 |
-| `sprite_allow_cover` | bool | `False` | 当设置为`True`时，立绘位置将不在经过平均排布算法计算，而是直接覆盖在指定位置 |
+| `sprites` | 列表 | None | 该列表可传入任意数量（不推荐超过6个）的`dokibox.Avatar`对象，请直接将变量作为**魔术函数**调用 |
+
+#### 关于`dokibox.Avatar`的魔术调用
+
+完全的魔术调用如下，以前文创建的`sayori`角色为例
+
+~~~python
+sayori(position="center", emote="happy", animation="shocked", width=200, height=300, sprite_allow_cover=True)
+~~~
+
+| 参数 | 类型 | 默认值 | 解释 |
+| ---- | ---- | ------ | ---- |
+|      |      |        |      |
+|      |      |        |      |
+|      |      |        |      |
+
+
 
 #### 关于动作参数
 

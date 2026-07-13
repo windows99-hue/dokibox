@@ -111,7 +111,7 @@ dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太�
 dokibox.dialogbox("这么舒服的地方，如果能配上甜甜的曲奇就更完美啦～诶嘿嘿~",name=sayori)
 dokibox.dialogbox("曲奇？！我就说我书包里的曲奇少了好几块！纱世里，是不是你偷偷吃掉的！",name=natsuki,sprites=[natsuki("center", "angry"),sayori("left", "panicked"),yuri("right", "shocked")])
 dokibox.dialogbox("等等…！夏树、纱世里、优里？你们三个怎么都在这里？！",name=os.getlogin(),sprites=[natsuki("center", "shocked"),sayori("left", "shocked"),yuri("right", "shocked")])
-dokibox.dialogbox("看来大家都不约而同找到了这个好去处呢。哈喽，各位。",name=monika,sprites=[sayori("left", "shocked"),monika("center", "normal"),yuri("right", "shocked"),natsuki("right", "shocked")])
+dokibox.dialogbox("看来大家都不约而同找到了这个好去处呢。哈喽，各位。",name=monika,sprites=[sayori("left", "shocked"),monika("center", "normal",sprite_allow_cover=True),yuri("right", "shocked"),natsuki("right", "shocked")])
 dokibox.dialogbox("莫妮卡！？你居然也来这里了！今天也太热闹了吧！",name=sayori, sprites=[sayori("left", "surprised"),monika("center", "normal"),yuri("right", "shocked"),natsuki("right", "curious")])
 dokibox.dialogbox("是啊，这么治愈的地方，值得大家一同前来。看来我们默契十足呢～",name=monika, sprites=[sayori("center", "happy"),monika("center", "happy2"),yuri("center", "shocked"),natsuki("center", "mild")])
 dokibox.dialogbox("可是这里......是我的电脑啊！",name=os.getlogin(), sprites=[sayori("center", "shocked"),monika("center", "shocked"),yuri("center", "shocked"),natsuki("center", "shocked")])
