@@ -8,7 +8,6 @@ from PySide6.QtCore import (
     Qt, QTimer, QEventLoop, QRectF, QPointF, Signal,
     QPropertyAnimation, QVariantAnimation, QEasingCurve,
     QParallelAnimationGroup, Property, QRect,
-    QElapsedTimer,
 )
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
@@ -36,7 +35,7 @@ SPRITE_BASE_HEIGHT_RATIO = 0.95
 SPRITE_SPEAKER_SCALE = 1.10
 SPRITE_SILENT_SCALE = 1.0
 SPRITE_SILENT_OPACITY = 1.0
-SPRITE_ANIM_DURATION = 450
+SPRITE_ANIM_DURATION = 220
 SPRITE_FADE_DURATION = 180
 
 
@@ -335,10 +334,9 @@ class _SpriteWindow(QWidget):
             start_opacity = self._opacity_val
             geom_changed = (start_geom != target_geom)
 
-            elapsed = QElapsedTimer()
-            elapsed.start()
-            duration = SPRITE_ANIM_DURATION
+            num_ticks = SPRITE_ANIM_DURATION // 10
             easing = QEasingCurve(QEasingCurve.OutCubic)
+            tick = [0]
 
             self._anim_timer = QTimer(self)
             self._anim_timer.setInterval(10)
@@ -353,8 +351,8 @@ class _SpriteWindow(QWidget):
             th = target_geom.height()
 
             def on_tick():
-                progress = min(elapsed.elapsed() / duration, 1.0)
-                t = easing.valueForProgress(progress)
+                progress = tick[0] / max(num_ticks - 1, 1)
+                t = easing.valueForProgress(min(progress, 1.0))
                 if geom_changed:
                     self.setGeometry(
                         int(sx + (tx - sx) * t),
@@ -364,8 +362,14 @@ class _SpriteWindow(QWidget):
                     )
                 self._anim_scale = start_scale + (target_scale - start_scale) * t
                 self._opacity_val = start_opacity + (target_opacity - start_opacity) * t
-                self.update()
-                if progress >= 1.0:
+                self.repaint()
+                tick[0] += 1
+                if tick[0] >= num_ticks:
+                    if geom_changed:
+                        self.setGeometry(target_geom)
+                    self._anim_scale = target_scale
+                    self._opacity_val = target_opacity
+                    self.repaint()
                     self._anim_timer.stop()
                     self._anim_timer.deleteLater()
                     self._anim_timer = None
