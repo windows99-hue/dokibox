@@ -184,13 +184,13 @@ class DdlcBlockTest(QWidget):
         """执行ynbox对话框测试"""
         try:
             self.label.setText("等待用户输入名字...")
-            username = dokibox.enterbox("请输入你的名字：", default="MC")
+            self.mcname = dokibox.enterbox("请输入你的名字：", default="MC")
             
-            if not username:
-                username = "MC"
+            if not self.mcname:
+                self.mcname = "MC"
                 
-            self.label.setText(f"等待用户确认喜好... (用户: {username})")
-            dokibox.dialogbox(f"哈喽 {username}！你喜欢文学部吗？", name="Monika")
+            self.label.setText(f"等待用户确认喜好... (用户: {self.mcname})")
+            dokibox.dialogbox(f"哈喽 {self.mcname}！你喜欢文学部吗？", name="Monika")
             
             cmd = dokibox.ynbox("你喜欢文学部吗？", tooltip=True)
             
@@ -238,7 +238,7 @@ class DdlcBlockTest(QWidget):
                             sprites=[self.sayori("left", "happy"), self.yuri("right", "smiled")])
             dokibox.dialogbox("曲奇？！我就说我书包里的曲奇少了好几块！纱世里，是不是你偷偷吃掉的！", name=self.natsuki, 
                             sprites=[self.natsuki("center", "angry"), self.sayori("left", "panicked"), self.yuri("right", "shocked")])
-            dokibox.dialogbox("等等…！夏树、纱世里、优里？你们三个怎么都在这里？！", name=os.getlogin(), 
+            dokibox.dialogbox("等等…！夏树、纱世里、优里？你们三个怎么都在这里？！", name=self.mcname, 
                             sprites=[self.natsuki("center", "shocked"), self.sayori("left", "shocked"), self.yuri("right", "shocked")])
             dokibox.dialogbox("看来大家都不约而同找到了这个好去处呢。哈喽，各位。", name=self.monika, 
                             sprites=[self.sayori("left", "shocked"), self.monika("center", "normal"), 
@@ -249,10 +249,10 @@ class DdlcBlockTest(QWidget):
             dokibox.dialogbox("是啊，这么治愈的地方，值得大家一同前来。看来我们默契十足呢～", name=self.monika, 
                             sprites=[self.sayori("center", "happy"), self.monika("center", "happy2"), 
                                     self.yuri("center", "shocked"), self.natsuki("center", "mild")])
-            dokibox.dialogbox("可是这里......是我的电脑啊！", name=os.getlogin(), 
+            dokibox.dialogbox("可是这里......是我的电脑啊！", name=self.mcname, 
                             sprites=[self.sayori("center", "shocked"), self.monika("center", "shocked"), 
                                     self.yuri("center", "shocked"), self.natsuki("center", "shocked")])
-            dokibox.dialogbox("大家惊讶地看着我，我也惊讶地看着他们", name="MC", 
+            dokibox.dialogbox("大家惊讶地看着我，我也惊讶地看着他们", name=self.mcname, 
                             sprites=[self.monika.hide(),self.sayori.hide(),self.yuri.hide(),self.natsuki.hide()],fdst=True)
             
             self.label.setText("✅ 立绘场景播放完成！")

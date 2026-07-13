@@ -940,7 +940,7 @@ class _DialogBox(QWidget):
 
     def _destroy_sprites(self):
         for sw in self._sprites:
-            sw._instant_destroy()
+            sw.destroy_sprite()
         self._sprites = []
 
     def closeEvent(self, event):
