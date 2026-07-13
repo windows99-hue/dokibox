@@ -147,7 +147,7 @@ dokibox.dialogbox("All at once", typewriter=False)
 
 Starting from `v2.3.0`, `dialogbox` supports rendering character sprites!
 
-[images]
+<img width="2560" alt="3f95a52f629bc382f2d1dc18cfcf4d9d" src="https://github.com/user-attachments/assets/3fe03e28-0e68-487d-9749-a72a1bc39fb5" />
 
 #### Declaring Characters
 
@@ -211,19 +211,19 @@ Multi-sprite example:
 dokibox.dialogbox("So that's it! No wonder it's so lush everywhere — it's so beautiful!", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "smiled")])
 ```
 
-[Three-character image]
+<img width="2558" alt="49e6c26587a69dfbd932b1a733669e25" src="https://github.com/user-attachments/assets/78a0fc50-43c7-467b-a5cf-7b20faa29b48" />
 
 ```python
 dokibox.dialogbox("Yeah, such a healing place deserves to be visited together. Looks like we're on the same wavelength!", name=monika, sprites=[sayori("center", "happy"), monika("center", "happy2"), yuri("center", "shocked"), natsuki("center", "mild")])
 ```
 
-[Four-character image]
+<img width="2560" alt="3b5d931976ecf83a23869e02cd51b40f" src="https://github.com/user-attachments/assets/c74ce6a9-a0a2-4b9a-a289-7c056ff2648e" />
 
 ```python
 dokibox.dialogbox("Hello!", name=monika, sprites=[sayori("left", "shocked"), monika("center", "normal"), yuri("right", "shocked"), natsuki("right", "shocked")])
 ```
 
-[Demo image with sprite_allow_cover=True]
+<img width="2556" alt="114fe540dc7259e95b1ac144294dfa74" src="https://github.com/user-attachments/assets/916184de-6fdd-4763-944a-90c8f0a5552c" />
 
 #### About Continuous Calls
 
