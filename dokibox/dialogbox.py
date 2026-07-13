@@ -88,7 +88,7 @@ def _normalize_sprites(sprites):
     return list(sprites)
 
 
-def _normalize_sprite_pos(sprite_pos, count):
+def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
     if count == 0:
         return []
     if sprite_pos is None:
@@ -121,7 +121,67 @@ def _normalize_sprite_pos(sprite_pos, count):
             result.append(float(p))
     while len(result) < count:
         result.append(0.5 + (len(result) - count / 2) * 0.1)
-    return result[:count]
+    result = result[:count]
+    if not allow_cover:
+        result = _resolve_overlapping_positions(result)
+    return result
+
+
+def _resolve_overlapping_positions(positions):
+    """当多个角色被指定到同一位置时，自动分散以避免重叠。
+
+    Args:
+        positions: 已转换为浮点数的位置列表 (0.0~1.0)。
+
+    Returns:
+        调整后的位置列表。
+    """
+    n = len(positions)
+    if n <= 1:
+        return positions[:]
+
+    unique = set(round(p, 6) for p in positions)
+    if len(unique) == n:
+        return positions[:]
+
+    indexed = sorted(enumerate(positions), key=lambda x: (x[1], x[0]))
+
+    result = [0.0] * n
+    GAP = 0.02
+
+    i = 0
+    while i < n:
+        orig_idx, pos = indexed[i]
+        j = i + 1
+        while j < n and abs(indexed[j][1] - pos) < 0.001:
+            j += 1
+
+        count = j - i
+        if count == 1:
+            result[orig_idx] = pos
+        else:
+            if i == 0:
+                group_left = pos
+            else:
+                group_left = (indexed[i - 1][1] + pos) / 2 + GAP / 2
+
+            if j == n:
+                group_right = pos
+            else:
+                group_right = (pos + indexed[j][1]) / 2 - GAP / 2
+
+            if group_right - group_left < 0.001:
+                total_spread = min(0.6, 0.15 * count)
+                group_left = max(0.05, pos - total_spread / 2)
+                group_right = min(0.95, pos + total_spread / 2)
+
+            for k in range(count):
+                t = k / max(count - 1, 1)
+                result[indexed[i + k][0]] = group_left + t * (group_right - group_left)
+
+        i = j
+
+    return result
 
 
 def _load_pixmap(data):
@@ -516,7 +576,8 @@ class _DialogBox(QWidget):
     def __init__(self, msg, w, h, name=None, typewriter=True, chardelay=50,
                  bold=False, pinned=True, fdst=False, overflow_mode="wrap",
                  font_family=None, font_size=None, transparent=True, glare=True,
-                 sprites=None, sprite_pos=None, speaker_idx=None):
+                 sprites=None, sprite_pos=None, speaker_idx=None,
+                 sprite_allow_cover=False):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -541,6 +602,7 @@ class _DialogBox(QWidget):
         self._transparent = transparent
         self._glare = glare
         self._sprites = []
+        self._sprite_allow_cover = sprite_allow_cover
 
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size or 20
@@ -636,7 +698,7 @@ class _DialogBox(QWidget):
         count = len(raw)
         if count == 0:
             return
-        positions = _normalize_sprite_pos(sprite_pos, count)
+        positions = _normalize_sprite_pos(sprite_pos, count, self._sprite_allow_cover)
         for i in range(count):
             is_speaker = (i == speaker_idx)
             sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
@@ -652,14 +714,14 @@ class _DialogBox(QWidget):
             return
 
         if old_count == 0 and new_count > 0:
-            positions = _normalize_sprite_pos(sprite_pos, new_count)
+            positions = _normalize_sprite_pos(sprite_pos, new_count, self._sprite_allow_cover)
             for i in range(new_count):
                 is_speaker = (i == speaker_idx)
                 sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
                 self._sprites.append(sw)
             return
 
-        positions = _normalize_sprite_pos(sprite_pos, new_count)
+        positions = _normalize_sprite_pos(sprite_pos, new_count, self._sprite_allow_cover)
 
         if avatar_map is not None:
             old_by_avatar = {}
@@ -768,7 +830,7 @@ class _DialogBox(QWidget):
     def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,
                         font_family=None, font_size=None, transparent=None, glare=None,
                         sprites=None, sprite_pos=None, speaker_idx=None,
-                        avatar_sprite_map=None):
+                        avatar_sprite_map=None, sprite_allow_cover=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -787,6 +849,8 @@ class _DialogBox(QWidget):
             self._transparent = transparent
         if glare is not None:
             self._glare = glare
+        if sprite_allow_cover is not None:
+            self._sprite_allow_cover = sprite_allow_cover
 
         self._name = name
 
@@ -1259,7 +1323,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               font_family: str = None, font_size: int = None,
               transparent: bool = True, glare: bool = True,
               sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
-              sprite_pos: Optional[Union[str, float, List[Union[str, float]]]] = None) -> None:
+              sprite_pos: Optional[Union[str, float, List[Union[str, float]]]] = None,
+              sprite_allow_cover: bool = False) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -1283,6 +1348,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         sprites:       standing picture path(s) or bytes. Single str/bytes or list for multiple characters.
         sprite_pos:    position(s) for sprites: 'left'/'center'/'right', float 0.0-1.0 (screen ratio),
                        or a list matching sprites. Auto-layout if None.
+        sprite_allow_cover: If True, allow sprites at the same position to overlap (default False).
+                       When False, sprites sharing a position are automatically spread apart.
 
     Usage:
         dokibox.dialogbox("Hello!", name="Sayori", sprites="sayori.png", sprite_pos="center")
@@ -1353,7 +1420,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                                      transparent=transparent, glare=glare,
                                      sprites=sprites, sprite_pos=sprite_pos,
                                      speaker_idx=speaker_idx,
-                                     avatar_sprite_map=avatar_sprite_map)
+                                     avatar_sprite_map=avatar_sprite_map,
+                                     sprite_allow_cover=sprite_allow_cover)
             else:
                 _destroy_box()
         except Exception:
@@ -1365,7 +1433,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                           font_family=font_family, font_size=font_size,
                           transparent=transparent, glare=glare,
                           sprites=sprites, sprite_pos=sprite_pos,
-                          speaker_idx=speaker_idx)
+                          speaker_idx=speaker_idx,
+                          sprite_allow_cover=sprite_allow_cover)
 
     for i, sw in enumerate(_box._sprites):
         if i < len(avatar_sprite_map):
