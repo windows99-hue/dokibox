@@ -627,10 +627,16 @@ class _SpriteWindow(QWidget):
             self._offset_anim.stop()
             self._offset_anim.deleteLater()
             self._offset_anim = None
-        self._offset_y = 0.0
-        self.repaint()
 
         if anim_type is None:
+            if abs(self._offset_y) > 0.5:
+                anim = QPropertyAnimation(self, b"anim_offset_y")
+                self._offset_anim = anim
+                anim.setDuration(300)
+                anim.setEasingCurve(QEasingCurve.InOutCubic)
+                anim.setStartValue(self._offset_y)
+                anim.setEndValue(0.0)
+                anim.start()
             return
 
         anim = QPropertyAnimation(self, b"anim_offset_y")
@@ -639,26 +645,14 @@ class _SpriteWindow(QWidget):
         if anim_type == "shocked":
             anim.setDuration(400)
             anim.setEasingCurve(QEasingCurve.OutBounce)
-            anim.setStartValue(0.0)
+            anim.setStartValue(self._offset_y)
             anim.setKeyValueAt(0.12, -65.0)
             anim.setEndValue(0.0)
-        elif anim_type == "sad":
+        elif anim_type in ("sad", "thanks"):
             anim.setDuration(900)
             anim.setEasingCurve(QEasingCurve.InOutCubic)
-            anim.setStartValue(0.0)
-            anim.setKeyValueAt(0.3, 35.0)
-            anim.setKeyValueAt(0.7, 35.0)
-            anim.setEndValue(0.0)
-        elif anim_type == "thanks":
-            anim.setDuration(900)
-            anim.setEasingCurve(QEasingCurve.InOutCubic)
-            anim.setStartValue(0.0)
-            anim.setKeyValueAt(0.3, 35.0)
-            anim.setKeyValueAt(0.7, 35.0)
-            anim.setEndValue(0.0)
-        else:
-            self._offset_anim = None
-            return
+            anim.setStartValue(self._offset_y)
+            anim.setEndValue(35.0)
 
         anim.start()
 
@@ -1571,9 +1565,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                 sw._height_override = h_ov
                 sw._apply_geometry(animate=False)
         if i < len(sprite_animation_map):
-            anim = sprite_animation_map[i]
-            if anim is not None:
-                sw._play_animation(anim)
+            sw._play_animation(sprite_animation_map[i])
 
     _dialogbox_loop = QEventLoop()
     _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)
