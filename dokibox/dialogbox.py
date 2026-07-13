@@ -213,7 +213,13 @@ def _composite_sprite_pixmaps(images):
 
 
 class _SpriteWindow(QWidget):
-    """Single standing-picture (立绘) window displayed above the dialog."""
+    """Single standing-picture (立绘) window displayed above the dialog.
+
+    The window is kept at speaker-scale geometry to avoid resizing during
+    silent<->speaker transitions.  All scale animation happens in paintEvent
+    via a transform — this eliminates the DWM compositing jank that comes
+    with per-frame setGeometry calls.
+    """
 
     def __init__(self, image_data, x_frac, is_speaker, pinned):
         super().__init__(None)
@@ -227,6 +233,9 @@ class _SpriteWindow(QWidget):
         self._height_override = None
 
         self._pixmap = _load_pixmap(image_data)
+        self._pixmap_source = image_data
+
+        self._anim_scale = SPRITE_SPEAKER_SCALE if is_speaker else SPRITE_SILENT_SCALE
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
@@ -256,7 +265,8 @@ class _SpriteWindow(QWidget):
         except Exception:
             pass
 
-    def _compute_geometry(self):
+    def _compute_base_wh(self):
+        """Return the unscaled (base) width and height tuple."""
         screen = QApplication.primaryScreen()
         sh = screen.size().height()
         sw = screen.size().width()
@@ -266,34 +276,37 @@ class _SpriteWindow(QWidget):
         both_overrides = (self._width_override is not None and self._height_override is not None)
 
         if both_overrides:
-            w = self._width_override
-            h = self._height_override
+            return self._width_override, self._height_override
+
+        if self._height_override is not None:
+            base_h = self._height_override
         else:
-            if self._height_override is not None:
-                base_h = self._height_override
-            else:
-                base_h = int(sh * SPRITE_BASE_HEIGHT_RATIO)
+            base_h = int(sh * SPRITE_BASE_HEIGHT_RATIO)
 
+        if ph > 0:
+            base_w = int(base_h * pw / ph)
+        else:
+            base_w = base_h
+
+        if self._width_override is not None:
+            base_w = self._width_override
+
+        if pw > 0 and self._width_override is None and base_w > sw * 0.5:
+            base_w = int(sw * 0.5)
             if ph > 0:
-                base_w = int(base_h * pw / ph)
-            else:
-                base_w = base_h
+                base_h = int(base_w * ph / pw)
 
-            if self._width_override is not None:
-                base_w = self._width_override
+        return base_w, base_h
 
-            if pw > 0 and self._width_override is None and base_w > sw * 0.5:
-                base_w = int(sw * 0.5)
-                if ph > 0:
-                    base_h = int(base_w * ph / pw)
+    def _compute_max_geometry(self):
+        """Window geometry at speaker scale (the largest it will ever be)."""
+        base_w, base_h = self._compute_base_wh()
+        screen = QApplication.primaryScreen()
+        sw = screen.size().width()
+        sh = screen.size().height()
 
-            if self._is_speaker:
-                h = int(base_h * SPRITE_SPEAKER_SCALE)
-                w = int(base_w * SPRITE_SPEAKER_SCALE)
-            else:
-                h = base_h
-                w = base_w
-
+        w = int(base_w * SPRITE_SPEAKER_SCALE)
+        h = int(base_h * SPRITE_SPEAKER_SCALE)
         x = int(sw * self._x_frac - w // 2)
         x = max(0, min(x, sw - w))
         y = sh - h
@@ -304,22 +317,16 @@ class _SpriteWindow(QWidget):
             self._anim_timer.stop()
             self._anim_timer.deleteLater()
             self._anim_timer = None
-        target_geom = self._compute_geometry()
+
+        target_geom = self._compute_max_geometry()
+        target_scale = SPRITE_SPEAKER_SCALE if self._is_speaker else SPRITE_SILENT_SCALE
         target_opacity = 1.0 if self._is_speaker else SPRITE_SILENT_OPACITY
+
         if animate and self.isVisible():
             start_geom = self.geometry()
-            start_w, start_h = start_geom.width(), start_geom.height()
-            target_w, target_h = target_geom.width(), target_geom.height()
+            start_scale = self._anim_scale
             start_opacity = self._opacity_val
-            target_x_frac = self._x_frac
-
-            screen_sw = QApplication.primaryScreen().size().width()
-            screen_sh = QApplication.primaryScreen().size().height()
-
-            if start_w > 0:
-                start_x_frac = (start_geom.x() + start_w / 2.0) / screen_sw
-            else:
-                start_x_frac = target_x_frac
+            geom_changed = (start_geom != target_geom)
 
             elapsed = QElapsedTimer()
             elapsed.start()
@@ -329,16 +336,26 @@ class _SpriteWindow(QWidget):
             self._anim_timer = QTimer(self)
             self._anim_timer.setInterval(10)
 
+            sx = start_geom.x()
+            sy = start_geom.y()
+            sw_val = start_geom.width()
+            sh_val = start_geom.height()
+            tx = target_geom.x()
+            ty = target_geom.y()
+            tw = target_geom.width()
+            th = target_geom.height()
+
             def on_tick():
                 progress = min(elapsed.elapsed() / duration, 1.0)
                 t = easing.valueForProgress(progress)
-                w = int(start_w + (target_w - start_w) * t)
-                h = int(start_h + (target_h - start_h) * t)
-                cur_x_frac = start_x_frac + (target_x_frac - start_x_frac) * t
-                x = int(screen_sw * cur_x_frac - w // 2)
-                x = max(0, min(x, screen_sw - w))
-                y = screen_sh - h
-                self.setGeometry(x, y, w, h)
+                if geom_changed:
+                    self.setGeometry(
+                        int(sx + (tx - sx) * t),
+                        int(sy + (ty - sy) * t),
+                        int(sw_val + (tw - sw_val) * t),
+                        int(sh_val + (th - sh_val) * t),
+                    )
+                self._anim_scale = start_scale + (target_scale - start_scale) * t
                 self._opacity_val = start_opacity + (target_opacity - start_opacity) * t
                 self.update()
                 if progress >= 1.0:
@@ -350,6 +367,7 @@ class _SpriteWindow(QWidget):
             self._anim_timer.start()
         else:
             self.setGeometry(target_geom)
+            self._anim_scale = target_scale
             self._opacity_val = target_opacity
             self.update()
 
@@ -357,6 +375,7 @@ class _SpriteWindow(QWidget):
         changed = False
         if image_data is not None:
             self._pixmap = _load_pixmap(image_data)
+            self._pixmap_source = image_data
             changed = True
         if x_frac is not None:
             self._x_frac = x_frac
@@ -380,14 +399,20 @@ class _SpriteWindow(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.SmoothPixmapTransform)
         painter.setOpacity(self._opacity_val)
-        scaled = self._pixmap.scaled(
-            self.width(), self.height(),
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
-        )
-        x = (self.width() - scaled.width()) // 2
-        y = self.height() - scaled.height()
-        painter.drawPixmap(x, y, scaled)
+
+        ratio = self._anim_scale / SPRITE_SPEAKER_SCALE
+
+        w = self.width()
+        h = self.height()
+        paint_w = int(w * ratio)
+        paint_h = int(h * ratio)
+        ox = (w - paint_w) // 2
+        oy = h - paint_h
+
+        scaled = self._pixmap.scaled(paint_w, paint_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        sx = ox + (paint_w - scaled.width()) // 2
+        sy = oy + paint_h - scaled.height()
+        painter.drawPixmap(sx, sy, scaled)
         painter.end()
 
     def destroy_sprite(self):
