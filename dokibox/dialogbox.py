@@ -95,11 +95,11 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
         if count == 1:
             return [0.5]
         if count == 2:
-            return [0.25, 0.75]
+            return [0.32, 0.68]
         if count == 3:
-            return [0.15, 0.50, 0.85]
+            return [0.28, 0.50, 0.72]
         if count == 4:
-            return [0.08, 0.35, 0.65, 0.92]
+            return [0.16, 0.39, 0.61, 0.84]
         return [i / max(count - 1, 1) for i in range(count)]
     if isinstance(sprite_pos, (str, float, int)):
         pos_list = [sprite_pos]
@@ -110,11 +110,11 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
         if isinstance(p, str):
             p_lower = p.strip().lower()
             if p_lower == "left":
-                result.append(0.15)
+                result.append(0.28)
             elif p_lower == "center":
                 result.append(0.50)
             elif p_lower == "right":
-                result.append(0.85)
+                result.append(0.72)
             else:
                 result.append(float(p))
         else:
@@ -1399,7 +1399,6 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               font_family: str = None, font_size: int = None,
               transparent: bool = True, glare: bool = True,
               sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
-              sprite_pos: Optional[Union[str, float, List[Union[str, float]]]] = None,
               sprite_allow_cover: bool = False) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
@@ -1421,16 +1420,12 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                        'hide'    – clip text at the boundary.
         transparent:   apply alpha gradient from top to bottom, making the body see-through (default True).
         glare:         draw a white semicircular highlight at the bottom of the dialog (default True).
-        sprites:       standing picture path(s) or bytes. Single str/bytes or list for multiple characters.
-        sprite_pos:    position(s) for sprites: 'left'/'center'/'right', float 0.0-1.0 (screen ratio),
-                       or a list matching sprites. Auto-layout if None.
+        sprites:       list of Avatar calls specifying character and position, e.g.
+                       [sayori("left", "happy"), yuri("right", "shocked")].
         sprite_allow_cover: If True, allow sprites at the same position to overlap (default False).
                        When False, sprites sharing a position are automatically spread apart.
 
     Usage:
-        dokibox.dialogbox("Hello!", name="Sayori", sprites="sayori.png", sprite_pos="center")
-
-        # New Avatar API:
         sayori = Avatar(name="Sayori", emotes={"happy": ["sayori_happy.png"]})
         yuri = Avatar(name="Yuri", emotes={"shocked": ["yuri_shocked.png"]})
         dokibox.dialogbox("Hello!", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "shocked")])
@@ -1450,6 +1445,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     speaker_idx = None
     avatar_sprite_map = []
     sprite_size_map = []
+    sprite_pos = None
 
     if sprites is not None:
         is_new_api = False
