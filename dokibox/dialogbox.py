@@ -219,6 +219,7 @@ class _SpriteWindow(QWidget):
         self._is_speaker = is_speaker
         self._pinned = pinned
         self._opacity_val = 1.0
+        self._anim_group = None
         self._avatar = None
         self._width_override = None
         self._height_override = None
@@ -292,6 +293,9 @@ class _SpriteWindow(QWidget):
         return QRect(x, y, w, h)
 
     def _apply_geometry(self, animate=True):
+        if self._anim_group is not None:
+            self._anim_group.stop()
+            self._anim_group = None
         target_geom = self._compute_geometry()
         target_opacity = 1.0 if self._is_speaker else SPRITE_SILENT_OPACITY
         if animate and self.isVisible():
@@ -499,7 +503,7 @@ class _DialogBox(QWidget):
             sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
             self._sprites.append(sw)
 
-    def _update_sprites(self, sprites, sprite_pos, speaker_idx):
+    def _update_sprites(self, sprites, sprite_pos, speaker_idx, avatar_map=None):
         raw = _normalize_sprites(sprites)
         new_count = len(raw)
         old_count = len(self._sprites)
@@ -524,6 +528,48 @@ class _DialogBox(QWidget):
 
         positions = _normalize_sprite_pos(sprite_pos, new_count)
 
+        if avatar_map is not None:
+            old_by_avatar = {}
+            for old_i, sw in enumerate(self._sprites):
+                av = getattr(sw, '_avatar', None)
+                if av is not None:
+                    old_by_avatar[av] = old_i
+
+            new_sprites = [None] * new_count
+
+            for new_i in range(new_count):
+                new_av = avatar_map[new_i] if new_i < len(avatar_map) else None
+                if new_av is not None and new_av in old_by_avatar:
+                    old_i = old_by_avatar[new_av]
+                    sw = self._sprites[old_i]
+                    same_image = raw[new_i] == sw._pixmap_data_ref if hasattr(sw, '_pixmap_data_ref') else False
+                    image_data = raw[new_i] if not same_image else None
+                    is_speaker = (speaker_idx is not None and new_i == speaker_idx) or new_count == 1
+                    sw.update_state(image_data=image_data, x_frac=positions[new_i], is_speaker=is_speaker)
+                    if image_data is not None:
+                        sw._pixmap_data_ref = raw[new_i]
+                    new_sprites[new_i] = sw
+
+            for new_i in range(new_count):
+                if new_sprites[new_i] is None:
+                    is_speaker = (speaker_idx is not None and new_i == speaker_idx) or new_count == 1
+                    sw = _SpriteWindow(raw[new_i], positions[new_i], is_speaker, self._pinned)
+                    sw._pixmap_data_ref = raw[new_i]
+                    new_sprites[new_i] = sw
+
+            used_old_indices = set()
+            for new_i in range(min(len(avatar_map), new_count)):
+                new_av = avatar_map[new_i]
+                if new_av is not None and new_av in old_by_avatar:
+                    used_old_indices.add(old_by_avatar[new_av])
+
+            for old_i, sw in enumerate(self._sprites):
+                if old_i not in used_old_indices:
+                    sw.destroy_sprite()
+
+            self._sprites = new_sprites
+            return
+
         if new_count == old_count:
             for i in range(new_count):
                 same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
@@ -538,13 +584,16 @@ class _DialogBox(QWidget):
                     self._sprites[i]._pixmap_data_ref = raw[i]
         elif new_count > old_count:
             for i in range(old_count):
+                same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
+                image_data = raw[i] if not same_image else None
                 is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
                 self._sprites[i].update_state(
-                    image_data=raw[i],
+                    image_data=image_data,
                     x_frac=positions[i],
                     is_speaker=is_speaker
                 )
-                self._sprites[i]._pixmap_data_ref = raw[i]
+                if image_data is not None:
+                    self._sprites[i]._pixmap_data_ref = raw[i]
             for i in range(old_count, new_count):
                 is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
                 sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
@@ -552,13 +601,16 @@ class _DialogBox(QWidget):
                 self._sprites.append(sw)
         else:
             for i in range(new_count):
+                same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
+                image_data = raw[i] if not same_image else None
                 is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
                 self._sprites[i].update_state(
-                    image_data=raw[i],
+                    image_data=image_data,
                     x_frac=positions[i],
                     is_speaker=is_speaker
                 )
-                self._sprites[i]._pixmap_data_ref = raw[i]
+                if image_data is not None:
+                    self._sprites[i]._pixmap_data_ref = raw[i]
             for i in range(new_count, old_count):
                 self._sprites[i].destroy_sprite()
             self._sprites = self._sprites[:new_count]
@@ -582,7 +634,8 @@ class _DialogBox(QWidget):
 
     def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,
                         font_family=None, font_size=None, transparent=None, glare=None,
-                        sprites=None, sprite_pos=None, speaker_idx=None):
+                        sprites=None, sprite_pos=None, speaker_idx=None,
+                        avatar_sprite_map=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -673,7 +726,7 @@ class _DialogBox(QWidget):
         self._init_typewriter_state(msg)
 
         if sprites is not None:
-            self._update_sprites(sprites, sprite_pos, speaker_idx)
+            self._update_sprites(sprites, sprite_pos, speaker_idx, avatar_map=avatar_sprite_map)
             QApplication.processEvents()
             self.raise_()
         elif speaker_idx is not None:
@@ -1167,7 +1220,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                                      font_family=font_family, font_size=font_size,
                                      transparent=transparent, glare=glare,
                                      sprites=sprites, sprite_pos=sprite_pos,
-                                     speaker_idx=speaker_idx)
+                                     speaker_idx=speaker_idx,
+                                     avatar_sprite_map=avatar_sprite_map)
             else:
                 _destroy_box()
         except Exception:
@@ -1185,8 +1239,11 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         if i < len(avatar_sprite_map):
             sw._avatar = avatar_sprite_map[i]
         if i < len(sprite_size_map):
-            sw._width_override, sw._height_override = sprite_size_map[i]
-            sw._apply_geometry(animate=False)
+            w_ov, h_ov = sprite_size_map[i]
+            if w_ov != sw._width_override or h_ov != sw._height_override:
+                sw._width_override = w_ov
+                sw._height_override = h_ov
+                sw._apply_geometry(animate=False)
 
     _dialogbox_loop = QEventLoop()
     _box.dismissed.connect(_dialogbox_loop.quit, Qt.SingleShotConnection)
