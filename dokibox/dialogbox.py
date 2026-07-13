@@ -161,7 +161,7 @@ def _resolve_overlapping_positions(positions):
         i = j
 
     if len(groups) == 1:
-        MARGIN = 0.06
+        MARGIN = 0.2
         usable = 1.0 - 2 * MARGIN
         targets = [MARGIN + i / max(n - 1, 1) * usable for i in range(n)]
         result = [0.0] * n
