@@ -767,6 +767,38 @@ class _DialogBox(QWidget):
 
         positions = _normalize_sprite_pos(sprite_pos, new_count, self._sprite_allow_cover)
 
+        if avatar_map is not None and len(avatar_map) > 0 and old_count > 0:
+            old_x_frac = {}
+            for sw in self._sprites:
+                av = getattr(sw, '_avatar', None)
+                if av is not None:
+                    old_x_frac[av] = sw._x_frac
+
+            if old_x_frac:
+                sorted_remaining = sorted(positions)
+                assigned = {}
+                old_chars = []
+                new_chars = []
+                for new_i in range(new_count):
+                    av = avatar_map[new_i] if new_i < len(avatar_map) else None
+                    ox = old_x_frac.get(av) if av is not None else None
+                    if ox is not None:
+                        old_chars.append((new_i, ox))
+                    else:
+                        new_chars.append(new_i)
+
+                old_chars.sort(key=lambda x: x[1])
+                for new_i, ox in old_chars:
+                    best_idx = min(range(len(sorted_remaining)),
+                                   key=lambda j: abs(sorted_remaining[j] - ox))
+                    assigned[new_i] = sorted_remaining.pop(best_idx)
+
+                for new_i in new_chars:
+                    assigned[new_i] = sorted_remaining.pop(0)
+
+                for new_i, pos in assigned.items():
+                    positions[new_i] = pos
+
         if avatar_map is not None:
             old_by_avatar = {}
             for old_i, sw in enumerate(self._sprites):
