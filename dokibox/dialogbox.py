@@ -923,11 +923,11 @@ class _DialogBox(QWidget):
             self._font_size = font_size
         else:
             self._font_size = 20
-        self._body_fs = self._font_size
-        self._name_fs = self._font_size
 
         dpi = _get_dpi_scale()
         s = 1.0 / dpi
+        self._body_fs = max(12, int(self._font_size * s))
+        self._name_fs = max(12, int(self._font_size * s))
         name_pad = int(28 * s)
 
         f_name = QFont(self._font_family, self._name_fs, QFont.Bold)
