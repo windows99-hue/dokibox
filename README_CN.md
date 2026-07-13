@@ -196,7 +196,7 @@ sayori(position="center", emote="happy", animation="shocked", width=200, height=
 | animation          | str  | 无     | 详见下文的`关于动作参数`                                     |
 | width              | int  | 无     | 立绘的宽，当width和height只有一个设置时等比例缩放            |
 | height             | int  | 无     | 立绘的高，当width和height只有一个设置时等比例缩放            |
-| sprite_allow_cover | bool | False  | 若为True，则                                                 |
+| sprite_allow_cover | bool | False  | 若为True，则这个dialogbox的该立绘无视平均平滑排布算法，直接覆盖 |
 
 #### 关于动作参数
 
@@ -241,6 +241,18 @@ dokibox.dialogbox("这么舒服的地方，如果能配上甜甜的曲奇就更�
 dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
 dokibox.dialogbox("这么舒服的地方，如果能配上甜甜的曲奇就更完美啦～诶嘿嘿~",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
 ~~~
+
+#### 关于立绘离场
+
+请按照如下方式让想要立场立绘离场
+
+~~~python
+dokibox.dialogbox("大家惊讶地看着我，我也惊讶地看着他们", name="MC", sprites=[monika.hide(),sayori.hide(),yuri.hide(),natsuki.hide()]) #全离场
+~~~
+
+### 在伴随其他Qt窗口使用时的注意事项
+
+在目标剧情结束后，建议把最后一个dialogbox的`fdst`参数设置为True，有效销毁窗口，我觉得这应该算个bug但可以通过fdst参数解决，所以搁置解决计划
 
 ---
 

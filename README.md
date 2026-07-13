@@ -27,7 +27,7 @@ import dokibox
 
 ---
 
-### ynbox — Yes/No Dialog
+## ynbox — Yes/No Dialog
 
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/283ffc50-17c5-4095-85aa-ac9af918ab6e" />
 
@@ -39,10 +39,10 @@ dokibox.ynbox(msg="Delete?", tooltip=False) → bool
 |-----------|------|---------|-------------|
 | `msg` | str | `""` | Message text |
 | `tooltip` | bool | `False` | Tooltip text |
-| `btn_texts` | tuple | None | Confirm button prompt. When set to None, `dokibox` will automatically detect the system language. To modify, please pass in a tuple, replacing "Yes" with the first parameter and "No" with the second parameter. English is used by default when the language is unknown. |
+| `btn_texts` | tuple | `None` | Confirm button prompts. When `None`, `dokibox` auto-detects the system language. To customize, pass a tuple — the first element replaces "Yes", the second replaces "No". English fallback if language is unknown. |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` or unset to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` or unset to use default. |
-| `pinned` | bool | `True` | Whether to pin |
+| `pinned` | bool | `True` | Keep window on top |
 
 Return value: clicking "Yes" returns `True`; clicking "No" or pressing Esc returns `False`.
 
@@ -53,7 +53,7 @@ if dokibox.ynbox("Delete?"):
 
 ---
 
-### msgbox — Message Box
+## msgbox — Message Box
 
 <img width="440" alt="image" src="https://github.com/user-attachments/assets/50aaa9b7-b972-4fa4-8508-90620626a4a1" />
 
@@ -67,7 +67,7 @@ dokibox.msgbox(msg="Operation successful!", tooltip=False) → True
 | `tooltip` | bool | `False` | Tooltip text |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` to use default. |
-| `pinned` | bool | `True` | Whether to pin |
+| `pinned` | bool | `True` | Keep window on top |
 
 Single OK button. Closes on click, Enter, or Esc; returns `True`.
 
@@ -77,7 +77,7 @@ dokibox.msgbox("Saved successfully!")
 
 ---
 
-### choicebox — Multiple Choice Dialog
+## choicebox — Multiple Choice Dialog
 
 <img width="609" alt="image" src="https://github.com/user-attachments/assets/a20b59e2-25c3-4f29-8625-4608f34e487b" />
 
@@ -93,7 +93,7 @@ dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | Non
 | `force` | int | `None` | Force-select an index (0-based); cursor moves to the center of that choice |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` to use default. |
-| `pinned` | bool | `True` | Whether to pin |
+| `pinned` | bool | `True` | Keep window on top |
 
 Return value: the selected text content; Esc returns `None`.
 
@@ -104,77 +104,194 @@ print(char)  # "Yuri"
 
 ---
 
-### dialogbox — Bottom Dialog Box
+## dialogbox — Bottom Dialog Box
 
 <img width="1206" alt="image" src="https://github.com/user-attachments/assets/db7c4489-aa32-4cc0-a6fd-d702bcc77417" />
 
 ```python
-dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, bold=False)
+dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, chardelay=50, bold=False)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | str | `""` | Message text |
-| `w` | int | `None` | Width (default 60% of screen width) |
+| `w` | int | `None` | Width (default: 60% of screen width) |
 | `h` | int | `220` | Height |
-| `name` | str | `None` | Character name tag (white rounded label protruding above the dialog) |
+| `name` | str or `dokibox.Avatar` (see below) | `None` | Character name tag (white rounded label protruding above the dialog). Pass an `Avatar` to enable auto speaker detection with sprites. |
 | `typewriter` | bool | `True` | Typewriter mode |
 | `chardelay` | int | `50` | Typewriter interval per character (ms) |
 | `bold` | bool | `False` | Bold black stroke on text |
-| `overflow_mode` | string | `wrap` | Has three parameters: `wrap`, `overflow`, and `hide`. `wrap` enables automatic line wrapping, `overflow` causes content to overflow the screen, and `hide` hides the content that goes off-screen.|
+| `overflow_mode` | str | `wrap` | How to handle text exceeding dialog width: `wrap` – wrap to next line; `overflow` – expand window so text renders past the boundary; `hide` – clip text at the boundary |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points (default: 20). Set to `None` to use default. |
-| `fdst` | bool | `False` | If True, destroys the window when dismissed. Use this for the final line of a dialogue scene or story branch to ensure the window closes completely. |
+| `fdst` | bool | `False` | If True, destroys the window when dismissed. Use for the final line of a dialogue scene or story branch to ensure the window closes completely. |
 | `transparent` | bool | `True` | Apply alpha gradient from top to bottom, making the body see-through |
 | `glare` | bool | `True` | Draw a white semicircular highlight at the bottom of the dialog |
-| `pinned` | bool | `True` | Whether to pin |
+| `pinned` | bool | `True` | Keep window on top |
+
+Sprite-related APIs are not listed in this table — see the Sprite section below.
 
 In typewriter mode:
+
 - Text appears character by character
 - First click → reveals full text instantly
 - Second click → closes
 
 ```python
 dokibox.dialogbox("Do you actually go by Administrator or something?", name="Monika")
-dokibox.dialogbox("Slower...", speed=80, bold=True)
+dokibox.dialogbox("Slower...", chardelay=80, bold=True)
 dokibox.dialogbox("All at once", typewriter=False)
 ```
 
-### enterbox - Text Enter Box
+### Sprite (Standing Picture) Feature
 
-<img width="452" alt="image" src="https://github.com/user-attachments/assets/03f7d34e-d76f-4921-97ce-ab18a43969e5" />
+Starting from `v2.3.0`, `dialogbox` supports rendering character sprites!
 
-~~~python
-cmd = dokibox.enterbox("Please enter your name")
-print(cmd) #The user input string
-~~~
+[images]
 
-| Parameter | Type | Default | Description |
-| --------- | ---- | ------- | ----------- |
-| `msg` | str | `""` | Prompt text |
-| `default` | str | `""` | Auto-filled content |
-| `tooltip` | bool | `False` | Tooltip text |
-| `pinned` | bool | `True` | Whether to pin to the top |
-| `font_family` | str | `None` | Font name (default "Microsoft YaHei"); pass `None` to use the default |
-| `font_size` | int | `None` | Font size (in points, default 20); pass `None` to use the default |
-| `max_length` | int | `None` | Maximum input character length |
-| `pinned` | bool | `True` | Whether to pin |
-
-
-### garbled — Generate Garbled String
-
-<img width="1649" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />
+#### Declaring Characters
 
 ```python
-dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True,chardelay=5,bold=True,overflow_mode="overflow")
+sayori = dokibox.Avatar(name="Sayori", emotes={
+    "normal": ["images\\sayori\\1l.png",
+               "images\\sayori\\1r.png",
+               "images\\sayori\\a.png"]
+})
+```
+
+`dokibox.Avatar` initializes a character sprite. See `avatar_test.py` in the repository for a full example.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | str | `""` | Content displayed in the dialogbox name tag |
+| `emotes` | dict | — | A dictionary where keys are emote names and values are lists of images. You can place any number of sprite images — they can be file path strings or `bytes` objects. `dokibox` composites all provided images into one and renders them together. |
+
+#### Rendering Sprites
+
+A typical sprite dialogbox call looks like this:
+
+```python
+dokibox.dialogbox("Wow, the scenery here is so relaxing!", name=sayori, sprites=[sayori("center", "happy")])
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `n` | int | `200` | the length of garbled string |
+| `name` | str or `dokibox.Avatar` | `""` | If an `Avatar` is passed, `dialogbox` treats that character as the speaker and scales them up by 10%. |
+| `sprites` | list | `None` | A list of `dokibox.Avatar` calls (not recommended to exceed 6). Call the avatar variable as a **magic method** directly. |
+| `sprite_allow_cover` | bool | `False` | If True, sprites at the same position are allowed to overlap. When False, sprites sharing a position are automatically spread apart. |
+
+#### About `dokibox.Avatar` Magic Call
+
+The full magic call signature, using the `sayori` character declared earlier:
+
+```python
+sayori(position="center", emote="happy", animation="shocked", width=200, height=300, sprite_allow_cover=True)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `position` | str | — | Must be one of `left`, `center`, or `right`. Represents the sprite's position on stage. Multiple sprites can share a position — the program adjusts them automatically. |
+| `emote` | str | — | Must match a key in the `emotes` dictionary declared when creating the character. Represents the sprite's expression for this dialogbox. |
+| `animation` | str | `None` | See the *Animation Parameter* section below. |
+| `width` | int | `None` | Sprite width. When only one of `width` or `height` is set, the other is scaled proportionally based on the original image aspect ratio. When both are set, the sprite is stretched to the exact dimensions. |
+| `height` | int | `None` | Sprite height. Same proportional scaling rules as `width`. |
+| `sprite_allow_cover` | bool | `False` | If True, this specific sprite ignores the averaging/spreading algorithm and overlays directly at its position. |
+
+#### About Animation Parameter
+
+| Name | Behavior |
+|------|----------|
+| `thanks` | Sprite moves down and then bounces back up, like a bow. |
+| `sad` | Sprite moves down and stays there until the next `dialogbox` call. |
+| `shocked` | Sprite quickly bounces upward. |
+
+Multi-sprite example:
+
+```python
+dokibox.dialogbox("So that's it! No wonder it's so lush everywhere — it's so beautiful!", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "smiled")])
+```
+
+[Three-character image]
+
+```python
+dokibox.dialogbox("Yeah, such a healing place deserves to be visited together. Looks like we're on the same wavelength!", name=monika, sprites=[sayori("center", "happy"), monika("center", "happy2"), yuri("center", "shocked"), natsuki("center", "mild")])
+```
+
+[Four-character image]
+
+```python
+dokibox.dialogbox("Hello!", name=monika, sprites=[sayori("left", "shocked"), monika("center", "normal"), yuri("right", "shocked"), natsuki("right", "shocked")])
+```
+
+[Demo image with sprite_allow_cover=True]
+
+#### About Continuous Calls
+
+When the expression and position haven't changed, you can omit the `sprites` parameter or pass `None` — this reuses the previous `dialogbox` configuration:
+
+```python
+dokibox.dialogbox("So that's it! No wonder it's so lush everywhere — it's so beautiful!", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "smiled")])
+dokibox.dialogbox("Such a cozy place... if only we had some sweet cookies, it'd be perfect! Ehehe~", name=sayori)
+```
+
+This is equivalent to:
+
+```python
+dokibox.dialogbox("So that's it! No wonder it's so lush everywhere — it's so beautiful!", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "smiled")])
+dokibox.dialogbox("Such a cozy place... if only we had some sweet cookies, it'd be perfect! Ehehe~", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "smiled")])
+```
+
+#### About Sprite Exit
+
+Use the `hide()` method to make a sprite leave the stage:
+
+```python
+dokibox.dialogbox("Everyone looks at me in surprise, and I stare back at them", name="MC", sprites=[monika.hide(), sayori.hide(), yuri.hide(), natsuki.hide()])  # all leave
+```
+
+### Notes When Using Alongside Other Qt Windows
+
+After your story/dialogue ends, it's recommended to set `fdst=True` on the last `dialogbox` call to properly destroy the window. This is a known workaround for window cleanup when integrating with other Qt-based applications.
+
+---
+
+## enterbox — Text Input Box
+
+<img width="452" alt="image" src="https://github.com/user-attachments/assets/03f7d34e-d76f-4921-97ce-ab18a43969e5" />
+
+```python
+cmd = dokibox.enterbox("Please enter your name")
+print(cmd)  # the user's input string
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `msg` | str | `""` | Prompt text |
+| `default` | str | `""` | Auto-filled content |
+| `tooltip` | bool | `False` | Tooltip text |
+| `pinned` | bool | `True` | Keep window on top |
+| `font_family` | str | `None` | Font name (default: "Microsoft YaHei"); pass `None` to use default |
+| `font_size` | int | `None` | Font size in points (default: 20); pass `None` to use default |
+| `max_length` | int | `None` | Maximum input character length |
+
+---
+
+## garbled — Generate Garbled Text
+
+<img width="1649" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />
+
+```python
+dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True, chardelay=5, bold=True, overflow_mode="overflow")
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `n` | int | `200` | Length of the garbled string |
+
+---
 
 ## Finally
 
 This project is licensed under the `MIT` license. When using it, please **strictly** comply with Team Salvato's relevant fan work IP creation guidelines.
 
-> Sayori is my favorite!🎀
+> Sayori is my favorite! 🎀
