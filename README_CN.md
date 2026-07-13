@@ -189,13 +189,14 @@ dokibox.dialogbox("哇，这里的风景也太舒服啦！",name=sayori,sprites=
 sayori(position="center", emote="happy", animation="shocked", width=200, height=300, sprite_allow_cover=True)
 ~~~
 
-| 参数 | 类型 | 默认值 | 解释 |
-| ---- | ---- | ------ | ---- |
-|      |      |        |      |
-|      |      |        |      |
-|      |      |        |      |
-
-
+| 参数               | 类型 | 默认值 | 解释                                                         |
+| ------------------ | ---- | ------ | ------------------------------------------------------------ |
+| position           | str  | 无     | 必须是`left` `center` `right`中的一个，代表了立绘存在的位置，多个立绘可以在同一个位置，程序会自行调整 |
+| emote              | str  | 无     | 请传入先前定义角色时`emotes`字典中的键名，代表立绘在这个dialogbox下的表情 |
+| animation          | str  | 无     | 详见下文的`关于动作参数`                                     |
+| width              | int  | 无     | 立绘的宽，当width和height只有一个设置时等比例缩放            |
+| height             | int  | 无     | 立绘的高，当width和height只有一个设置时等比例缩放            |
+| sprite_allow_cover | bool | False  | 若为True，则                                                 |
 
 #### 关于动作参数
 

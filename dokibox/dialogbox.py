@@ -853,18 +853,15 @@ class _DialogBox(QWidget):
                 if av is not None:
                     old_x_frac[av] = sw._x_frac
 
-            if old_x_frac:
+            allow_cover_list = self._sprite_allow_cover_list
+            has_cover = allow_cover_list is not None and any(allow_cover_list[:new_count])
+
+            if old_x_frac and not has_cover:
                 sorted_remaining = sorted(positions)
                 assigned = {}
                 old_chars = []
                 new_chars = []
-                allow_cover_list = self._sprite_allow_cover_list
                 for new_i in range(new_count):
-                    if allow_cover_list is not None and new_i < len(allow_cover_list) and allow_cover_list[new_i]:
-                        assigned[new_i] = positions[new_i]
-                        if positions[new_i] in sorted_remaining:
-                            sorted_remaining.remove(positions[new_i])
-                        continue
                     av = avatar_map[new_i] if new_i < len(avatar_map) else None
                     ox = old_x_frac.get(av) if av is not None else None
                     if ox is not None:
