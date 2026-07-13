@@ -492,14 +492,9 @@ class _DialogBox(QWidget):
         count = len(raw)
         if count == 0:
             return
-        if count > 1 and speaker_idx is None:
-            raise ValueError(
-                "speaker_idx must be specified when there are multiple sprites. "
-                "Use speaker_idx=0 for the first sprite, speaker_idx=1 for the second, etc."
-            )
         positions = _normalize_sprite_pos(sprite_pos, count)
         for i in range(count):
-            is_speaker = (speaker_idx is not None and i == speaker_idx) or count == 1
+            is_speaker = (i == speaker_idx) or count == 1
             sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
             self._sprites.append(sw)
 
@@ -512,16 +507,10 @@ class _DialogBox(QWidget):
             self._destroy_sprites()
             return
 
-        if new_count > 1 and speaker_idx is None:
-            raise ValueError(
-                "speaker_idx must be specified when there are multiple sprites. "
-                "Use speaker_idx=0 for the first sprite, speaker_idx=1 for the second, etc."
-            )
-
         if old_count == 0 and new_count > 0:
             positions = _normalize_sprite_pos(sprite_pos, new_count)
             for i in range(new_count):
-                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx) or new_count == 1
                 sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
                 self._sprites.append(sw)
             return
@@ -544,7 +533,7 @@ class _DialogBox(QWidget):
                     sw = self._sprites[old_i]
                     same_image = raw[new_i] == sw._pixmap_data_ref if hasattr(sw, '_pixmap_data_ref') else False
                     image_data = raw[new_i] if not same_image else None
-                    is_speaker = (speaker_idx is not None and new_i == speaker_idx) or new_count == 1
+                    is_speaker = (new_i == speaker_idx) or new_count == 1
                     sw.update_state(image_data=image_data, x_frac=positions[new_i], is_speaker=is_speaker)
                     if image_data is not None:
                         sw._pixmap_data_ref = raw[new_i]
@@ -552,7 +541,7 @@ class _DialogBox(QWidget):
 
             for new_i in range(new_count):
                 if new_sprites[new_i] is None:
-                    is_speaker = (speaker_idx is not None and new_i == speaker_idx) or new_count == 1
+                    is_speaker = (new_i == speaker_idx) or new_count == 1
                     sw = _SpriteWindow(raw[new_i], positions[new_i], is_speaker, self._pinned)
                     sw._pixmap_data_ref = raw[new_i]
                     new_sprites[new_i] = sw
@@ -574,7 +563,7 @@ class _DialogBox(QWidget):
             for i in range(new_count):
                 same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
                 image_data = raw[i] if not same_image else None
-                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx) or new_count == 1
                 self._sprites[i].update_state(
                     image_data=image_data,
                     x_frac=positions[i],
@@ -586,7 +575,7 @@ class _DialogBox(QWidget):
             for i in range(old_count):
                 same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
                 image_data = raw[i] if not same_image else None
-                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx) or new_count == 1
                 self._sprites[i].update_state(
                     image_data=image_data,
                     x_frac=positions[i],
@@ -595,7 +584,7 @@ class _DialogBox(QWidget):
                 if image_data is not None:
                     self._sprites[i]._pixmap_data_ref = raw[i]
             for i in range(old_count, new_count):
-                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx) or new_count == 1
                 sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
                 sw._pixmap_data_ref = raw[i]
                 self._sprites.append(sw)
@@ -603,7 +592,7 @@ class _DialogBox(QWidget):
             for i in range(new_count):
                 same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
                 image_data = raw[i] if not same_image else None
-                is_speaker = (speaker_idx is not None and i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx) or new_count == 1
                 self._sprites[i].update_state(
                     image_data=image_data,
                     x_frac=positions[i],
@@ -620,7 +609,7 @@ class _DialogBox(QWidget):
         if count == 0:
             return
         for i in range(count):
-            is_speaker = (speaker_idx is not None and i == speaker_idx) or count == 1
+            is_speaker = (i == speaker_idx) or count == 1
             self._sprites[i].update_state(is_speaker=is_speaker)
 
     def _destroy_sprites(self):
@@ -729,7 +718,7 @@ class _DialogBox(QWidget):
             self._update_sprites(sprites, sprite_pos, speaker_idx, avatar_map=avatar_sprite_map)
             QApplication.processEvents()
             self.raise_()
-        elif speaker_idx is not None:
+        else:
             self._update_sprites_state_only(speaker_idx)
 
         self.update()
@@ -1126,8 +1115,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               font_family: str = None, font_size: int = None,
               transparent: bool = True, glare: bool = True,
               sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
-              sprite_pos: Optional[Union[str, float, List[Union[str, float]]]] = None,
-              speaker_idx: Optional[int] = None) -> None:
+              sprite_pos: Optional[Union[str, float, List[Union[str, float]]]] = None) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -1135,6 +1123,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         w:             width in pixels. Defaults to 70% of screen width if None.
         h:             height in pixels. Defaults to 220 (DPI-scaled) if None.
         name:          character name shown in a white rounded tag above the dialog.
+                       Use an Avatar object for auto speaker detection with sprites.
         typewriter:    animate text character-by-character (default True).
         chardelay:     delay in ms per character in typewriter mode (default 50).
         bold:          use a thicker black stroke outline for body text (default False).
@@ -1150,8 +1139,6 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         sprites:       standing picture path(s) or bytes. Single str/bytes or list for multiple characters.
         sprite_pos:    position(s) for sprites: 'left'/'center'/'right', float 0.0-1.0 (screen ratio),
                        or a list matching sprites. Auto-layout if None.
-        speaker_idx:   index (0-based) of the currently speaking sprite. Speaker is highlighted/larger,
-                       others are dimmed. Ignored when only 1 sprite is present.
 
     Usage:
         dokibox.dialogbox("Hello!", name="Sayori", sprites="sayori.png", sprite_pos="center")
@@ -1160,7 +1147,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         sayori = Avatar(name="Sayori", emotes={"happy": ["sayori_happy.png"]})
         yuri = Avatar(name="Yuri", emotes={"shocked": ["yuri_shocked.png"]})
         dokibox.dialogbox("Hello!", name=sayori, sprites=[sayori("left", "happy"), yuri("right", "shocked")])
-        dokibox.dialogbox("Hi!", name=yuri)  # sprites persist
+        dokibox.dialogbox("Hi!", name=yuri)  # sprites persist, speaker auto-detected
     """
     global _box
 
@@ -1173,6 +1160,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 
     display_name = name.name if isinstance(name, Avatar) else name
     avatar = name if isinstance(name, Avatar) else None
+    speaker_idx = None
     avatar_sprite_map = []
     sprite_size_map = []
 
@@ -1180,7 +1168,6 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         is_new_api = False
         processed_sprites = []
         processed_positions = []
-        auto_speaker_idx = None
 
         for chunk in sprites:
             if isinstance(chunk, _HideSlot):
@@ -1195,8 +1182,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                 processed_positions.append(chunk.position)
                 avatar_sprite_map.append(chunk.avatar)
                 sprite_size_map.append((chunk.width, chunk.height))
-                if avatar is not None and chunk.avatar is avatar and auto_speaker_idx is None:
-                    auto_speaker_idx = len(processed_sprites) - 1
+                if avatar is not None and chunk.avatar is avatar and speaker_idx is None:
+                    speaker_idx = len(processed_sprites) - 1
             else:
                 processed_sprites.append(chunk)
                 sprite_size_map.append((None, None))
@@ -1204,14 +1191,15 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         if is_new_api:
             sprites = processed_sprites if processed_sprites else []
             sprite_pos = processed_positions
-            if speaker_idx is None:
-                speaker_idx = auto_speaker_idx
 
     if sprites is None and avatar is not None and _box is not None:
         for i, sw in enumerate(_box._sprites):
             if getattr(sw, '_avatar', None) is avatar:
                 speaker_idx = i
                 break
+
+    if speaker_idx is None:
+        speaker_idx = 0
 
     if _box is not None:
         try:

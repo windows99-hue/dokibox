@@ -60,3 +60,4 @@ dokibox.dialogbox("我也不知道，听夏树说这里很好玩就来啦，看�
 dokibox.dialogbox("哇~好漂亮的树木呀！",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
 dokibox.dialogbox("要是这里有曲奇就更好啦~诶嘿嘿~",name=sayori)
 dokibox.dialogbox("曲奇？话说是不是你偷吃了我的曲奇啊纱世里！",name=natsuki,sprites=[natsuki("right", "normal"),sayori("left", "suprised"),yuri("center", "normal")])
+dokibox.dialogbox("你们在干啥呐！",name="MC")
