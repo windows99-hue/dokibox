@@ -31,7 +31,7 @@ DWMWA_BORDER_COLOR = 34
 DWMWA_SHADOW_OPACITY = 33
 
 SPRITE_BASE_HEIGHT_RATIO = 0.95
-SPRITE_SPEAKER_SCALE = 1.15
+SPRITE_SPEAKER_SCALE = 1.10
 SPRITE_SILENT_SCALE = 1.0
 SPRITE_SILENT_OPACITY = 1.0
 SPRITE_ANIM_DURATION = 350
@@ -272,21 +272,26 @@ class _SpriteWindow(QWidget):
             else:
                 base_h = int(sh * SPRITE_BASE_HEIGHT_RATIO)
 
-            if self._is_speaker:
-                h = int(base_h * SPRITE_SPEAKER_SCALE)
+            if ph > 0:
+                base_w = int(base_h * pw / ph)
             else:
-                h = int(base_h * SPRITE_SILENT_SCALE)
+                base_w = base_h
 
             if self._width_override is not None:
-                w = self._width_override
-            elif ph > 0:
-                w = int(h * pw / ph)
-            else:
-                w = h
+                base_w = self._width_override
 
-        if pw > 0 and self._width_override is None and w > sw * 0.5:
-            w = int(sw * 0.5)
-            h = int(w * ph / pw)
+            if pw > 0 and self._width_override is None and base_w > sw * 0.5:
+                base_w = int(sw * 0.5)
+                if ph > 0:
+                    base_h = int(base_w * ph / pw)
+
+            if self._is_speaker:
+                h = int(base_h * SPRITE_SPEAKER_SCALE)
+                w = int(base_w * SPRITE_SPEAKER_SCALE)
+            else:
+                h = base_h
+                w = base_w
+
         x = int(sw * self._x_frac - w // 2)
         x = max(0, min(x, sw - w))
         y = sh - h
@@ -494,7 +499,7 @@ class _DialogBox(QWidget):
             return
         positions = _normalize_sprite_pos(sprite_pos, count)
         for i in range(count):
-            is_speaker = (i == speaker_idx) or count == 1
+            is_speaker = (i == speaker_idx)
             sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
             self._sprites.append(sw)
 
@@ -510,7 +515,7 @@ class _DialogBox(QWidget):
         if old_count == 0 and new_count > 0:
             positions = _normalize_sprite_pos(sprite_pos, new_count)
             for i in range(new_count):
-                is_speaker = (i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx)
                 sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
                 self._sprites.append(sw)
             return
@@ -533,7 +538,7 @@ class _DialogBox(QWidget):
                     sw = self._sprites[old_i]
                     same_image = raw[new_i] == sw._pixmap_data_ref if hasattr(sw, '_pixmap_data_ref') else False
                     image_data = raw[new_i] if not same_image else None
-                    is_speaker = (new_i == speaker_idx) or new_count == 1
+                    is_speaker = (new_i == speaker_idx)
                     sw.update_state(image_data=image_data, x_frac=positions[new_i], is_speaker=is_speaker)
                     if image_data is not None:
                         sw._pixmap_data_ref = raw[new_i]
@@ -541,7 +546,7 @@ class _DialogBox(QWidget):
 
             for new_i in range(new_count):
                 if new_sprites[new_i] is None:
-                    is_speaker = (new_i == speaker_idx) or new_count == 1
+                    is_speaker = (new_i == speaker_idx)
                     sw = _SpriteWindow(raw[new_i], positions[new_i], is_speaker, self._pinned)
                     sw._pixmap_data_ref = raw[new_i]
                     new_sprites[new_i] = sw
@@ -563,7 +568,7 @@ class _DialogBox(QWidget):
             for i in range(new_count):
                 same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
                 image_data = raw[i] if not same_image else None
-                is_speaker = (i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx)
                 self._sprites[i].update_state(
                     image_data=image_data,
                     x_frac=positions[i],
@@ -575,7 +580,7 @@ class _DialogBox(QWidget):
             for i in range(old_count):
                 same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
                 image_data = raw[i] if not same_image else None
-                is_speaker = (i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx)
                 self._sprites[i].update_state(
                     image_data=image_data,
                     x_frac=positions[i],
@@ -584,7 +589,7 @@ class _DialogBox(QWidget):
                 if image_data is not None:
                     self._sprites[i]._pixmap_data_ref = raw[i]
             for i in range(old_count, new_count):
-                is_speaker = (i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx)
                 sw = _SpriteWindow(raw[i], positions[i], is_speaker, self._pinned)
                 sw._pixmap_data_ref = raw[i]
                 self._sprites.append(sw)
@@ -592,7 +597,7 @@ class _DialogBox(QWidget):
             for i in range(new_count):
                 same_image = raw[i] == self._sprites[i]._pixmap_data_ref if hasattr(self._sprites[i], '_pixmap_data_ref') else False
                 image_data = raw[i] if not same_image else None
-                is_speaker = (i == speaker_idx) or new_count == 1
+                is_speaker = (i == speaker_idx)
                 self._sprites[i].update_state(
                     image_data=image_data,
                     x_frac=positions[i],
@@ -609,7 +614,7 @@ class _DialogBox(QWidget):
         if count == 0:
             return
         for i in range(count):
-            is_speaker = (i == speaker_idx) or count == 1
+            is_speaker = (i == speaker_idx)
             self._sprites[i].update_state(is_speaker=is_speaker)
 
     def _destroy_sprites(self):
@@ -1199,7 +1204,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                 break
 
     if speaker_idx is None:
-        speaker_idx = 0
+        speaker_idx = -1
 
     if _box is not None:
         try:
