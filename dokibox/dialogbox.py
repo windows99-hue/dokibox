@@ -128,58 +128,41 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
 
 
 def _resolve_overlapping_positions(positions):
-    """当多个角色被指定到同一位置时，自动分散以避免重叠。
+    """当多个角色被指定到同一位置时，将所有角色均匀分布以避免重叠。
+
+    不会保留原始的"位置分组"（如 center×2+left+right 不会让 center 两人挤在一起），
+    而是按 left→right 顺序对所有角色重新做均匀排布。
 
     Args:
         positions: 已转换为浮点数的位置列表 (0.0~1.0)。
 
     Returns:
-        调整后的位置列表。
+        均匀分布后的位置列表。
     """
     n = len(positions)
     if n <= 1:
         return positions[:]
 
-    unique = set(round(p, 6) for p in positions)
-    if len(unique) == n:
+    rounded = [round(p, 4) for p in positions]
+    if len(set(rounded)) == n:
         return positions[:]
 
     indexed = sorted(enumerate(positions), key=lambda x: (x[1], x[0]))
 
+    if n == 2:
+        targets = [0.25, 0.75]
+    elif n == 3:
+        targets = [0.15, 0.50, 0.85]
+    elif n == 4:
+        targets = [0.08, 0.35, 0.65, 0.92]
+    else:
+        MARGIN = 0.08
+        usable = 1.0 - 2 * MARGIN
+        targets = [MARGIN + i / max(n - 1, 1) * usable for i in range(n)]
+
     result = [0.0] * n
-    GAP = 0.02
-
-    i = 0
-    while i < n:
-        orig_idx, pos = indexed[i]
-        j = i + 1
-        while j < n and abs(indexed[j][1] - pos) < 0.001:
-            j += 1
-
-        count = j - i
-        if count == 1:
-            result[orig_idx] = pos
-        else:
-            if i == 0:
-                group_left = pos
-            else:
-                group_left = (indexed[i - 1][1] + pos) / 2 + GAP / 2
-
-            if j == n:
-                group_right = pos
-            else:
-                group_right = (pos + indexed[j][1]) / 2 - GAP / 2
-
-            if group_right - group_left < 0.001:
-                total_spread = min(0.6, 0.15 * count)
-                group_left = max(0.05, pos - total_spread / 2)
-                group_right = min(0.95, pos + total_spread / 2)
-
-            for k in range(count):
-                t = k / max(count - 1, 1)
-                result[indexed[i + k][0]] = group_left + t * (group_right - group_left)
-
-        i = j
+    for i, (idx, _) in enumerate(indexed):
+        result[idx] = targets[i]
 
     return result
 
@@ -370,7 +353,7 @@ class _SpriteWindow(QWidget):
         w = int(base_w * SPRITE_SPEAKER_SCALE)
         h = int(base_h * SPRITE_SPEAKER_SCALE)
         x = int(sw * self._x_frac - w // 2)
-        x = max(0, min(x, sw - w))
+        x = max(-w // 2, min(x, sw - w // 2))
         y = sh - h
         return QRect(x, y, w, h)
 
