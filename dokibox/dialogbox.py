@@ -95,11 +95,11 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
         if count == 1:
             return [0.5]
         if count == 2:
-            return [0.32, 0.68]
+            return [0.25, 0.75]
         if count == 3:
-            return [0.28, 0.50, 0.72]
+            return [0.25, 0.50, 0.75]
         if count == 4:
-            return [0.16, 0.39, 0.61, 0.84]
+            return [0.12, 0.37, 0.63, 0.88]
         return [i / max(count - 1, 1) for i in range(count)]
     if isinstance(sprite_pos, (str, float, int)):
         pos_list = [sprite_pos]
@@ -110,11 +110,11 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
         if isinstance(p, str):
             p_lower = p.strip().lower()
             if p_lower == "left":
-                result.append(0.28)
+                result.append(0.25)
             elif p_lower == "center":
                 result.append(0.50)
             elif p_lower == "right":
-                result.append(0.72)
+                result.append(0.75)
             else:
                 result.append(float(p))
         else:
@@ -209,21 +209,6 @@ def _resolve_overlapping_positions(positions):
                 break
 
     _push_apart(result)
-
-    if len(groups) > 1:
-        group_centers = []
-        for _, members in groups:
-            vals = [result[idx] for idx, _ in members]
-            group_centers.append((min(vals) + max(vals)) / 2)
-
-        for i, (_, members) in enumerate(groups):
-            old_center = group_centers[i]
-            new_center = 0.5 + (old_center - 0.5) * 0.88
-            shift = new_center - old_center
-            for idx, _ in members:
-                result[idx] = max(0.04, min(0.96, result[idx] + shift))
-
-        _push_apart(result)
 
     return result
 
