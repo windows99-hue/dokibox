@@ -24,7 +24,7 @@ MSG_PAD_Y = 16
 class _Panel(QWidget):
 
     def __init__(self, index, text, pw, opt_fs, opt_pad_y, border_w,
-                 on_select, tooltip=False, pinned=True, font_family=None):
+                 on_select, tooltip=None, pinned=True, font_family=None):
         super().__init__(None)
         self.index = index
         self.text = text
@@ -93,7 +93,7 @@ class _Panel(QWidget):
     def mouseMoveEvent(self, event):
         if self._tooltip:
             gp = event.globalPosition().toPoint()
-            QToolTip.showText(gp, self.text, self)
+            QToolTip.showText(gp, self._tooltip, self)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -105,7 +105,7 @@ class _Panel(QWidget):
 
 class _ChoiceManager:
 
-    def __init__(self, msg, choices, title, tooltip=False, force=None, pinned=True,
+    def __init__(self, msg, choices, title, tooltip=None, force=None, pinned=True,
                  font_family=None, font_size=None):
         _get_app()
         self.result = None
@@ -267,7 +267,7 @@ class _MsgLabel(QWidget):
 
 
 def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "",
-              tooltip: bool = False, force: Optional[int] = None,
+              tooltip: Optional[str] = None, force: Optional[int] = None,
               pinned: bool = True, font_family: str = None,
               font_size: int = None) -> Optional[str]:
     """DDLC-style multi-choice dialog. Each option is a floating window.
@@ -277,7 +277,7 @@ def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "
         msg:      prompt text displayed above the options. No label shown if empty.
         choices:  list of option strings to display.
         title:    window title (unused in borderless mode).
-        tooltip:  show a floating tooltip when hovering over an option.
+        tooltip:  tooltip text shown when hovering over an option. Disabled if None or empty.
         force:    pre-select an option by index (0-based). The mouse warps to its center.
         pinned:   keep the windows always on top of other windows.
 

@@ -32,13 +32,13 @@ import dokibox
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/283ffc50-17c5-4095-85aa-ac9af918ab6e" />
 
 ```python
-dokibox.ynbox(msg="确认删除？", tooltip=False) → bool
+dokibox.ynbox(msg="确认删除？", tooltip=None) → bool
 ```
 
 | 参数 | 类型 | 默认 | 说明 |
 |------|------|------|------|
 | `msg` | str | `""` | 正文 |
-| `tooltip` | bool | `False` | 悬浮文字提示 |
+| `tooltip` | str | `None` | 悬停时显示的提示文字，为 `None` 或空字符串时不显示 |
 | `btn_texts` | tuple | `None` | 确认按钮提示，为None时`dokibox`会自动检测系统语言，如需修改请传入一个元组，第一个参数替换"Yes"第二个参数替换"No"，语言未知时默认使用英文 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 或不填使用默认 |
 | `font_size` | int | `None` | 字号，传 `None` 或不填使用默认 |
@@ -58,13 +58,13 @@ if dokibox.ynbox("确认删除？"):
 <img width="440" alt="image" src="https://github.com/user-attachments/assets/50aaa9b7-b972-4fa4-8508-90620626a4a1" />
 
 ```python
-dokibox.msgbox(msg="操作成功！", tooltip=False) → True
+dokibox.msgbox(msg="操作成功！", tooltip=None) → True
 ```
 
 | 参数 | 类型 | 默认 | 说明 |
 |------|------|------|------|
 | `msg` | str | `""` | 正文 |
-| `tooltip` | bool | `False` | 悬浮文字提示 |
+| `tooltip` | str | `None` | 悬停时显示的提示文字，为 `None` 或空字符串时不显示 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号，传 `None` 使用默认 |
 | `pinned` | bool | `True` | 是否置顶 |
@@ -82,14 +82,14 @@ dokibox.msgbox("保存成功！")
 <img width="609" alt="image" src="https://github.com/user-attachments/assets/a20b59e2-25c3-4f29-8625-4608f34e487b" />
 
 ```python
-dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | None
+dokibox.choicebox(msg="", choices=None, tooltip=None, force=None) → str | None
 ```
 
 | 参数 | 类型 | 默认 | 说明 |
 |------|------|------|------|
 | `msg` | str | `""` | 提示文字，为空时不显示 |
 | `choices` | list | `None` | 选项列表 |
-| `tooltip` | bool | `False` | 悬浮文字提示 |
+| `tooltip` | str | `None` | 悬停时显示的提示文字，为 `None` 或空字符串时不显示 |
 | `force` | int | `None` | 指定索引（0 开始），鼠标自动移到该选项中央 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号，传 `None` 使用默认 |
@@ -269,7 +269,7 @@ print(cmd) #用户输入的字符串
 | ----- | ---- | ---- | ------ |
 | `msg` | str  | `""` | 提示词 |
 | `default` | str | `""` | 自动填充的内容 |
-| `tooltip` | bool | `False` | 悬浮文字提示 |
+| `tooltip` | str | `None` | 悬停时显示的提示文字，为 `None` 或空字符串时不显示 |
 | `pinned` | bool | `True` | 是否置顶 |
 | `font_family` | str | `None` | 字体名称（默认 "Microsoft YaHei"），传 `None` 使用默认 |
 | `font_size` | int | `None` | 字号（磅值，默认 20），传 `None` 使用默认 |

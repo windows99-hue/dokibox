@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """dokibox.msgbox -- DDLC-style message dialog (single OK button)"""
 import math
+from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
 from PySide6.QtWidgets import QToolTip
@@ -22,7 +23,7 @@ BTN_FONT_SIZE = 26
 
 class _MsgDialog(_DokiBase):
 
-    def __init__(self, msg, title="", tooltip=False, pinned=True,
+    def __init__(self, msg, title="", tooltip=None, pinned=True,
                  font_family=None, font_size=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
@@ -166,7 +167,7 @@ class _MsgDialog(_DokiBase):
             if self._btn_ok_hover and not self._tooltip_shown:
                 self._tooltip_shown = True
                 gp = event.globalPosition().toPoint()
-                QToolTip.showText(gp, "OK", self)
+                QToolTip.showText(gp, self._tooltip, self)
             elif not self._btn_ok_hover:
                 self._tooltip_shown = False
                 QToolTip.hideText()
@@ -176,14 +177,15 @@ class _MsgDialog(_DokiBase):
             self._done(True)
 
 
-def msgbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True,
-           font_family: str = None, font_size: int = None) -> bool:
+def msgbox(msg: str = "", title: str = "", tooltip: Optional[str] = None,
+           pinned: bool = True, font_family: str = None,
+           font_size: int = None) -> bool:
     """DDLC-style message dialog (OK button). Returns True.
 
     Args:
         msg:       message text to display (supports \\n for multiple lines).
         title:     window title (unused in borderless mode).
-        tooltip:   show a floating tooltip when hovering over the button.
+        tooltip:   tooltip text shown when hovering over the button. Disabled if None or empty.
         pinned:    keep the window always on top of other windows.
 
     Usage:

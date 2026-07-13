@@ -32,13 +32,13 @@ import dokibox
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/283ffc50-17c5-4095-85aa-ac9af918ab6e" />
 
 ```python
-dokibox.ynbox(msg="Delete?", tooltip=False) → bool
+dokibox.ynbox(msg="Delete?", tooltip=None) → bool
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | str | `""` | Message text |
-| `tooltip` | bool | `False` | Tooltip text |
+| `tooltip` | str | `None` | Tooltip text shown on hover; disabled when `None` or empty |
 | `btn_texts` | tuple | `None` | Confirm button prompts. When `None`, `dokibox` auto-detects the system language. To customize, pass a tuple — the first element replaces "Yes", the second replaces "No". English fallback if language is unknown. |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` or unset to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` or unset to use default. |
@@ -58,13 +58,13 @@ if dokibox.ynbox("Delete?"):
 <img width="440" alt="image" src="https://github.com/user-attachments/assets/50aaa9b7-b972-4fa4-8508-90620626a4a1" />
 
 ```python
-dokibox.msgbox(msg="Operation successful!", tooltip=False) → True
+dokibox.msgbox(msg="Operation successful!", tooltip=None) → True
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | str | `""` | Message text |
-| `tooltip` | bool | `False` | Tooltip text |
+| `tooltip` | str | `None` | Tooltip text shown on hover; disabled when `None` or empty |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` to use default. |
 | `pinned` | bool | `True` | Keep window on top |
@@ -82,14 +82,14 @@ dokibox.msgbox("Saved successfully!")
 <img width="609" alt="image" src="https://github.com/user-attachments/assets/a20b59e2-25c3-4f29-8625-4608f34e487b" />
 
 ```python
-dokibox.choicebox(msg="", choices=None, tooltip=False, force=None) → str | None
+dokibox.choicebox(msg="", choices=None, tooltip=None, force=None) → str | None
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | str | `""` | Prompt text; hidden when empty |
 | `choices` | list | `None` | List of choices |
-| `tooltip` | bool | `False` | Tooltip text |
+| `tooltip` | str | `None` | Tooltip text shown on hover; disabled when `None` or empty |
 | `force` | int | `None` | Force-select an index (0-based); cursor moves to the center of that choice |
 | `font_family` | str | `None` | Font family (default: "Microsoft YaHei"). Set to `None` to use default. |
 | `font_size` | int | `None` | Font size in points. Set to `None` to use default. |
@@ -268,7 +268,7 @@ print(cmd)  # the user's input string
 |-----------|------|---------|-------------|
 | `msg` | str | `""` | Prompt text |
 | `default` | str | `""` | Auto-filled content |
-| `tooltip` | bool | `False` | Tooltip text |
+| `tooltip` | str | `None` | Tooltip text shown on hover; disabled when `None` or empty |
 | `pinned` | bool | `True` | Keep window on top |
 | `font_family` | str | `None` | Font name (default: "Microsoft YaHei"); pass `None` to use default |
 | `font_size` | int | `None` | Font size in points (default: 20); pass `None` to use default |

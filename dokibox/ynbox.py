@@ -64,7 +64,7 @@ def get_system_locale():
 
 class _YnDialog(_DokiBase):
 
-    def __init__(self, msg, title="", tooltip=False, pinned=True, btn_texts=None,
+    def __init__(self, msg, title="", tooltip=None, pinned=True, btn_texts=None,
                  font_family=None, font_size=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
@@ -77,7 +77,7 @@ class _YnDialog(_DokiBase):
         self._btn_no_hover = False
         self._btn_yes_rect = None
         self._btn_no_rect = None
-        self._tooltip_text = None
+        self._tooltip_pos = None
         super().__init__(msg, title, pinned=pinned)
 
     def _wrap_lines(self, text, font, max_w):
@@ -243,22 +243,12 @@ class _YnDialog(_DokiBase):
         hovering = self._update_hover(event.position().toPoint())
         if self._tooltip:
             if hovering:
-                pos = event.position().toPoint()
-                text = ""
-                if self._btn_yes_rect:
-                    rx, ry, rw, rh = self._btn_yes_rect
-                    if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
-                        text = self._yes_text
-                if self._btn_no_rect and not text:
-                    rx, ry, rw, rh = self._btn_no_rect
-                    if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
-                        text = self._no_text
-                if text and text != self._tooltip_text:
-                    self._tooltip_text = text
-                    gp = event.globalPosition().toPoint()
-                    QToolTip.showText(gp, text, self)
+                gp = event.globalPosition().toPoint()
+                if self._tooltip_pos is None:
+                    self._tooltip_pos = gp
+                    QToolTip.showText(gp, self._tooltip, self)
             else:
-                self._tooltip_text = None
+                self._tooltip_pos = None
                 QToolTip.hideText()
 
     def keyPressEvent(self, event):
@@ -268,15 +258,15 @@ class _YnDialog(_DokiBase):
             self._done(False)
 
 
-def ynbox(msg: str = "", title: str = "", tooltip: bool = False, pinned: bool = True,
-          btn_texts: Optional[Tuple[str, str]] = None,
+def ynbox(msg: str = "", title: str = "", tooltip: Optional[str] = None,
+          pinned: bool = True, btn_texts: Optional[Tuple[str, str]] = None,
           font_family: str = None, font_size: int = None) -> bool:
     """DDLC-style yes/no dialog. Returns True(Yes) / False(No)
 
     Args:
         msg:        message text to display (supports \\n for multiple lines).
         title:      window title (unused in borderless mode).
-        tooltip:    show a floating tooltip when hovering over buttons.
+        tooltip:    tooltip text shown when hovering over buttons. Disabled if None or empty.
         pinned:     keep the window always on top of other windows.
         btn_texts:  (confirm, cancel) tuple. Auto-detected from system language if None.
 
