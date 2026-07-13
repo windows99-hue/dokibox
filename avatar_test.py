@@ -1,5 +1,6 @@
 import dokibox
 import rpareader
+import copy
 
 IMAGE_ARCHIVE = r"J:\SteamLibrary\steamapps\common\Doki Doki Literature Club\game\images.rpa"
 
@@ -71,6 +72,8 @@ monika = dokibox.Avatar(name="Monika", emotes={
                 monika_images[monika_images_root + "a.png"]],
 })
 
+sayori2 = copy.deepcopy(sayori)
+
 dokibox.dialogbox("你好呀！我是纱世里！",name=sayori,sprites=[sayori("center", "normal")])  
 dokibox.dialogbox("你好呀！我是优里！",name=yuri,sprites=[sayori("left", "normal"),yuri("right", "normal")])
 dokibox.dialogbox("优里!?你也在这里！",name=sayori,sprites=[sayori("left", "suprised"),yuri("right", "normal")])
@@ -85,6 +88,6 @@ dokibox.dialogbox("诶！？你....你们....是怎么到这里来的！？",nam
                                                                 yuri("right", "shocked")])
 
 dokibox.dialogbox("哈喽！",name=monika,sprites=[natsuki("center", "shocked"),
-                                                                sayori("left", "shocked"),
+                                                                sayori("center", "shocked"),
                                                                 monika("center", "normal"),
-                                                                yuri("right", "shocked")])
+                                                                yuri("center", "shocked")])

@@ -128,16 +128,17 @@ def _normalize_sprite_pos(sprite_pos, count, allow_cover=False):
 
 
 def _resolve_overlapping_positions(positions):
-    """当多个角色被指定到同一位置时，将所有角色均匀分布以避免重叠。
+    """当多个角色被指定到同一位置时，重新分布以紧凑且有层次地排开。
 
-    不会保留原始的"位置分组"（如 center×2+left+right 不会让 center 两人挤在一起），
-    而是按 left→right 顺序对所有角色重新做均匀排布。
+    - 同位置的角色紧密围绕该位置分布（组内间距小）
+    - 不同位置组之间按原始比例保持间距
+    - 如果所有角色位置相同，则均分整个舞台
 
     Args:
         positions: 已转换为浮点数的位置列表 (0.0~1.0)。
 
     Returns:
-        均匀分布后的位置列表。
+        调整后的位置列表。
     """
     n = len(positions)
     if n <= 1:
@@ -149,20 +150,80 @@ def _resolve_overlapping_positions(positions):
 
     indexed = sorted(enumerate(positions), key=lambda x: (x[1], x[0]))
 
-    if n == 2:
-        targets = [0.25, 0.75]
-    elif n == 3:
-        targets = [0.15, 0.50, 0.85]
-    elif n == 4:
-        targets = [0.08, 0.35, 0.65, 0.92]
-    else:
-        MARGIN = 0.08
+    groups = []
+    i = 0
+    while i < n:
+        pos = indexed[i][1]
+        j = i + 1
+        while j < n and round(indexed[j][1], 4) == round(pos, 4):
+            j += 1
+        groups.append((pos, [indexed[k] for k in range(i, j)]))
+        i = j
+
+    if len(groups) == 1:
+        MARGIN = 0.06
         usable = 1.0 - 2 * MARGIN
         targets = [MARGIN + i / max(n - 1, 1) * usable for i in range(n)]
+        result = [0.0] * n
+        for i, (idx, _) in enumerate(indexed):
+            result[idx] = targets[i]
+        return result
+
+    INNER_GAP = 0.18
+    MIN_GAP = 0.08
 
     result = [0.0] * n
-    for i, (idx, _) in enumerate(indexed):
-        result[idx] = targets[i]
+
+    for pos, members in groups:
+        count = len(members)
+        if count == 1:
+            idx, _ = members[0]
+            result[idx] = pos
+        else:
+            total_w = (count - 1) * INNER_GAP
+            for k, (idx, _) in enumerate(members):
+                t = k / max(count - 1, 1)
+                result[idx] = pos - total_w / 2 + t * total_w
+
+    idx_to_group = {}
+    for gi, (_, members) in enumerate(groups):
+        for idx, _ in members:
+            idx_to_group[idx] = gi
+
+    def _push_apart(positions):
+        for _ in range(100):
+            sorted_pairs = sorted(enumerate(positions), key=lambda x: x[1])
+            changed = False
+            for k in range(n - 1):
+                a, va = sorted_pairs[k]
+                b, vb = sorted_pairs[k + 1]
+                if idx_to_group[a] == idx_to_group[b]:
+                    continue
+                gap = vb - va
+                if gap < MIN_GAP:
+                    push = (MIN_GAP - gap) / 2
+                    positions[a] = max(0.04, va - push)
+                    positions[b] = min(0.96, vb + push)
+                    changed = True
+            if not changed:
+                break
+
+    _push_apart(result)
+
+    if len(groups) > 1:
+        group_centers = []
+        for _, members in groups:
+            vals = [result[idx] for idx, _ in members]
+            group_centers.append((min(vals) + max(vals)) / 2)
+
+        for i, (_, members) in enumerate(groups):
+            old_center = group_centers[i]
+            new_center = 0.5 + (old_center - 0.5) * 0.88
+            shift = new_center - old_center
+            for idx, _ in members:
+                result[idx] = max(0.04, min(0.96, result[idx] + shift))
+
+        _push_apart(result)
 
     return result
 
