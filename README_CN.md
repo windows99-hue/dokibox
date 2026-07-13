@@ -27,7 +27,7 @@ import dokibox
 
 ---
 
-### ynbox — 是/否 对话框
+## ynbox — 是/否 对话框
 
 <img width="300" alt="image" src="https://github.com/user-attachments/assets/283ffc50-17c5-4095-85aa-ac9af918ab6e" />
 
@@ -53,7 +53,7 @@ if dokibox.ynbox("确认删除？"):
 
 ---
 
-### msgbox — 消息提示框
+## msgbox — 消息提示框
 
 <img width="440" alt="image" src="https://github.com/user-attachments/assets/50aaa9b7-b972-4fa4-8508-90620626a4a1" />
 
@@ -77,7 +77,7 @@ dokibox.msgbox("保存成功！")
 
 ---
 
-### choicebox — 多选对话框
+## choicebox — 多选对话框
 
 <img width="609" alt="image" src="https://github.com/user-attachments/assets/a20b59e2-25c3-4f29-8625-4608f34e487b" />
 
@@ -104,7 +104,7 @@ print(char)  # "优里"
 
 ---
 
-### dialogbox — 底部对话框
+## dialogbox — 底部对话框
 
 <img width="1206" alt="image" src="https://github.com/user-attachments/assets/db7c4489-aa32-4cc0-a6fd-d702bcc77417" />
 
@@ -117,7 +117,7 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `msg` | str | `""` | 正文 |
 | `w` | int | `None` | 宽度（默认 60% 屏宽） |
 | `h` | int | `220` | 高度 |
-| `name` | str | `None` | 角色名牌（探出对话框上方的白色圆角标签） |
+| `name` | str或`dokibox.Avatar`（详情见下文） | `None` | 角色名牌（探出对话框上方的白色圆角标签） |
 | `typewriter` | bool | `True` | 打字机模式 |
 | `chardelay` | int | `50` | 打字机每字间隔（ms） |
 | `bold` | bool | `False` | 正文黑色描边加粗 |
@@ -129,7 +129,10 @@ dokibox.dialogbox(msg="", w=None, h=220, name=None, typewriter=True, speed=50, b
 | `glare` | bool | `True` | 在对话框底部绘制白色半圆高光 |
 | `pinned` | bool | `True` | 是否置顶 |
 
+与立绘相关的api本表格不再赘述，请在后文查看
+
 打字机模式下：
+
 - 文字逐个出现
 - 第一次点击 → 全文瞬间显示
 - 第二次点击 → 关闭
@@ -140,7 +143,92 @@ dokibox.dialogbox("慢一点……", speed=80, bold=True)
 dokibox.dialogbox("一下全出来", typewriter=False)
 ```
 
-### enterbox - 文本输入框
+### dialogbox的立绘功能
+
+在`v2.3.0`之后的版本中，`dokibox`的`dialogbox`带有了渲染立绘功能！
+
+[图片们]
+
+立绘功能的API如下
+
+#### 声明角色
+
+~~~python
+sayori = dokibox.Avatar(name="Sayori", emotes={
+    "normal":["images\\sayori\\1l.png",
+              "images\\sayori\\1r.png",
+              "images\\sayori\\a.png"]
+})
+~~~
+
+`dokibox.Avatar`类会初始化一个角色立绘，详情可见仓库内`avatar_test.py`
+
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `name` | str | `""` | dialogbox的nametag所显示的内容 |
+| `emotes` | dict | "" | `emotes`参数接收一个字典，其中字典键为表情名称，字典值应为一个列表，你可以在其中放置任意数量的立绘图片，他们可以是字符串类型的图片路径，也可以是`bytes`字节串，`dokibox`会将传入的所有照片一同合并为一个整体，并参与到接下来的渲染中 |
+
+#### 渲染立绘
+
+一个普通的带立绘dialogbox调用办法如下
+
+~~~python
+dokibox.dialogbox("哇，这里的风景也太舒服啦！",name=sayori,sprites=[sayori("center", "happy")])
+~~~
+
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `name` | str或`dokibox.Avatar` | `""` | 若传入类型为`dokibox.Avatar`，则dialogbox会将这个对象视为说话者，并放大10% |
+| `sprites` | 列表 | None | 该列表可传入任意数量（不推荐超过6个）的`dokibox.Avatar`对象，直接将变量作为**魔术函数**调用，第一个参数为角色在屏幕上的位置，第二个参数为角色的表情，第三个参数（可选）为角色说话时的动作，目前有`shocked` `sad` `thanks`三种 |
+| `sprite_allow_cover` | bool | `False` | 当设置为`True`时，立绘位置将不在经过平均排布算法计算，而是直接覆盖在指定位置 |
+
+#### 关于动作参数
+
+| 名称    | 动作                                            |
+| ------- | ----------------------------------------------- |
+| thanks  | 立绘向下移动后向上恢复位置，就像鞠躬一样        |
+| sad     | 立绘向下移动后不再回弹，直到下一次调用dialogbox |
+| shocked | 立绘快速向上弹跳起来                            |
+
+多个立绘示例
+
+~~~python
+dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
+~~~
+
+[三人图片]
+
+~~~python
+dokibox.dialogbox("是啊，这么治愈的地方，值得大家一同前来。看来我们默契十足呢～",name=monika, sprites=[sayori("center", "happy"),monika("center", "happy2"),yuri("center", "shocked"),natsuki("center", "mild")])
+~~~
+
+[四人图片]
+
+~~~python
+dokibox.dialogbox("哈喽！",name=monika,sprites=[sayori("left", "shocked"),monika("center", "normal"),yuri("right", "shocked"),natsuki("right", "shocked")])
+~~~
+
+[sprite_allow_cover为True]演示图片
+
+#### 关于连续调用
+
+如果表情和位置都没有变化时，可以不传入sprites参数或者传入`None`这意味着直接使用上一个dialogbox的配置
+
+~~~python
+dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
+dokibox.dialogbox("这么舒服的地方，如果能配上甜甜的曲奇就更完美啦～诶嘿嘿~",name=sayori)
+~~~
+
+效果等同于
+
+~~~python
+dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
+dokibox.dialogbox("这么舒服的地方，如果能配上甜甜的曲奇就更完美啦～诶嘿嘿~",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
+~~~
+
+---
+
+## enterbox - 文本输入框
 
 <img width="452" alt="image" src="https://github.com/user-attachments/assets/03f7d34e-d76f-4921-97ce-ab18a43969e5" />
 
@@ -161,7 +249,7 @@ print(cmd) #用户输入的字符串
 | `pinned` | bool | `True` | 是否置顶 |
 
 
-### garbled - 生成混乱文本
+## garbled - 生成混乱文本
 
 <img width="1649" alt="image" src="https://github.com/user-attachments/assets/0ffc1ac4-ce59-4120-9eb9-76844be07f09" />
 
@@ -173,7 +261,7 @@ dokibox.dialogbox(dokibox.garbled(200), name="Monika", typewriter=True,chardelay
 |-----------|------|---------|-------------|
 | `n` | int | `200` | 混乱文本的长度 |
 
-## 在最后
+# 在最后
 
 本项目使用`MIT`协议，在使用的同时请**严格**遵守Team Salvato的相关同人ip创作条款
 
