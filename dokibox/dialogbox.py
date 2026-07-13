@@ -8,6 +8,7 @@ from PySide6.QtCore import (
     Qt, QTimer, QEventLoop, QRectF, QPointF, Signal,
     QPropertyAnimation, QVariantAnimation, QEasingCurve,
     QParallelAnimationGroup, Property, QRect,
+    QElapsedTimer,
 )
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
@@ -220,7 +221,7 @@ class _SpriteWindow(QWidget):
         self._is_speaker = is_speaker
         self._pinned = pinned
         self._opacity_val = 1.0
-        self._anim_group = None
+        self._anim_timer = None
         self._avatar = None
         self._width_override = None
         self._height_override = None
@@ -299,9 +300,10 @@ class _SpriteWindow(QWidget):
         return QRect(x, y, w, h)
 
     def _apply_geometry(self, animate=True):
-        if self._anim_group is not None:
-            self._anim_group.stop()
-            self._anim_group = None
+        if self._anim_timer is not None:
+            self._anim_timer.stop()
+            self._anim_timer.deleteLater()
+            self._anim_timer = None
         target_geom = self._compute_geometry()
         target_opacity = 1.0 if self._is_speaker else SPRITE_SILENT_OPACITY
         if animate and self.isVisible():
@@ -319,14 +321,17 @@ class _SpriteWindow(QWidget):
             else:
                 start_x_frac = target_x_frac
 
-            geom_anim = QVariantAnimation(self)
-            geom_anim.setDuration(SPRITE_ANIM_DURATION)
-            geom_anim.setStartValue(0.0)
-            geom_anim.setEndValue(1.0)
-            geom_anim.setEasingCurve(QEasingCurve.OutCubic)
+            elapsed = QElapsedTimer()
+            elapsed.start()
+            duration = SPRITE_ANIM_DURATION
+            easing = QEasingCurve(QEasingCurve.OutCubic)
 
-            def on_geom_changed(val):
-                t = val
+            self._anim_timer = QTimer(self)
+            self._anim_timer.setInterval(10)
+
+            def on_tick():
+                progress = min(elapsed.elapsed() / duration, 1.0)
+                t = easing.valueForProgress(progress)
                 w = int(start_w + (target_w - start_w) * t)
                 h = int(start_h + (target_h - start_h) * t)
                 cur_x_frac = start_x_frac + (target_x_frac - start_x_frac) * t
@@ -334,19 +339,15 @@ class _SpriteWindow(QWidget):
                 x = max(0, min(x, screen_sw - w))
                 y = screen_sh - h
                 self.setGeometry(x, y, w, h)
+                self._opacity_val = start_opacity + (target_opacity - start_opacity) * t
+                self.update()
+                if progress >= 1.0:
+                    self._anim_timer.stop()
+                    self._anim_timer.deleteLater()
+                    self._anim_timer = None
 
-            geom_anim.valueChanged.connect(on_geom_changed)
-
-            op_anim = QPropertyAnimation(self, b"opacity")
-            op_anim.setDuration(SPRITE_ANIM_DURATION)
-            op_anim.setStartValue(start_opacity)
-            op_anim.setEndValue(target_opacity)
-            op_anim.setEasingCurve(QEasingCurve.OutCubic)
-
-            self._anim_group = QParallelAnimationGroup()
-            self._anim_group.addAnimation(geom_anim)
-            self._anim_group.addAnimation(op_anim)
-            self._anim_group.start()
+            self._anim_timer.timeout.connect(on_tick)
+            self._anim_timer.start()
         else:
             self.setGeometry(target_geom)
             self._opacity_val = target_opacity
@@ -391,6 +392,10 @@ class _SpriteWindow(QWidget):
 
     def destroy_sprite(self):
         try:
+            if self._anim_timer is not None:
+                self._anim_timer.stop()
+                self._anim_timer.deleteLater()
+                self._anim_timer = None
             self.hide()
             self.deleteLater()
         except Exception:
