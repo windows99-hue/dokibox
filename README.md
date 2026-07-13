@@ -220,7 +220,7 @@ dokibox.dialogbox("Yeah, such a healing place deserves to be visited together. L
 <img width="2560" alt="3b5d931976ecf83a23869e02cd51b40f" src="https://github.com/user-attachments/assets/c74ce6a9-a0a2-4b9a-a289-7c056ff2648e" />
 
 ```python
-dokibox.dialogbox("Hello!", name=monika, sprites=[sayori("left", "shocked"), monika("center", "normal"), yuri("right", "shocked"), natsuki("right", "shocked")])
+dokibox.dialogbox("Hello!",name=monika,sprites=[sayori("left", "shocked"),monika("center", "normal", sprite_allow_cover=True),yuri("right", "shocked"),natsuki("center", "shocked")])
 ```
 
 <img width="2556" alt="114fe540dc7259e95b1ac144294dfa74" src="https://github.com/user-attachments/assets/916184de-6fdd-4763-944a-90c8f0a5552c" />
