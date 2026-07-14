@@ -13,7 +13,7 @@ from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
     QPixmap,
 )
-from PySide6.QtWidgets import QWidget, QApplication, QLineEdit
+from PySide6.QtWidgets import QWidget, QApplication
 from dokibox._base import _get_app, _get_dpi_scale
 
 
@@ -663,15 +663,6 @@ class _SpriteWindow(QWidget):
         anim.start()
 
 
-class _InputLineEdit(QLineEdit):
-
-    escapePressed = Signal()
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
-            self.escapePressed.emit()
-            return
-        super().keyPressEvent(event)
 
 
 class _DiaEnterBox(QWidget):
@@ -700,6 +691,14 @@ class _DiaEnterBox(QWidget):
         self._sprite_allow_cover = sprite_allow_cover
         self._sprite_allow_cover_list = sprite_allow_cover_list
 
+        self._input_text = default
+        self._cursor_pos = len(default)
+        self._max_length = max_length
+        self._cursor_visible = True
+        self._blink_timer = QTimer(self)
+        self._blink_timer.timeout.connect(self._toggle_cursor)
+        self._blink_timer.start(530)
+
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size or 20
 
@@ -717,7 +716,10 @@ class _DiaEnterBox(QWidget):
         self._triangle_s = int(16 * s)
         self.r = self._corner_radius
 
-        self._input_h = max(28, int(INPUT_H * s))
+        self._line_h = int(44 * s)
+        self._pad_top = int(40 * s)
+
+        self._body_font = QFont(self._font_family, self._body_fs, QFont.Bold)
 
         f_name = QFont(self._font_family, self._name_fs, QFont.Bold)
         fm = QFontMetrics(f_name)
@@ -751,6 +753,7 @@ class _DiaEnterBox(QWidget):
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setFocusPolicy(Qt.StrongFocus)
         self.setGeometry(x, win_y, canvas_w, cv_h)
         self.setFixedSize(canvas_w, cv_h)
 
@@ -759,34 +762,17 @@ class _DiaEnterBox(QWidget):
         _enter_box = self
 
         self._init_sprites(sprites, sprite_pos, speaker_idx)
-        self._setup_input(default, max_length)
 
-        self.setFocusProxy(self._input)
         QApplication.processEvents()
         self.raise_()
         self.activateWindow()
+        self.setFocus()
 
+    def _toggle_cursor(self):
+        if self.hasFocus():
+            self._cursor_visible = not self._cursor_visible
+            self.update()
 
-    def _setup_input(self, default, max_length):
-        input_w = self.w - self._pad_x * 2
-        input_x = self._dialog_left + self._pad_x
-        input_y = self._dialog_top + (self.h - self._input_h) // 2
-
-        self._input = _InputLineEdit(self)
-        self._input.setText(default)
-        font = QFont(self._font_family, self._body_fs, QFont.Bold)
-        self._input.setFont(font)
-        self._input.setGeometry(int(input_x), int(input_y), int(input_w), int(self._input_h))
-        self._input.setStyleSheet(
-            "border: none; padding: 5px 10px;"
-            f"background-color: {INPUT_BG};"
-            f"color: {INPUT_TEXT};"
-            f"border-radius: {max(4, int(8 / _get_dpi_scale()))}px;"
-        )
-        if max_length is not None:
-            self._input.setMaxLength(max_length)
-        self._input.returnPressed.connect(self._submit)
-        self._input.escapePressed.connect(self._cancel)
 
     def _init_sprites(self, sprites, sprite_pos, speaker_idx):
         raw = _normalize_sprites(sprites)
@@ -987,7 +973,16 @@ class _DiaEnterBox(QWidget):
         self._name_fs = max(12, int(self._font_size * s))
         name_pad = int(28 * s)
 
-        self._input_h = max(28, int(INPUT_H * s))
+        self._line_h = int(44 * s)
+        self._pad_top = int(40 * s)
+
+        self._body_font = QFont(self._font_family, self._body_fs, QFont.Bold)
+
+        if default is not None:
+            self._input_text = default
+            self._cursor_pos = len(default)
+        if max_length is not None:
+            self._max_length = max_length
 
         f_name = QFont(self._font_family, self._name_fs, QFont.Bold)
         fm = QFontMetrics(f_name)
@@ -1018,24 +1013,6 @@ class _DiaEnterBox(QWidget):
         self.setGeometry(x, win_y, canvas_w, cv_h)
         self.setFixedSize(canvas_w, cv_h)
 
-        if default is not None:
-            self._input.setText(default)
-        if max_length is not None:
-            self._input.setMaxLength(max_length)
-
-        input_w = self.w - self._pad_x * 2
-        input_x = self._dialog_left + self._pad_x
-        input_y = self._dialog_top + (self.h - self._input_h) // 2
-        font = QFont(self._font_family, self._body_fs, QFont.Bold)
-        self._input.setFont(font)
-        self._input.setGeometry(int(input_x), int(input_y), int(input_w), int(self._input_h))
-        self._input.setStyleSheet(
-            "border: none; padding: 5px 10px;"
-            f"background-color: {INPUT_BG};"
-            f"color: {INPUT_TEXT};"
-            f"border-radius: {max(4, int(8 / _get_dpi_scale()))}px;"
-        )
-
         if sprites is not None:
             self._update_sprites(sprites, sprite_pos, speaker_idx, avatar_map=avatar_sprite_map)
             QApplication.processEvents()
@@ -1043,8 +1020,7 @@ class _DiaEnterBox(QWidget):
         else:
             self._update_sprites_state_only(speaker_idx)
 
-        self._input.setFocus()
-        self.setFocusProxy(self._input)
+        self.setFocus()
         self.update()
 
     def showEvent(self, event):
@@ -1088,6 +1064,9 @@ class _DiaEnterBox(QWidget):
         self._draw_dots(painter, dl, top, w, h)
         if self._glare:
             self._draw_glare(painter, dl, top, w, h)
+
+        self._draw_input_text(painter, dl)
+
         painter.setClipping(False)
 
         self._draw_outline(painter, dl, top, w, h, r)
@@ -1235,21 +1214,155 @@ class _DiaEnterBox(QWidget):
         painter.setPen(Qt.NoPen)
         painter.fillPath(path, QColor("#ffffff"))
 
+    def _draw_input_text(self, painter, dl):
+        text = self._input_text
+        font = self._body_font
+        x = dl + self._pad_x
+        y = self._dialog_top + self._pad_top + self._line_h // 2
+
+        painter.setFont(font)
+        fm = QFontMetrics(font)
+        text_y = int(y + fm.ascent() - fm.height() // 2)
+
+        max_w = self.w - self._pad_x * 2
+
+        if self.hasFocus() and fm.horizontalAdvance(text) <= max_w:
+            visible_text = text
+            cursor_x = x + fm.horizontalAdvance(text[:self._cursor_pos])
+        elif self.hasFocus() and self._cursor_pos >= 0:
+            full_w = fm.horizontalAdvance(text)
+            cursor_rel = fm.horizontalAdvance(text[:self._cursor_pos])
+            scroll = max(0, cursor_rel - max_w + fm.horizontalAdvance(" "))
+            scroll = min(scroll, max(0, full_w - max_w))
+            offset_x = int(-scroll)
+            visible_text = text
+            cursor_x = x + cursor_rel + offset_x
+        else:
+            visible_text = text
+            if fm.horizontalAdvance(text) > max_w:
+                visible_text = self._truncate_text(text, font, max_w)
+            cursor_x = 0
+
+        if visible_text:
+            self._draw_stroked_text_left2(painter, x, text_y, visible_text, font)
+
+        if self.hasFocus() and self._cursor_visible and self._cursor_pos >= 0:
+            if self.hasFocus() and fm.horizontalAdvance(text) > max_w:
+                cursor_rel = fm.horizontalAdvance(text[:self._cursor_pos])
+                full_w = fm.horizontalAdvance(text)
+                scroll = max(0, cursor_rel - max_w + fm.horizontalAdvance(" "))
+                scroll = min(scroll, max(0, full_w - max_w))
+                cursor_x = x + cursor_rel - scroll
+            cursor_h = fm.ascent() + fm.descent()
+            cursor_y = self._dialog_top + self._pad_top + self._line_h // 2 - cursor_h // 2
+            painter.setPen(QPen(QColor("#CF80B5"), 2))
+            painter.drawLine(int(cursor_x), cursor_y, int(cursor_x), cursor_y + cursor_h)
+
+    def _draw_stroked_text_left2(self, painter, x, text_y, text, font):
+        sw = 1
+        painter.setFont(font)
+        for step in range(48):
+            angle = 2 * math.pi * step / 24
+            dx = int(sw * math.cos(angle))
+            dy = int(sw * math.sin(angle))
+            painter.setPen(QColor("#000000"))
+            painter.drawText(int(x) + dx, text_y + dy, text)
+        painter.setPen(QColor("#ffffff"))
+        painter.drawText(int(x), text_y, text)
+
+    def _truncate_text(self, text, font, max_w):
+        fm = QFontMetrics(font)
+        if fm.horizontalAdvance(text) <= max_w:
+            return text
+        lo, hi = 0, len(text)
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if fm.horizontalAdvance(text[:mid]) <= max_w:
+                lo = mid
+            else:
+                hi = mid - 1
+        return text[:lo]
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            py = event.position().toPoint().y()
-            input_top = self._dialog_top + (self.h - self._input_h) // 2
-            input_bottom = input_top + self._input_h
-            if input_top <= py <= input_bottom:
-                return
             self._submit()
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
+        key = event.key()
+        text = event.text()
+        mods = event.modifiers()
+
+        if key == Qt.Key_Return or key == Qt.Key_Enter:
+            self._submit()
+            return
+        if key == Qt.Key_Escape:
             self._cancel()
+            return
+
+        if key == Qt.Key_Backspace:
+            if self._cursor_pos > 0:
+                self._input_text = (self._input_text[:self._cursor_pos - 1]
+                                    + self._input_text[self._cursor_pos:])
+                self._cursor_pos -= 1
+                self._cursor_visible = True
+                self.update()
+            return
+        if key == Qt.Key_Delete:
+            if self._cursor_pos < len(self._input_text):
+                self._input_text = (self._input_text[:self._cursor_pos]
+                                    + self._input_text[self._cursor_pos + 1:])
+                self._cursor_visible = True
+                self.update()
+            return
+        if key == Qt.Key_Left:
+            if self._cursor_pos > 0:
+                self._cursor_pos -= 1
+                self._cursor_visible = True
+                self.update()
+            return
+        if key == Qt.Key_Right:
+            if self._cursor_pos < len(self._input_text):
+                self._cursor_pos += 1
+                self._cursor_visible = True
+                self.update()
+            return
+        if key == Qt.Key_Home:
+            self._cursor_pos = 0
+            self._cursor_visible = True
+            self.update()
+            return
+        if key == Qt.Key_End:
+            self._cursor_pos = len(self._input_text)
+            self._cursor_visible = True
+            self.update()
+            return
+        if key == Qt.Key_V and mods == Qt.ControlModifier:
+            from PySide6.QtWidgets import QApplication as QA
+            cb = QA.clipboard()
+            if cb:
+                paste_text = cb.text()
+                self._insert_text(paste_text)
+            return
+
+        if text and len(text) > 0 and ord(text[0]) >= 32:
+            self._insert_text(text)
+
+    def _insert_text(self, text):
+        if self._max_length is not None:
+            remaining = self._max_length - len(self._input_text)
+            if remaining <= 0:
+                return
+            if len(text) > remaining:
+                text = text[:remaining]
+        self._input_text = (self._input_text[:self._cursor_pos]
+                            + text
+                            + self._input_text[self._cursor_pos:])
+        self._cursor_pos += len(text)
+        self._cursor_visible = True
+        self.update()
 
     def _submit(self):
-        self.result = self._input.text()
+        self.result = self._input_text
         self.dismissed.emit()
 
     def _cancel(self):
@@ -1287,7 +1400,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
 
     Args:
         w:                   width in pixels. Defaults to 70% of screen width if None.
-        h:                   dialog body height in pixels. Defaults to 100 (DPI-scaled) if None.
+        h:                   dialog body height in pixels. Defaults to 220 (DPI-scaled) if None.
         name:                character name shown in a white rounded tag above the dialog.
                              Use an Avatar object for auto speaker detection with sprites.
         pinned:              keep the window always on top of other windows (default True).
@@ -1316,7 +1429,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
     if w is None:
         w = min(int(sw * 0.7), 1200)
     if h is None:
-        h = int(100 / _get_dpi_scale())
+        h = int(220 / _get_dpi_scale())
 
     display_name = name.name if isinstance(name, Avatar) else name
     avatar = name if isinstance(name, Avatar) else None
