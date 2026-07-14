@@ -115,5 +115,5 @@ dokibox.dialogbox("看来大家都不约而同找到了这个好去处呢。哈�
 dokibox.dialogbox("莫妮卡！？你居然也来这里了！今天也太热闹了吧！",name=sayori, sprites=[sayori("left", "surprised"),monika("center", "normal"),yuri("right", "shocked"),natsuki("right", "curious")])
 dokibox.dialogbox("是啊，这么治愈的地方，值得大家一同前来。看来我们默契十足呢～",name=monika, sprites=[sayori("center", "happy"),monika("center", "happy2"),yuri("center", "shocked"),natsuki("center", "mild")])
 dokibox.dialogbox("可是这里......是我的电脑啊！",name=os.getlogin(), sprites=[sayori("center", "shocked"),monika("center", "shocked"),yuri("center", "shocked"),natsuki("center", "shocked")])
-dokibox.dialogbox("大家惊讶地看着我，我也惊讶地看着他们", name="MC", 
+dokibox.dialogbox("大家惊讶地看着我，我也惊讶地看着他们", name=os.getlogin(), 
                             sprites=[monika.hide(),sayori.hide(),yuri.hide(),natsuki.hide()],fdst=True)
