@@ -9,10 +9,12 @@
 >
 >  特别感谢 Team Salvato 的 Joseph 在邮件中对本项目的支持与解答！
 
-<div style="display: flex; gap: 10px;">
-  <img style="width: 50%;" alt="image" src="https://github.com/user-attachments/assets/a25345b9-28a3-4415-9d14-4090bbb3ee51" />
-  <img style="width: 50%;" alt="3b5d931976ecf83a23869e02cd51b40f" src="https://github.com/user-attachments/assets/c74ce6a9-a0a2-4b9a-a289-7c056ff2648e" />
-</div>
+<table>
+  <tr>
+    <td><img width="100%" alt="image" src="https://github.com/user-attachments/assets/a25345b9-28a3-4415-9d14-4090bbb3ee51" /></td>
+    <td><img width="100%" alt="3b5d931976ecf83a23869e02cd51b40f" src="https://github.com/user-attachments/assets/c74ce6a9-a0a2-4b9a-a289-7c056ff2648e" /></td>
+  </tr>
+</table>
 
 ## 安装
 
