@@ -1518,6 +1518,9 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     """
     global _box
 
+    from dokibox.diaenterbox import _destroy_box as _destroy_diaenterbox
+    _destroy_diaenterbox()
+
     _get_app()
     sw = QApplication.primaryScreen().size().width()
     if w is None:

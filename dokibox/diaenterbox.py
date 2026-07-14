@@ -1446,6 +1446,9 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
     """
     global _enter_box
 
+    from dokibox.dialogbox import _destroy_box as _destroy_dialogbox
+    _destroy_dialogbox()
+
     _get_app()
     sw = QApplication.primaryScreen().size().width()
     if w is None:
