@@ -1024,6 +1024,10 @@ class _DiaEnterBox(QWidget):
         self.setFocus()
         self.update()
 
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
     def showEvent(self, event):
         super().showEvent(event)
         if sys.platform != 'win32':
