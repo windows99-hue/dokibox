@@ -149,6 +149,8 @@ dokibox.dialogbox("一下全出来", typewriter=False)
 
 <img width="2560" alt="3f95a52f629bc382f2d1dc18cfcf4d9d" src="https://github.com/user-attachments/assets/3fe03e28-0e68-487d-9749-a72a1bc39fb5" />
 
+[演示视频](https://youtu.be/m4Sv5mAFWDY)
+
 立绘功能的API如下
 
 #### 声明角色
