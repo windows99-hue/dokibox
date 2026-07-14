@@ -1710,6 +1710,10 @@ def _destroy_box():
         _box = None
 
 
+def _get_shared_box():
+    return _box
+
+
 def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               name: Optional[str] = None, typewriter: bool = True,
               chardelay: int = 50, bold: bool = False, pinned: bool = True,

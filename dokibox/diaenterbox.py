@@ -43,7 +43,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
         name = dokibox.diaenterbox(name=sayori, sprites=[sayori("left", "happy")])
         print(name)
     """
-    from dokibox.dialogbox import _DialogBox, _SpriteSlot, _HideSlot, _composite_sprite_pixmaps, _destroy_box
+    from dokibox.dialogbox import _DialogBox, _SpriteSlot, _HideSlot, _composite_sprite_pixmaps, _destroy_box, _get_shared_box
     from dokibox.dialogbox import Avatar
 
     _get_app()
@@ -94,9 +94,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
             sprites = processed_sprites if processed_sprites else []
             sprite_pos = processed_positions
 
-    import sys
-    _dg = sys.modules["dokibox.dialogbox"]
-    _box = _dg._box
+    _box = _get_shared_box()
 
     if sprites is None and avatar is not None and _box is not None:
         for i, sw in enumerate(_box._sprites):
@@ -125,7 +123,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
         except Exception:
             _destroy_box()
 
-    if _dg._box is None:
+    if _get_shared_box() is None:
         _box = _DialogBox("", w, h, display_name,
                           typewriter=True, chardelay=50, bold=False,
                           pinned=pinned, fdst=fdst, overflow_mode="wrap",
@@ -137,7 +135,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
                           sprite_allow_cover_list=sprite_allow_cover_list,
                           mode="input", default=default, max_length=max_length)
 
-    _box = _dg._box
+    _box = _get_shared_box()
     if _box is None:
         return None
 
