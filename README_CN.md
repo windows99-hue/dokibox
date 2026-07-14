@@ -195,10 +195,10 @@ sayori(position="center", emote="happy", animation="shocked", width=200, height=
 | ------------------ | ---- | ------ | ------------------------------------------------------------ |
 | position           | str  | 无     | 必须是`left` `center` `right`中的一个，代表了立绘存在的位置，多个立绘可以在同一个位置，程序会自行调整 |
 | emote              | str  | 无     | 请传入先前定义角色时`emotes`字典中的键名，代表立绘在这个dialogbox下的表情 |
-| animation          | str  | 无     | 详见下文的`关于动作参数`                                     |
-| width              | int  | 无     | 立绘的宽，当width和height只有一个设置时等比例缩放            |
-| height             | int  | 无     | 立绘的高，当width和height只有一个设置时等比例缩放            |
-| sprite_allow_cover | bool | False  | 若为True，则这个dialogbox的该立绘无视平均平滑排布算法，直接覆盖 |
+| animation          | str  | 无     | 详见下文的[关于动作参数](#关于动作参数)                      |
+| width              | int  | 无     | 立绘的宽，当width和height只有一个设置时**等比例缩放**        |
+| height             | int  | 无     | 立绘的高，当width和height只有一个设置时**等比例缩放**        |
+| sprite_allow_cover | bool | False  | 若为True，则这个dialogbox的该立绘无视平均平滑排布算法，直接覆盖在指定位置 |
 
 #### 关于动作参数
 
@@ -214,7 +214,7 @@ sayori(position="center", emote="happy", animation="shocked", width=200, height=
 dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
 ~~~
 
-<img width="2560"alt="c132a913e95bacec0c50898a6b06a875" src="https://github.com/user-attachments/assets/0d037bbb-2bdc-474e-b7d7-3280e2e6df4a" />
+<img width="2560" alt="c132a913e95bacec0c50898a6b06a875" src="https://github.com/user-attachments/assets/0d037bbb-2bdc-474e-b7d7-3280e2e6df4a" />
 
 ~~~python
 dokibox.dialogbox("是啊，这么治愈的地方，值得大家一同前来。看来我们默契十足呢～",name=monika, sprites=[sayori("center", "happy"),monika("center", "happy2"),yuri("center", "shocked"),natsuki("center", "mild")])
