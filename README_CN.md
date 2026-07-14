@@ -214,7 +214,7 @@ sayori(position="center", emote="happy", animation="shocked", width=200, height=
 dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
 ~~~
 
-<img width="2560" height="1440" alt="c132a913e95bacec0c50898a6b06a875" src="https://github.com/user-attachments/assets/0d037bbb-2bdc-474e-b7d7-3280e2e6df4a" />
+<img width="2560"alt="c132a913e95bacec0c50898a6b06a875" src="https://github.com/user-attachments/assets/0d037bbb-2bdc-474e-b7d7-3280e2e6df4a" />
 
 ~~~python
 dokibox.dialogbox("是啊，这么治愈的地方，值得大家一同前来。看来我们默契十足呢～",name=monika, sprites=[sayori("center", "happy"),monika("center", "happy2"),yuri("center", "shocked"),natsuki("center", "mild")])
