@@ -149,6 +149,8 @@ Starting from `v2.3.0`, `dialogbox` supports rendering character sprites!
 
 <img width="2560" alt="3f95a52f629bc382f2d1dc18cfcf4d9d" src="https://github.com/user-attachments/assets/3fe03e28-0e68-487d-9749-a72a1bc39fb5" />
 
+[Demo Video](https://youtu.be/m4Sv5mAFWDY)
+
 #### Declaring Characters
 
 ```python
