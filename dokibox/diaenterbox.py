@@ -11,7 +11,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient,
-    QPixmap,
+    QPixmap, QInputMethodEvent,
 )
 from PySide6.QtWidgets import QWidget, QApplication
 from dokibox._base import _get_app, _get_dpi_scale
@@ -753,6 +753,7 @@ class _DiaEnterBox(QWidget):
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_InputMethodEnabled, True)
         self.setFocusPolicy(Qt.StrongFocus)
         self.setGeometry(x, win_y, canvas_w, cv_h)
         self.setFixedSize(canvas_w, cv_h)
@@ -1360,6 +1361,23 @@ class _DiaEnterBox(QWidget):
         self._cursor_pos += len(text)
         self._cursor_visible = True
         self.update()
+
+    def inputMethodEvent(self, event):
+        commit = event.commitString()
+        if commit:
+            self._insert_text(commit)
+
+    def inputMethodQuery(self, query):
+        if query == Qt.ImCursorRectangle:
+            font = self._body_font
+            fm = QFontMetrics(font)
+            x = self._dialog_left + self._pad_x
+            y = self._dialog_top + self._pad_top + self._line_h // 2 - fm.ascent()
+            cursor_x = x + fm.horizontalAdvance(self._input_text[:self._cursor_pos])
+            return QRectF(cursor_x, y, 2, fm.height())
+        if query == Qt.ImEnabled:
+            return True
+        return super().inputMethodQuery(query)
 
     def _submit(self):
         self.result = self._input_text
