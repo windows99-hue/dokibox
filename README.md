@@ -194,7 +194,7 @@ sayori(position="center", emote="happy", animation="shocked", width=200, height=
 |-----------|------|---------|-------------|
 | `position` | str | — | Must be one of `left`, `center`, or `right`. Represents the sprite's position on stage. Multiple sprites can share a position — the program adjusts them automatically. |
 | `emote` | str | — | Must match a key in the `emotes` dictionary declared when creating the character. Represents the sprite's expression for this dialogbox. |
-| `animation` | str | `None` | See the [About Animation Parameter](#About Animation Parameter) section below. |
+| `animation` | str | `None` | See the [About Animation Parameter](#about-animation-parameter) section below. |
 | `width` | int | `None` | Sprite width. When only one of `width` or `height` is set, the other is scaled proportionally based on the original image aspect ratio. When both are set, the sprite is stretched to the exact dimensions. |
 | `height` | int | `None` | Sprite height. Same proportional scaling rules as `width`. |
 | `sprite_allow_cover` | bool | `False` | If True, this specific sprite ignores the averaging/spreading algorithm and overlays directly at its position. |
