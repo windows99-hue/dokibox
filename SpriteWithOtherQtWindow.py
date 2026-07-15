@@ -224,6 +224,8 @@ class DdlcBlockTest(QWidget):
             self.label.setText("🎭 显示立绘场景...")
             
             # 原始场景（来自你的脚本）
+            a = dokibox.diaenterbox(name="MC")
+            self.label.setText(f"MC说{a}")
             dokibox.dialogbox("哇，这里的风景也太舒服啦！", name=self.sayori, 
                             sprites=[self.sayori("center", "happy")])
             dokibox.dialogbox("你好，纱世里。没想到会在这里碰到你。", name=self.yuri, 
