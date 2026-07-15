@@ -1511,7 +1511,10 @@ class _DialogBox(QWidget):
             mods = event.modifiers()
 
             if key == Qt.Key_Return or key == Qt.Key_Enter:
-                self._insert_text("\n")
+                if mods & Qt.ShiftModifier:
+                    self._submit()
+                else:
+                    self._insert_text("\n")
                 return
             if key == Qt.Key_Escape:
                 self._cancel()
