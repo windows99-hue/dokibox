@@ -27,7 +27,7 @@ class _MsgDialog(_DokiBase):
                  font_family=None, font_size=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
-        self._tooltip = tooltip
+        self._tooltip = tooltip if isinstance(tooltip, str) and tooltip else None
         self._btn_ok_hover = False
         self._btn_ok_rect = None
         self._tooltip_shown = False

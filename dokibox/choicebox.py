@@ -29,7 +29,7 @@ class _Panel(QWidget):
         self.index = index
         self.text = text
         self._on_select = on_select
-        self._tooltip = tooltip
+        self._tooltip = tooltip if isinstance(tooltip, str) and tooltip else None
         self._hover = False
         self._border_w = border_w
 
@@ -109,7 +109,7 @@ class _ChoiceManager:
                  font_family=None, font_size=None):
         _get_app()
         self.result = None
-        self._tooltip = tooltip
+        self._tooltip = tooltip if isinstance(tooltip, str) and tooltip else None
         self._pinned = pinned
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size

@@ -68,7 +68,7 @@ class _YnDialog(_DokiBase):
                  font_family=None, font_size=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
-        self._tooltip = tooltip
+        self._tooltip = tooltip if isinstance(tooltip, str) and tooltip else None
         if btn_texts is not None:
             self._yes_text, self._no_text = btn_texts
         else:
