@@ -1511,7 +1511,7 @@ class _DialogBox(QWidget):
             mods = event.modifiers()
 
             if key == Qt.Key_Return or key == Qt.Key_Enter:
-                self._submit()
+                self._insert_text("\n")
                 return
             if key == Qt.Key_Escape:
                 self._cancel()
@@ -1656,23 +1656,37 @@ class _DialogBox(QWidget):
             return
 
         if self._overflow_mode == "wrap" and text:
-            lines = self._wrap_line(text, font, max_w)
+            segments = text.split('\n')
+            lines = []
+            positions = []
+            raw_pos = 0
+            for seg in segments:
+                wrapped = self._wrap_line(seg, font, max_w)
+                for wl in wrapped:
+                    lines.append(wl)
+                    positions.append(raw_pos)
+                    raw_pos += len(wl)
+                raw_pos += 1
+
             base_y = text_y
             line_h = self._line_h
 
             cursor_line_idx = -1
             cursor_col_offset = 0
-            if self._cursor_pos >= 0:
-                char_count = 0
-                for li, line in enumerate(lines):
-                    if char_count + len(line) > self._cursor_pos:
-                        cursor_line_idx = li
-                        cursor_col_offset = self._cursor_pos - char_count
-                        break
-                    char_count += len(line)
-                if cursor_line_idx == -1 and len(lines) > 0:
-                    cursor_line_idx = len(lines) - 1
-                    cursor_col_offset = len(lines[-1])
+            for li in range(len(lines)):
+                start = positions[li]
+                end = start + len(lines[li])
+                if start <= self._cursor_pos <= end:
+                    cursor_line_idx = li
+                    cursor_col_offset = self._cursor_pos - start
+                    break
+                if self._cursor_pos < start:
+                    cursor_line_idx = max(0, li - 1)
+                    cursor_col_offset = len(lines[cursor_line_idx])
+                    break
+            if cursor_line_idx == -1 and lines:
+                cursor_line_idx = len(lines) - 1
+                cursor_col_offset = len(lines[-1])
 
             for li, line in enumerate(lines):
                 ly = base_y + li * line_h
@@ -1681,6 +1695,37 @@ class _DialogBox(QWidget):
             if (self._mode == "input" and self.hasFocus() and self._cursor_visible
                     and cursor_line_idx >= 0 and self._cursor_pos >= 0):
                 cursor_x = x + fm.horizontalAdvance(lines[cursor_line_idx][:cursor_col_offset])
+                cursor_h = fm.ascent() + fm.descent()
+                cur_y = base_y + cursor_line_idx * line_h - fm.ascent()
+                painter.setPen(QPen(QColor("#CF80B5"), 2))
+                painter.drawLine(int(cursor_x), cur_y, int(cursor_x), cur_y + cursor_h)
+            return
+
+        if self._overflow_mode == "overflow" and text:
+            raw_lines = text.split('\n')
+            line_h = self._line_h
+            base_y = text_y
+
+            cursor_line_idx = 0
+            cursor_col_offset = self._cursor_pos
+            raw_pos = 0
+            for li, rl in enumerate(raw_lines):
+                if raw_pos + len(rl) >= self._cursor_pos:
+                    cursor_line_idx = li
+                    cursor_col_offset = self._cursor_pos - raw_pos
+                    break
+                raw_pos += len(rl) + 1
+            if self._cursor_pos >= len(text):
+                cursor_line_idx = len(raw_lines) - 1
+                cursor_col_offset = len(raw_lines[-1])
+
+            for li, rl in enumerate(raw_lines):
+                ly = base_y + li * line_h
+                self._draw_stroked_text_left2(painter, x, ly, rl, font)
+
+            if (self._mode == "input" and self.hasFocus() and self._cursor_visible
+                    and self._cursor_pos >= 0):
+                cursor_x = x + fm.horizontalAdvance(raw_lines[cursor_line_idx][:cursor_col_offset])
                 cursor_h = fm.ascent() + fm.descent()
                 cur_y = base_y + cursor_line_idx * line_h - fm.ascent()
                 painter.setPen(QPen(QColor("#CF80B5"), 2))
@@ -1753,20 +1798,54 @@ class _DialogBox(QWidget):
                 cursor_x = x + fm.horizontalAdvance("●" * cursor_pos)
             elif self._overflow_mode == "wrap" and self._input_text:
                 max_w = self.w - self._pad_x * 2
-                lines = self._wrap_line(self._input_text, font, max_w)
-                char_count = 0
+                segments = self._input_text.split('\n')
+                lines = []
+                positions = []
+                raw_pos = 0
+                for seg in segments:
+                    wrapped = self._wrap_line(seg, font, max_w)
+                    for wl in wrapped:
+                        lines.append(wl)
+                        positions.append(raw_pos)
+                        raw_pos += len(wl)
+                    raw_pos += 1
+
                 cursor_line = 0
                 cursor_col = 0
-                for li, line in enumerate(lines):
-                    if char_count + len(line) > cursor_pos:
+                found = False
+                for li in range(len(lines)):
+                    start = positions[li]
+                    end = start + len(lines[li])
+                    if start <= cursor_pos <= end:
                         cursor_line = li
-                        cursor_col = cursor_pos - char_count
+                        cursor_col = cursor_pos - start
+                        found = True
                         break
-                    char_count += len(line)
-                if char_count == len(self._input_text):
+                    if cursor_pos < start:
+                        cursor_line = max(0, li - 1)
+                        cursor_col = len(lines[cursor_line])
+                        found = True
+                        break
+                if not found and lines:
                     cursor_line = len(lines) - 1
                     cursor_col = len(lines[-1])
                 cursor_x = x + fm.horizontalAdvance(lines[cursor_line][:cursor_col])
+                y = y + cursor_line * self._line_h + self._line_h // 2
+            elif self._overflow_mode == "overflow" and self._input_text:
+                raw_lines = self._input_text.split('\n')
+                cursor_line = 0
+                cursor_col = cursor_pos
+                raw_pos = 0
+                for li, rl in enumerate(raw_lines):
+                    if raw_pos + len(rl) >= cursor_pos:
+                        cursor_line = li
+                        cursor_col = cursor_pos - raw_pos
+                        break
+                    raw_pos += len(rl) + 1
+                if cursor_pos >= len(self._input_text):
+                    cursor_line = len(raw_lines) - 1
+                    cursor_col = len(raw_lines[-1])
+                cursor_x = x + fm.horizontalAdvance(raw_lines[cursor_line][:cursor_col])
                 y = y + cursor_line * self._line_h + self._line_h // 2
             else:
                 cursor_x = x + fm.horizontalAdvance(self._input_text[:cursor_pos])
