@@ -14,7 +14,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
                 sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
                 sprite_allow_cover: bool = False,
                 default: str = "", max_length: int = None,
-                overflow_mode: str = "wrap") -> Optional[str]:
+                overflow_mode: str = "wrap", allow_empty: bool = False) -> Optional[str]:
     """DDLC-style bottom input dialog. Type in the field and press Enter or click to submit.
 
     The dialog body shows a DDLC-style rounded box containing a text input field.
@@ -37,6 +37,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
         max_length:          maximum number of characters allowed in the input.
         overflow_mode:       "wrap": auto word-wrap, "overflow": expand window and overflow text,
                              "hide": show bullets instead of text (default "wrap").
+        allow_empty:         if True, allow submitting empty input (default False).
 
     Returns:
         The text entered by the user, or None if cancelled (Escape).
@@ -120,7 +121,8 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
                                      avatar_sprite_map=avatar_sprite_map,
                                      sprite_allow_cover=sprite_allow_cover,
                                      sprite_allow_cover_list=sprite_allow_cover_list,
-                                     mode="input", default=default, max_length=max_length)
+                                     mode="input", default=default, max_length=max_length,
+                                     allow_empty=allow_empty)
             else:
                 _destroy_box()
         except Exception:
@@ -136,7 +138,8 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
                           speaker_idx=speaker_idx,
                           sprite_allow_cover=sprite_allow_cover,
                           sprite_allow_cover_list=sprite_allow_cover_list,
-                          mode="input", default=default, max_length=max_length)
+                          mode="input", default=default, max_length=max_length,
+                          allow_empty=allow_empty)
 
     _box = _get_shared_box()
     if _box is None:

@@ -697,7 +697,7 @@ class _DialogBox(QWidget):
                  font_family=None, font_size=None, transparent=True, glare=True,
                  sprites=None, sprite_pos=None, speaker_idx=None,
                  sprite_allow_cover=False, sprite_allow_cover_list=None,
-                 mode="dialog", default="", max_length=None):
+                 mode="dialog", default="", max_length=None, allow_empty=False):
         global _box
 
         if overflow_mode not in ("wrap", "overflow", "hide"):
@@ -817,6 +817,7 @@ class _DialogBox(QWidget):
         self._input_text = default
         self._cursor_pos = len(default)
         self._max_length = max_length
+        self._allow_empty = allow_empty
         self._cursor_visible = True
         self._blink_timer = QTimer(self)
         self._blink_timer.timeout.connect(self._toggle_cursor)
@@ -1018,7 +1019,7 @@ class _DialogBox(QWidget):
                         sprites=None, sprite_pos=None, speaker_idx=None,
                         avatar_sprite_map=None, sprite_allow_cover=None,
                         sprite_allow_cover_list=None,
-                        mode=None, default=None, max_length=None):
+                         mode=None, default=None, max_length=None, allow_empty=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -1050,6 +1051,8 @@ class _DialogBox(QWidget):
             self._cursor_pos = len(default)
         if max_length is not None:
             self._max_length = max_length
+        if allow_empty is not None:
+            self._allow_empty = allow_empty
 
         self._name = name
 
@@ -1583,6 +1586,8 @@ class _DialogBox(QWidget):
         self.dismissed.emit()
 
     def _submit(self):
+        if not self._allow_empty and not self._input_text.strip():
+            return
         self.result = self._input_text
         self.dismissed.emit()
 
