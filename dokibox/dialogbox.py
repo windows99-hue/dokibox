@@ -1132,6 +1132,7 @@ class _DialogBox(QWidget):
             except Exception:
                 pass
             self._blink_timer.start(530)
+            self._recalc_input_overflow()
 
         if sprites is not None:
             self._update_sprites(sprites, sprite_pos, speaker_idx, avatar_map=avatar_sprite_map)
@@ -1523,6 +1524,7 @@ class _DialogBox(QWidget):
                     self._cursor_pos -= 1
                     self._cursor_visible = True
                     self.update()
+                    self._recalc_input_overflow()
                 return
             if key == Qt.Key_Delete:
                 if self._cursor_pos < len(self._input_text):
@@ -1530,6 +1532,7 @@ class _DialogBox(QWidget):
                                         + self._input_text[self._cursor_pos + 1:])
                     self._cursor_visible = True
                     self.update()
+                    self._recalc_input_overflow()
                 return
             if key == Qt.Key_Left:
                 if self._cursor_pos > 0:
@@ -1584,6 +1587,28 @@ class _DialogBox(QWidget):
         self.result = None
         self.dismissed.emit()
 
+    def _recalc_input_overflow(self):
+        if self._overflow_mode != "overflow" or self._mode != "input":
+            return
+        dpi = _get_dpi_scale()
+        s = 1.0 / dpi
+        text = self._input_text
+        fm = QFontMetrics(self._body_font)
+        text_w = fm.horizontalAdvance(text) if text else 0
+        needed_w = max(int(text_w + int(80 * s)), self.w)
+        canvas_w = needed_w + self._inset * 2
+        if canvas_w == self._canvas_w:
+            return
+        self._canvas_w = canvas_w
+        self._dialog_left = self._inset
+        sw = QApplication.primaryScreen().size().width()
+        sh = QApplication.primaryScreen().size().height()
+        x = (sw - self.w) // 2 - self._dialog_left
+        dialog_screen_y = sh - self.h - 60
+        win_y = dialog_screen_y - self._dialog_top
+        self.setGeometry(x, win_y, canvas_w, self._cv_h)
+        self.setFixedSize(canvas_w, self._cv_h)
+
     def _toggle_cursor(self):
         if self._mode == "input" and self.hasFocus():
             self._cursor_visible = not self._cursor_visible
@@ -1602,6 +1627,7 @@ class _DialogBox(QWidget):
         self._cursor_pos += len(text)
         self._cursor_visible = True
         self.update()
+        self._recalc_input_overflow()
 
     def _draw_input_text(self, painter, dl):
         text = self._input_text
@@ -1615,6 +1641,51 @@ class _DialogBox(QWidget):
 
         max_w = self.w - self._pad_x * 2
         cursor_x = 0
+
+        if self._overflow_mode == "hide":
+            display_text = "●" * len(text) if text else ""
+            if display_text:
+                self._draw_stroked_text_left2(painter, x, text_y, display_text, font)
+            if (self._mode == "input" and self.hasFocus() and self._cursor_visible
+                    and self._cursor_pos >= 0):
+                cursor_x = x + fm.horizontalAdvance(display_text[:self._cursor_pos])
+                cursor_h = fm.ascent() + fm.descent()
+                cursor_y = text_y - fm.ascent()
+                painter.setPen(QPen(QColor("#CF80B5"), 2))
+                painter.drawLine(int(cursor_x), cursor_y, int(cursor_x), cursor_y + cursor_h)
+            return
+
+        if self._overflow_mode == "wrap" and text:
+            lines = self._wrap_line(text, font, max_w)
+            base_y = text_y
+            line_h = self._line_h
+
+            cursor_line_idx = -1
+            cursor_col_offset = 0
+            if self._cursor_pos >= 0:
+                char_count = 0
+                for li, line in enumerate(lines):
+                    if char_count + len(line) > self._cursor_pos:
+                        cursor_line_idx = li
+                        cursor_col_offset = self._cursor_pos - char_count
+                        break
+                    char_count += len(line)
+                if cursor_line_idx == -1 and len(lines) > 0:
+                    cursor_line_idx = len(lines) - 1
+                    cursor_col_offset = len(lines[-1])
+
+            for li, line in enumerate(lines):
+                ly = base_y + li * line_h
+                self._draw_stroked_text_left2(painter, x, ly, line, font)
+
+            if (self._mode == "input" and self.hasFocus() and self._cursor_visible
+                    and cursor_line_idx >= 0 and self._cursor_pos >= 0):
+                cursor_x = x + fm.horizontalAdvance(lines[cursor_line_idx][:cursor_col_offset])
+                cursor_h = fm.ascent() + fm.descent()
+                cur_y = base_y + cursor_line_idx * line_h - fm.ascent()
+                painter.setPen(QPen(QColor("#CF80B5"), 2))
+                painter.drawLine(int(cursor_x), cur_y, int(cursor_x), cur_y + cursor_h)
+            return
 
         if self._mode == "input" and self.hasFocus() and fm.horizontalAdvance(text) <= max_w:
             cursor_x = x + fm.horizontalAdvance(text[:self._cursor_pos])
@@ -1637,7 +1708,7 @@ class _DialogBox(QWidget):
                 scroll = min(scroll, max(0, full_w - max_w))
                 cursor_x = x + cursor_rel - scroll
             cursor_h = fm.ascent() + fm.descent()
-            cursor_y = self._dialog_top + self._pad_top + self._line_h // 2 - cursor_h // 2
+            cursor_y = text_y - fm.ascent()
             painter.setPen(QPen(QColor("#CF80B5"), 2))
             painter.drawLine(int(cursor_x), cursor_y, int(cursor_x), cursor_y + cursor_h)
 
@@ -1677,7 +1748,28 @@ class _DialogBox(QWidget):
             fm = QFontMetrics(font)
             x = self._dialog_left + self._pad_x
             y = self._dialog_top + self._pad_top + self._line_h // 2 - fm.ascent()
-            cursor_x = x + fm.horizontalAdvance(self._input_text[:self._cursor_pos])
+            cursor_pos = self._cursor_pos
+            if self._overflow_mode == "hide":
+                cursor_x = x + fm.horizontalAdvance("●" * cursor_pos)
+            elif self._overflow_mode == "wrap" and self._input_text:
+                max_w = self.w - self._pad_x * 2
+                lines = self._wrap_line(self._input_text, font, max_w)
+                char_count = 0
+                cursor_line = 0
+                cursor_col = 0
+                for li, line in enumerate(lines):
+                    if char_count + len(line) > cursor_pos:
+                        cursor_line = li
+                        cursor_col = cursor_pos - char_count
+                        break
+                    char_count += len(line)
+                if char_count == len(self._input_text):
+                    cursor_line = len(lines) - 1
+                    cursor_col = len(lines[-1])
+                cursor_x = x + fm.horizontalAdvance(lines[cursor_line][:cursor_col])
+                y = y + cursor_line * self._line_h + self._line_h // 2
+            else:
+                cursor_x = x + fm.horizontalAdvance(self._input_text[:cursor_pos])
             return QRectF(cursor_x, y, 2, fm.height())
         if query == Qt.ImEnabled:
             return True

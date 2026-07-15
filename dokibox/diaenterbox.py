@@ -13,7 +13,8 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
                 transparent: bool = True, glare: bool = True,
                 sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
                 sprite_allow_cover: bool = False,
-                default: str = "", max_length: int = None) -> Optional[str]:
+                default: str = "", max_length: int = None,
+                overflow_mode: str = "wrap") -> Optional[str]:
     """DDLC-style bottom input dialog. Type in the field and press Enter or click to submit.
 
     The dialog body shows a DDLC-style rounded box containing a text input field.
@@ -34,6 +35,8 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
         sprite_allow_cover:  allow sprites at the same position to overlap (default False).
         default:             default value in the input field.
         max_length:          maximum number of characters allowed in the input.
+        overflow_mode:       "wrap": auto word-wrap, "overflow": expand window and overflow text,
+                             "hide": show bullets instead of text (default "wrap").
 
     Returns:
         The text entered by the user, or None if cancelled (Escape).
@@ -108,7 +111,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
     if _box is not None:
         try:
             if _box.w == w and _box.h == h:
-                _box._update_content("", True, 50, False, "wrap",
+                _box._update_content("", True, 50, False, overflow_mode,
                                      display_name,
                                      font_family=font_family, font_size=font_size,
                                      transparent=transparent, glare=glare,
@@ -126,7 +129,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
     if _get_shared_box() is None:
         _box = _DialogBox("", w, h, display_name,
                           typewriter=True, chardelay=50, bold=False,
-                          pinned=pinned, fdst=fdst, overflow_mode="wrap",
+                          pinned=pinned, fdst=fdst, overflow_mode=overflow_mode,
                           font_family=font_family, font_size=font_size,
                           transparent=transparent, glare=glare,
                           sprites=sprites, sprite_pos=sprite_pos,
