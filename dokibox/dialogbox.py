@@ -700,9 +700,9 @@ class _DialogBox(QWidget):
                  mode="dialog", default="", max_length=None, allow_empty=False):
         global _box
 
-        if overflow_mode not in ("wrap", "overflow", "hide"):
+        if overflow_mode not in ("wrap", "overflow"):
             raise ValueError(
-                f"overflow_mode must be 'wrap', 'overflow', or 'hide', got {overflow_mode!r}"
+                f"overflow_mode must be 'wrap' or 'overflow', got {overflow_mode!r}"
             )
         _get_app()
         super().__init__(None)
@@ -1435,19 +1435,6 @@ class _DialogBox(QWidget):
             lines.append(current)
         return lines
 
-    def _truncate_line(self, text, font, max_w):
-        fm = QFontMetrics(font)
-        if fm.horizontalAdvance(text) <= max_w:
-            return text
-        lo, hi = 0, len(text)
-        while lo < hi:
-            mid = (lo + hi + 1) // 2
-            if fm.horizontalAdvance(text[:mid]) <= max_w:
-                lo = mid
-            else:
-                hi = mid - 1
-        return text[:lo]
-
     def _process_lines(self, text, font, max_w):
         if self._overflow_mode == "overflow":
             return text.split('\n')
@@ -1457,8 +1444,6 @@ class _DialogBox(QWidget):
             for line in raw_lines:
                 result.extend(self._wrap_line(line, font, max_w))
             return result
-        if self._overflow_mode == "hide":
-            return [self._truncate_line(line, font, max_w) for line in raw_lines]
         return raw_lines
 
     def _layout_text_positions(self, lines):
@@ -1675,40 +1660,6 @@ class _DialogBox(QWidget):
         max_w = self.w - self._pad_x * 2
         cursor_x = 0
 
-        if self._overflow_mode == "hide":
-            raw_lines = text.split('\n') if text else [""]
-            line_h = self._line_h
-            base_y = text_y
-
-            cursor_line_idx = 0
-            cursor_col_offset = self._cursor_pos
-            raw_pos = 0
-            for li, rl in enumerate(raw_lines):
-                if raw_pos + len(rl) >= self._cursor_pos:
-                    cursor_line_idx = li
-                    cursor_col_offset = self._cursor_pos - raw_pos
-                    break
-                raw_pos += len(rl) + 1
-            if self._cursor_pos >= len(text):
-                cursor_line_idx = len(raw_lines) - 1
-                cursor_col_offset = len(raw_lines[-1])
-
-            for li, rl in enumerate(raw_lines):
-                display_text = "●" * len(rl)
-                if display_text:
-                    ly = base_y + li * line_h
-                    self._draw_stroked_text_left2(painter, x, ly, display_text, font)
-
-            if (self._mode == "input" and self.hasFocus() and self._cursor_visible
-                    and self._cursor_pos >= 0):
-                display_prefix = "●" * cursor_col_offset
-                cursor_x = x + fm.horizontalAdvance(display_prefix)
-                cursor_h = fm.ascent() + fm.descent()
-                cur_y = base_y + cursor_line_idx * line_h - fm.ascent()
-                painter.setPen(QPen(QColor("#CF80B5"), 2))
-                painter.drawLine(int(cursor_x), cur_y, int(cursor_x), cur_y + cursor_h)
-            return
-
         if self._overflow_mode == "wrap" and text:
             segments = text.split('\n')
             lines = []
@@ -1823,19 +1774,6 @@ class _DialogBox(QWidget):
         painter.setPen(QColor("#ffffff"))
         painter.drawText(int(x), text_y, text)
 
-    def _input_truncate_text(self, text, font, max_w):
-        fm = QFontMetrics(font)
-        if fm.horizontalAdvance(text) <= max_w:
-            return text
-        lo, hi = 0, len(text)
-        while lo < hi:
-            mid = (lo + hi + 1) // 2
-            if fm.horizontalAdvance(text[:mid]) <= max_w:
-                lo = mid
-            else:
-                hi = mid - 1
-        return text[:lo]
-
     def inputMethodEvent(self, event):
         commit = event.commitString()
         if commit:
@@ -1848,23 +1786,7 @@ class _DialogBox(QWidget):
             x = self._dialog_left + self._pad_x
             y = self._dialog_top + self._pad_top + self._line_h // 2 - fm.ascent()
             cursor_pos = self._cursor_pos
-            if self._overflow_mode == "hide":
-                raw_lines = self._input_text.split('\n') if self._input_text else [""]
-                cursor_line = 0
-                cursor_col = cursor_pos
-                raw_pos = 0
-                for li, rl in enumerate(raw_lines):
-                    if raw_pos + len(rl) >= cursor_pos:
-                        cursor_line = li
-                        cursor_col = cursor_pos - raw_pos
-                        break
-                    raw_pos += len(rl) + 1
-                if cursor_pos >= len(self._input_text):
-                    cursor_line = len(raw_lines) - 1
-                    cursor_col = len(raw_lines[-1])
-                cursor_x = x + fm.horizontalAdvance("●" * cursor_col)
-                y = y + cursor_line * self._line_h + self._line_h // 2
-            elif self._overflow_mode == "wrap" and self._input_text:
+            if self._overflow_mode == "wrap" and self._input_text:
                 max_w = self.w - self._pad_x * 2
                 segments = self._input_text.split('\n')
                 lines = []

@@ -35,8 +35,8 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
         sprite_allow_cover:  allow sprites at the same position to overlap (default False).
         default:             default value in the input field.
         max_length:          maximum number of characters allowed in the input.
-        overflow_mode:       "wrap": auto word-wrap, "overflow": expand window and overflow text,
-                             "hide": show bullets instead of text (default "wrap").
+        overflow_mode:       "wrap": auto word-wrap, "overflow": expand window and overflow text
+                             (default "wrap").
         allow_empty:         if True, allow submitting empty input (default False).
 
     Returns:
