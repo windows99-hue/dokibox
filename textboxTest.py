@@ -1,4 +1,8 @@
 import dokibox
+from PySide6.QtGui import QFont
+
+
+font = QFont("方正准圆")
 
 sunshine = """亲爱的阳光
 
@@ -47,4 +51,4 @@ test = """
 """
 
 dokibox.textbox(msg=sunshine)
-dokibox.textbox(test,font_size=26)
+dokibox.textbox(test,font_size=26,okbtn=False)

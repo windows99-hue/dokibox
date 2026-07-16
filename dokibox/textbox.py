@@ -146,15 +146,18 @@ class _ContinueWindow(QWidget):
 
 class _TextDialog(_DokiBase):
 
-    def __init__(self, msg, font_family=None, font_size=None, delay=400):
+    def __init__(self, msg, font_family=None, font_size=None, delay=400,
+                 okbtn=True):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
         self._delay = max(0, int(delay))
+        self._okbtn = bool(okbtn)
         self._fade = None
         self._cont = None
         super().__init__(msg, pinned=True)
         self._setup_text(msg)
-        self._cont = _ContinueWindow(self)
+        if self._okbtn:
+            self._cont = _ContinueWindow(self)
         self.setWindowOpacity(0.0 if self._delay > 0 else 1.0)
 
     def showEvent(self, event):
@@ -265,7 +268,9 @@ class _TextDialog(_DokiBase):
         pass
 
     def keyPressEvent(self, event):
-        if event.key() in (Qt.Key_Escape, Qt.Key_Return, Qt.Key_Enter):
+        if event.key() == Qt.Key_Escape:
+            self._done(True)
+        elif event.key() in (Qt.Key_Return, Qt.Key_Enter) and self._okbtn:
             self._done(True)
 
     def _done(self, value):
@@ -277,7 +282,8 @@ class _TextDialog(_DokiBase):
 
 
 def textbox(msg: str = "", font_family: str = None,
-            font_size: int = None, delay: int = 400) -> bool:
+            font_size: int = None, delay: int = 400,
+            okbtn: bool = True) -> bool:
     """Long text viewer window. Returns True when closed.
 
     A square window (side = screen height) centered on the desktop with a
@@ -289,12 +295,14 @@ def textbox(msg: str = "", font_family: str = None,
         font_family: custom font family name.
         font_size:   base font size (automatically scaled by DPI).
         delay:       fade-in duration in ms (default 400, 0 disables fade).
+        okbtn:       show the "continue" button at the bottom-right corner.
+                     If False, the window can only be closed with Esc.
 
     Usage:
         import dokibox
-        dokibox.textbox("A very long text...", font_size=18, delay=800)
+        dokibox.textbox("A very long text...", font_size=18, okbtn=False)
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
     return _TextDialog.run(msg, font_family=font_family, font_size=font_size,
-                           delay=delay)
+                           delay=delay, okbtn=okbtn)
