@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
 """dokibox.textbox -- long text viewer window (square, side = screen height)"""
+import random
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QPainter, QColor, QFont, QTextOption
+from PySide6.QtGui import (QPainter, QColor, QFont, QTextOption,
+                           QImage, QPixmap, qRgb)
 from PySide6.QtWidgets import QTextEdit
 from dokibox._base import _DokiBase
 
-BG_COLOR = "#F3F3F3"
+BG_COLOR = "#E4E2DD"
 TEXT_COLOR = "#000000"
 PAD = 40
 TEXT_FONT_SIZE = 22
 
 SCROLLBAR_QSS = """
 QTextEdit {
-    background: %s;
+    background: transparent;
     color: %s;
     border: none;
 }
 QScrollBar:vertical {
-    background: %s;
+    background: transparent;
     width: 12px;
     margin: 0px;
 }
@@ -35,7 +37,37 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: transparent;
 }
-""" % (BG_COLOR, TEXT_COLOR, BG_COLOR)
+""" % TEXT_COLOR
+
+_paper_tile = None
+
+
+def _get_paper_tile():
+    global _paper_tile
+    if _paper_tile is not None:
+        return _paper_tile
+    rng = random.Random(99)
+    size = 256
+    br, bg, bb = 0xE4, 0xE2, 0xDD
+    img = QImage(size, size, QImage.Format_RGB32)
+    for y in range(size):
+        for x in range(size):
+            n = rng.randint(-6, 6)
+            w = rng.randint(-2, 2)
+            img.setPixel(x, y, qRgb(br + n + w, bg + n, bb + n - w))
+    for _ in range(400):
+        x = rng.randint(0, size - 1)
+        y = rng.randint(0, size - 1)
+        d = rng.randint(8, 20)
+        img.setPixel(x, y, qRgb(br - d, bg - d, bb - d))
+    for _ in range(120):
+        x = rng.randint(0, size - 4)
+        y = rng.randint(0, size - 1)
+        d = rng.randint(4, 10)
+        for i in range(rng.randint(2, 4)):
+            img.setPixel(x + i, y, qRgb(br - d, bg - d, bb - d))
+    _paper_tile = QPixmap.fromImage(img)
+    return _paper_tile
 
 
 class _TextDialog(_DokiBase):
@@ -84,6 +116,7 @@ class _TextDialog(_DokiBase):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(BG_COLOR))
+        painter.drawTiledPixmap(self.rect(), _get_paper_tile())
         painter.end()
 
     def _draw_content(self, painter):
