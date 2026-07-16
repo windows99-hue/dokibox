@@ -22,17 +22,20 @@ QTextEdit {
     border: none;
 }
 QScrollBar:vertical {
-    background: transparent;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 transparent, stop:0.42 transparent,
+        stop:0.44 #B5B1A9, stop:0.56 #B5B1A9,
+        stop:0.58 transparent, stop:1 transparent);
     width: 12px;
     margin: 0px;
 }
 QScrollBar::handle:vertical {
-    background: #C8C8C8;
-    border-radius: 6px;
+    background: #A8A49C;
+    border-radius: 0px;
     min-height: 30px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #A8A8A8;
+    background: #8C8880;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
