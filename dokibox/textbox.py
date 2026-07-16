@@ -2,10 +2,10 @@
 """dokibox.textbox -- long text viewer window (square, side = screen height)"""
 import random
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
-from PySide6.QtGui import (QPainter, QColor, QFont, QFontMetrics,
+from PySide6.QtGui import (QPainter, QColor, QPen, QFont, QFontMetrics,
                            QTextOption, QImage, QPixmap, qRgb)
-from PySide6.QtWidgets import QTextEdit, QScrollBar
-from dokibox._base import _DokiBase
+from PySide6.QtWidgets import QTextEdit, QScrollBar, QWidget
+from dokibox._base import (_DokiBase, _hex_to_rgb, BORDER_COLOR, BODY_COLOR)
 
 BG_COLOR = "#E4E2DD"
 TEXT_COLOR = "#000000"
@@ -81,6 +81,69 @@ def _get_paper_tile():
     return _paper_tile
 
 
+class _ContinueWindow(QWidget):
+
+    BORDER_W = 12
+    MARGIN = 10
+
+    def __init__(self, owner):
+        super().__init__(None)
+        self._owner = owner
+        self._fade = None
+        flags = Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
+        self.setWindowFlags(flags)
+        self.setCursor(Qt.PointingHandCursor)
+        scr = owner.screen().size()
+        self.w = scr.height() // 3
+        self.h = int(self.w / 2.5)
+        self.setGeometry(
+            scr.width() - self.w - self.MARGIN,
+            scr.height() - self.h - self.MARGIN,
+            self.w, self.h
+        )
+        self.setFixedSize(self.w, self.h)
+        fs = max(12, int(self.h * 0.2))
+        self._font = QFont(owner._font_family, fs, QFont.Bold)
+        self.setWindowOpacity(0.0 if owner._delay > 0 else 1.0)
+
+    def fade_in(self, delay):
+        if self._fade is None and delay > 0:
+            self._fade = QPropertyAnimation(self, b"windowOpacity", self)
+            self._fade.setDuration(delay)
+            self._fade.setStartValue(0.0)
+            self._fade.setEndValue(1.0)
+            self._fade.setEasingCurve(QEasingCurve.OutCubic)
+            self._fade.start()
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.fillRect(self.rect(), QColor(BODY_COLOR))
+        br, bg, bb = _hex_to_rgb(BORDER_COLOR)
+        er, eg, eb = _hex_to_rgb(BODY_COLOR)
+        bw = max(self.BORDER_W, 8)
+        for i in range(bw):
+            t = (i / max(bw - 1, 1)) ** 3
+            r = int(br + (er - br) * t)
+            g = int(bg + (eg - bg) * t)
+            b = int(bb + (eb - bb) * t)
+            p.setPen(QPen(QColor(r, g, b), 1))
+            p.drawRect(i, i, self.w - i * 2, self.h - i * 2)
+        p.setFont(self._font)
+        fm = QFontMetrics(self._font)
+        text = "继续"
+        tw = fm.horizontalAdvance(text)
+        x = self.w // 2 - tw // 2
+        y = self.h // 2 + fm.ascent() - fm.height() // 2
+        p.setPen(QColor(TEXT_COLOR))
+        p.drawText(int(x), int(y), text)
+        p.end()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._owner._done(True)
+
+
 class _TextDialog(_DokiBase):
 
     def __init__(self, msg, font_family=None, font_size=None, delay=400):
@@ -88,8 +151,10 @@ class _TextDialog(_DokiBase):
         self._font_size = font_size
         self._delay = max(0, int(delay))
         self._fade = None
+        self._cont = None
         super().__init__(msg, pinned=True)
         self._setup_text(msg)
+        self._cont = _ContinueWindow(self)
         self.setWindowOpacity(0.0 if self._delay > 0 else 1.0)
 
     def showEvent(self, event):
@@ -101,6 +166,9 @@ class _TextDialog(_DokiBase):
             self._position_sbar()
         _refresh()
         QTimer.singleShot(0, _refresh)
+        if self._cont is not None and not self._cont.isVisible():
+            self._cont.show()
+            self._cont.fade_in(self._delay)
         if self._fade is None and self._delay > 0:
             self._fade = QPropertyAnimation(self, b"windowOpacity", self)
             self._fade.setDuration(self._delay)
@@ -199,6 +267,13 @@ class _TextDialog(_DokiBase):
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Escape, Qt.Key_Return, Qt.Key_Enter):
             self._done(True)
+
+    def _done(self, value):
+        if self._cont is not None:
+            self._cont.hide()
+            self._cont.deleteLater()
+            self._cont = None
+        super()._done(value)
 
 
 def textbox(msg: str = "", font_family: str = None,
