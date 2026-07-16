@@ -9,7 +9,10 @@ from dokibox._base import _DokiBase
 
 BG_COLOR = "#E4E2DD"
 TEXT_COLOR = "#000000"
-PAD = 40
+PAD_LEFT = 70
+PAD_TOP = 100
+PAD_RIGHT = 40
+PAD_BOT = 40
 TEXT_FONT_SIZE = 22
 
 SCROLLBAR_QSS = """
@@ -91,7 +94,10 @@ class _TextDialog(_DokiBase):
 
     def _calc_size(self, msg):
         s = self._dpi_s
-        self._pad = int(PAD * s)
+        self._pad_left = int(PAD_LEFT * s)
+        self._pad_top = int(PAD_TOP * s)
+        self._pad_right = int(PAD_RIGHT * s)
+        self._pad_bot = int(PAD_BOT * s)
         fs = max(12, int(TEXT_FONT_SIZE * s))
         self._text_font = QFont(self._font_family, fs)
         side = self.screen().size().height()
@@ -108,8 +114,9 @@ class _TextDialog(_DokiBase):
         self._text.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._text.setStyleSheet(SCROLLBAR_QSS)
         self._text.setGeometry(
-            self._pad, self._pad,
-            self.w - self._pad * 2, self.h - self._pad * 2
+            self._pad_left, self._pad_top,
+            self.w - self._pad_left - self._pad_right,
+            self.h - self._pad_top - self._pad_bot
         )
         self._text.setFocus()
 
