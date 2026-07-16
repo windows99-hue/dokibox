@@ -11,7 +11,7 @@ BG_COLOR = "#E4E2DD"
 TEXT_COLOR = "#000000"
 PAD_LEFT = 70
 PAD_TOP = 100
-PAD_RIGHT = 40
+PAD_RIGHT = 70
 PAD_BOT = 40
 TEXT_FONT_SIZE = 22
 
@@ -75,8 +75,9 @@ def _get_paper_tile():
 
 class _TextDialog(_DokiBase):
 
-    def __init__(self, msg):
-        self._font_family = "Microsoft YaHei"
+    def __init__(self, msg, font_family=None, font_size=None):
+        self._font_family = font_family or "Microsoft YaHei"
+        self._font_size = font_size
         self._fade = None
         super().__init__(msg, pinned=True)
         self._setup_text(msg)
@@ -98,7 +99,7 @@ class _TextDialog(_DokiBase):
         self._pad_top = int(PAD_TOP * s)
         self._pad_right = int(PAD_RIGHT * s)
         self._pad_bot = int(PAD_BOT * s)
-        fs = max(12, int(TEXT_FONT_SIZE * s))
+        fs = max(12, int((self._font_size or TEXT_FONT_SIZE) * s))
         self._text_font = QFont(self._font_family, fs)
         side = self.screen().size().height()
         return side, side
@@ -134,20 +135,23 @@ class _TextDialog(_DokiBase):
             self._done(True)
 
 
-def textbox(msg: str = "") -> bool:
+def textbox(msg: str = "", font_family: str = None,
+            font_size: int = None) -> bool:
     """Long text viewer window. Returns True when closed.
 
     A square window (side = screen height) centered on the desktop with a
-    #F3F3F3 background. Long text wraps automatically; a scrollbar appears
+    paper-like background. Long text wraps automatically; a scrollbar appears
     on the right when the text overflows vertically.
 
     Args:
-        msg: long text to display (supports \\n for multiple lines).
+        msg:         long text to display (supports \\n for multiple lines).
+        font_family: custom font family name.
+        font_size:   base font size (automatically scaled by DPI).
 
     Usage:
         import dokibox
-        dokibox.textbox("A very long text...")
+        dokibox.textbox("A very long text...", font_size=18)
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
-    return _TextDialog.run(msg)
+    return _TextDialog.run(msg, font_family=font_family, font_size=font_size)
