@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """dokibox.textbox -- long text viewer window (square, side = screen height)"""
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QPainter, QColor, QFont, QTextOption
 from PySide6.QtWidgets import QTextEdit
 from dokibox._base import _DokiBase
@@ -42,8 +42,20 @@ class _TextDialog(_DokiBase):
 
     def __init__(self, msg):
         self._font_family = "Microsoft YaHei"
+        self._fade = None
         super().__init__(msg, pinned=True)
         self._setup_text(msg)
+        self.setWindowOpacity(0.0)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._fade is None:
+            self._fade = QPropertyAnimation(self, b"windowOpacity", self)
+            self._fade.setDuration(400)
+            self._fade.setStartValue(0.0)
+            self._fade.setEndValue(1.0)
+            self._fade.setEasingCurve(QEasingCurve.OutCubic)
+            self._fade.start()
 
     def _calc_size(self, msg):
         s = self._dpi_s
