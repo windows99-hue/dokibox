@@ -101,7 +101,9 @@ class _ContinueWindow(QWidget):
         self._fade = None
         self._text = btn_text if btn_text else _BTN_TEXTS.get(
             get_system_locale(), _BTN_TEXTS['en'])
-        flags = Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
+        flags = Qt.FramelessWindowHint | Qt.Tool
+        if owner._pinned:
+            flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         self.setCursor(Qt.PointingHandCursor)
         scr = owner.screen().size()
@@ -157,15 +159,16 @@ class _ContinueWindow(QWidget):
 class _TextDialog(_DokiBase):
 
     def __init__(self, msg, font_family=None, font_size=None, delay=400,
-                 okbtn=True, btn_text=None):
+                 okbtn=True, btn_text=None, pinned=True):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
         self._delay = max(0, int(delay))
         self._okbtn = bool(okbtn)
         self._btn_text = btn_text
+        self._pinned = bool(pinned)
         self._fade = None
         self._cont = None
-        super().__init__(msg, pinned=True)
+        super().__init__(msg, pinned=pinned)
         self._setup_text(msg)
         if self._okbtn:
             self._cont = _ContinueWindow(self, btn_text=btn_text)
@@ -294,7 +297,8 @@ class _TextDialog(_DokiBase):
 
 def textbox(msg: str = "", font_family: str = None,
             font_size: int = None, delay: int = 400,
-            okbtn: bool = True, btn_text: str = None) -> bool:
+            okbtn: bool = True, btn_text: str = None,
+            pinned: bool = True) -> bool:
     """Long text viewer window. Returns True when closed.
 
     A square window (side = screen height) centered on the desktop with a
@@ -310,13 +314,15 @@ def textbox(msg: str = "", font_family: str = None,
                      If False, the window can only be closed with Esc.
         btn_text:    custom text for the continue button.
                      Auto-detected from system language if None.
+        pinned:      keep the window always on top of other windows.
 
     Usage:
         import dokibox
         dokibox.textbox("A very long text...", font_size=18, okbtn=False,
-                        btn_text="点击继续")
+                        btn_text="点击继续", pinned=False)
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
     return _TextDialog.run(msg, font_family=font_family, font_size=font_size,
-                           delay=delay, okbtn=okbtn, btn_text=btn_text)
+                           delay=delay, okbtn=okbtn, btn_text=btn_text,
+                           pinned=pinned)
