@@ -24,18 +24,19 @@ QTextEdit {
 QScrollBar:vertical {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
         stop:0 transparent, stop:0.42 transparent,
-        stop:0.44 #B5B1A9, stop:0.56 #B5B1A9,
+        stop:0.44 #000000, stop:0.56 #000000,
         stop:0.58 transparent, stop:1 transparent);
     width: 12px;
     margin: 0px;
 }
 QScrollBar::handle:vertical {
-    background: #A8A49C;
+    background: %s;
+    border: 1px solid #000000;
     border-radius: 0px;
     min-height: 30px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #8C8880;
+    background: #D5D3CE;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0px;
@@ -43,7 +44,7 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: transparent;
 }
-""" % TEXT_COLOR
+""" % (TEXT_COLOR, BG_COLOR)
 
 _paper_tile = None
 
