@@ -7,3 +7,4 @@ from dokibox.enterbox import enterbox
 from dokibox.dialogbox import dialogbox, Avatar
 from dokibox.diaenterbox import diaenterbox
 from dokibox.garbled import garbled
+from dokibox.textbox import textbox
