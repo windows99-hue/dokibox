@@ -45,6 +45,10 @@ class DdlcBlockTest(QWidget):
         self.test_combined_btn = QPushButton("综合测试 (ynbox + 立绘)", self)
         self.test_combined_btn.clicked.connect(self.test_combined)
         button_layout.addWidget(self.test_combined_btn)
+
+        self.test_textbox_btn = QPushButton("测试 textbox", self)
+        self.test_textbox_btn.clicked.connect(self.test_textbox)
+        button_layout.addWidget(self.test_textbox_btn)
         
         main_layout.addLayout(button_layout)
         
@@ -283,6 +287,45 @@ class DdlcBlockTest(QWidget):
         except Exception as e:
             self.label.setText(f"❌ 综合测试出错: {str(e)}")
     
+    def test_textbox(self):
+        self.label.setText("开始测试 textbox...")
+        QTimer.singleShot(0, self._test_textbox)
+
+    def _test_textbox(self):
+        try:
+            dokibox.dialogbox("不如来看看这首诗吧~",name=self.monika,sprites=[self.monika("center","normal")])
+            test = """
+%
+滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。滚出我的脑袋。
+滚。
+出。
+我。
+的。
+脑。
+袋。
+
+
+
+在我想到该怎么收拾你才是最好之前给我滚出我的脑袋。
+在我对她言听计从之前给我滚出我的脑袋。
+在我告诉你我有多爱你之前给我滚出我的脑袋。
+在我写完这首诗之前给我滚出我的脑袋。
+
+
+
+
+
+
+但诗是永远无法写完的。
+只是戛然而止而已。
+"""
+            dokibox.textbox(msg=test)
+            dokibox.dialogbox("你把她晾在家里了",name=self.monika,sprites=[self.monika("center","normal")],fdst=True)
+            self.label.setText("✅ textbox 测试完成")
+
+        except Exception as e:
+            self.label.setText(f"❌ textbox测试出错: {str(e)}")
+
     def clear_status(self):
         self.label.setText("状态已清空，准备进行新的测试")
         self.label_status.setText("检测中...")
