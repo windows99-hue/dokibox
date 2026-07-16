@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """dokibox.textbox -- long text viewer window (square, side = screen height)"""
 import random
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import (QPainter, QColor, QFont, QTextOption,
-                           QImage, QPixmap, qRgb)
-from PySide6.QtWidgets import QTextEdit
+from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer
+from PySide6.QtGui import (QPainter, QColor, QFont, QFontMetrics,
+                           QTextOption, QImage, QPixmap, qRgb)
+from PySide6.QtWidgets import QTextEdit, QScrollBar
 from dokibox._base import _DokiBase
 
 BG_COLOR = "#E4E2DD"
@@ -13,24 +13,28 @@ PAD_LEFT = 70
 PAD_TOP = 100
 PAD_RIGHT = 70
 PAD_BOT = 40
-TEXT_FONT_SIZE = 22
+TEXT_FONT_SIZE = 24
+SBAR_W = 20
 
-SCROLLBAR_QSS = """
+TEXT_QSS = """
 QTextEdit {
     background: transparent;
     color: %s;
     border: none;
 }
+"""
+
+SBAR_QSS = """
 QScrollBar:vertical {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 transparent, stop:0.42 transparent,
-        stop:0.44 #000000, stop:0.56 #000000,
-        stop:0.58 transparent, stop:1 transparent);
-    width: 12px;
+        stop:0 transparent, stop:0.44 transparent,
+        stop:0.45 #000000, stop:0.55 #000000,
+        stop:0.56 transparent, stop:1 transparent);
+    width: %(sbw)dpx;
     margin: 0px;
 }
 QScrollBar::handle:vertical {
-    background: %s;
+    background: %(bg)s;
     border: 1px solid #000000;
     border-radius: 0px;
     min-height: 30px;
@@ -44,7 +48,7 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
     background: transparent;
 }
-""" % (TEXT_COLOR, BG_COLOR)
+"""
 
 _paper_tile = None
 
@@ -90,6 +94,13 @@ class _TextDialog(_DokiBase):
 
     def showEvent(self, event):
         super().showEvent(event)
+        vsb = self._text.verticalScrollBar()
+
+        def _refresh():
+            self._sync_range(vsb.minimum(), vsb.maximum())
+            self._position_sbar()
+        _refresh()
+        QTimer.singleShot(0, _refresh)
         if self._fade is None and self._delay > 0:
             self._fade = QPropertyAnimation(self, b"windowOpacity", self)
             self._fade.setDuration(self._delay)
@@ -117,14 +128,64 @@ class _TextDialog(_DokiBase):
         self._text.setLineWrapMode(QTextEdit.WidgetWidth)
         self._text.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
         self._text.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._text.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self._text.setStyleSheet(SCROLLBAR_QSS)
+        self._text.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._text.setStyleSheet(TEXT_QSS % TEXT_COLOR)
         self._text.setGeometry(
             self._pad_left, self._pad_top,
             self.w - self._pad_left - self._pad_right,
             self.h - self._pad_top - self._pad_bot
         )
         self._text.setFocus()
+        self._setup_scrollbar()
+
+    def _setup_scrollbar(self):
+        sb_w = max(8, int(SBAR_W * self._dpi_s))
+        self._sbar = QScrollBar(Qt.Vertical, self)
+        self._sbar.setStyleSheet(SBAR_QSS % {"sbw": sb_w, "bg": BG_COLOR})
+        doc_m = int(self._text.document().documentMargin())
+        x = (2 * self.w - self._pad_right - doc_m - sb_w) // 2
+        self._sbar.setGeometry(
+            x, self._pad_top, sb_w,
+            self.h - self._pad_top - self._pad_bot
+        )
+        self._sbar.setVisible(False)
+        vsb = self._text.verticalScrollBar()
+        vsb.rangeChanged.connect(self._sync_range)
+        vsb.valueChanged.connect(self._sbar.setValue)
+        self._sbar.valueChanged.connect(vsb.setValue)
+        self._sync_range(vsb.minimum(), vsb.maximum())
+
+    def _position_sbar(self):
+        sb_w = self._sbar.width()
+        doc = self._text.document()
+        doc_m = doc.documentMargin()
+        max_w = 0.0
+        block = doc.begin()
+        while block.isValid():
+            lay = block.layout()
+            if lay is not None:
+                for i in range(lay.lineCount()):
+                    lw = lay.lineAt(i).naturalTextWidth()
+                    if lw > max_w:
+                        max_w = lw
+            block = block.next()
+        limit = self.w - self._pad_right - int(doc_m)
+        if max_w > 0:
+            text_right = self._pad_left + int(doc_m + max_w)
+            cap = QFontMetrics(self._text_font).height()
+            text_right = max(min(text_right, limit), limit - cap)
+        else:
+            text_right = limit
+        x = (text_right + self.w - sb_w) // 2
+        self._sbar.move(x, self._pad_top)
+
+    def _sync_range(self, mn, mx):
+        vsb = self._text.verticalScrollBar()
+        self._sbar.setRange(mn, mx)
+        self._sbar.setPageStep(vsb.pageStep())
+        self._sbar.setSingleStep(vsb.singleStep())
+        self._sbar.setValue(vsb.value())
+        self._sbar.setVisible(mx > mn)
 
     def paintEvent(self, event):
         painter = QPainter(self)
