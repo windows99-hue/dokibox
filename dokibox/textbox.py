@@ -6,6 +6,7 @@ from PySide6.QtGui import (QPainter, QColor, QPen, QFont, QFontMetrics,
                            QTextOption, QImage, QPixmap, qRgb)
 from PySide6.QtWidgets import QTextEdit, QScrollBar, QWidget
 from dokibox._base import (_DokiBase, _hex_to_rgb, BORDER_COLOR, BODY_COLOR)
+from dokibox.ynbox import get_system_locale
 
 BG_COLOR = "#E4E2DD"
 TEXT_COLOR = "#000000"
@@ -15,6 +16,14 @@ PAD_RIGHT = 70
 PAD_BOT = 40
 TEXT_FONT_SIZE = 24
 SBAR_W = 20
+
+_BTN_TEXTS = {
+    'zh': "继续",
+    'en': "Continue",
+    'ja': "続ける",
+    'ko': "계속",
+    'ru': "Продолжить",
+}
 
 TEXT_QSS = """
 QTextEdit {
@@ -86,10 +95,12 @@ class _ContinueWindow(QWidget):
     BORDER_W = 12
     MARGIN = 10
 
-    def __init__(self, owner):
+    def __init__(self, owner, btn_text=None):
         super().__init__(None)
         self._owner = owner
         self._fade = None
+        self._text = btn_text if btn_text else _BTN_TEXTS.get(
+            get_system_locale(), _BTN_TEXTS['en'])
         flags = Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
         self.setCursor(Qt.PointingHandCursor)
@@ -131,12 +142,11 @@ class _ContinueWindow(QWidget):
             p.drawRect(i, i, self.w - i * 2, self.h - i * 2)
         p.setFont(self._font)
         fm = QFontMetrics(self._font)
-        text = "继续"
-        tw = fm.horizontalAdvance(text)
+        tw = fm.horizontalAdvance(self._text)
         x = self.w // 2 - tw // 2
         y = self.h // 2 + fm.ascent() - fm.height() // 2
         p.setPen(QColor(TEXT_COLOR))
-        p.drawText(int(x), int(y), text)
+        p.drawText(int(x), int(y), self._text)
         p.end()
 
     def mouseReleaseEvent(self, event):
@@ -147,17 +157,18 @@ class _ContinueWindow(QWidget):
 class _TextDialog(_DokiBase):
 
     def __init__(self, msg, font_family=None, font_size=None, delay=400,
-                 okbtn=True):
+                 okbtn=True, btn_text=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
         self._delay = max(0, int(delay))
         self._okbtn = bool(okbtn)
+        self._btn_text = btn_text
         self._fade = None
         self._cont = None
         super().__init__(msg, pinned=True)
         self._setup_text(msg)
         if self._okbtn:
-            self._cont = _ContinueWindow(self)
+            self._cont = _ContinueWindow(self, btn_text=btn_text)
         self.setWindowOpacity(0.0 if self._delay > 0 else 1.0)
 
     def showEvent(self, event):
@@ -283,7 +294,7 @@ class _TextDialog(_DokiBase):
 
 def textbox(msg: str = "", font_family: str = None,
             font_size: int = None, delay: int = 400,
-            okbtn: bool = True) -> bool:
+            okbtn: bool = True, btn_text: str = None) -> bool:
     """Long text viewer window. Returns True when closed.
 
     A square window (side = screen height) centered on the desktop with a
@@ -297,12 +308,15 @@ def textbox(msg: str = "", font_family: str = None,
         delay:       fade-in duration in ms (default 400, 0 disables fade).
         okbtn:       show the "continue" button at the bottom-right corner.
                      If False, the window can only be closed with Esc.
+        btn_text:    custom text for the continue button.
+                     Auto-detected from system language if None.
 
     Usage:
         import dokibox
-        dokibox.textbox("A very long text...", font_size=18, okbtn=False)
+        dokibox.textbox("A very long text...", font_size=18, okbtn=False,
+                        btn_text="点击继续")
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
     return _TextDialog.run(msg, font_family=font_family, font_size=font_size,
-                           delay=delay, okbtn=okbtn)
+                           delay=delay, okbtn=okbtn, btn_text=btn_text)
