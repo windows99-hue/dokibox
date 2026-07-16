@@ -75,19 +75,20 @@ def _get_paper_tile():
 
 class _TextDialog(_DokiBase):
 
-    def __init__(self, msg, font_family=None, font_size=None):
+    def __init__(self, msg, font_family=None, font_size=None, delay=400):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
+        self._delay = max(0, int(delay))
         self._fade = None
         super().__init__(msg, pinned=True)
         self._setup_text(msg)
-        self.setWindowOpacity(0.0)
+        self.setWindowOpacity(0.0 if self._delay > 0 else 1.0)
 
     def showEvent(self, event):
         super().showEvent(event)
-        if self._fade is None:
+        if self._fade is None and self._delay > 0:
             self._fade = QPropertyAnimation(self, b"windowOpacity", self)
-            self._fade.setDuration(400)
+            self._fade.setDuration(self._delay)
             self._fade.setStartValue(0.0)
             self._fade.setEndValue(1.0)
             self._fade.setEasingCurve(QEasingCurve.OutCubic)
@@ -136,7 +137,7 @@ class _TextDialog(_DokiBase):
 
 
 def textbox(msg: str = "", font_family: str = None,
-            font_size: int = None) -> bool:
+            font_size: int = None, delay: int = 400) -> bool:
     """Long text viewer window. Returns True when closed.
 
     A square window (side = screen height) centered on the desktop with a
@@ -147,11 +148,13 @@ def textbox(msg: str = "", font_family: str = None,
         msg:         long text to display (supports \\n for multiple lines).
         font_family: custom font family name.
         font_size:   base font size (automatically scaled by DPI).
+        delay:       fade-in duration in ms (default 400, 0 disables fade).
 
     Usage:
         import dokibox
-        dokibox.textbox("A very long text...", font_size=18)
+        dokibox.textbox("A very long text...", font_size=18, delay=800)
     """
     from dokibox.dialogbox import _destroy_box
     _destroy_box()
-    return _TextDialog.run(msg, font_family=font_family, font_size=font_size)
+    return _TextDialog.run(msg, font_family=font_family, font_size=font_size,
+                           delay=delay)
