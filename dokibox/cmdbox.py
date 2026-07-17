@@ -256,6 +256,13 @@ class _CmdPanel(QWidget):
         painter.fillRect(self.rect(), QColor(r, g, b, int(255 * BG_ALPHA)))
         painter.end()
 
+    def _apply_font(self, family, size):
+        font = QFont(family, size)
+        self._cmd_content._font = font
+        self._cmd_content._fm = QFontMetrics(font)
+        self._result_edit.setFont(font)
+        self._cmd_content.update()
+
     def _on_typing_finished(self):
         if self._pending_result_text:
             self._append_zero_spaced(self._pending_result_text)
@@ -286,15 +293,18 @@ class _CmdPanel(QWidget):
 _cmd_panel = None
 
 
-def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False):
+def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
+           font_family=None, font_size=None):
     """Show a gray semi-transparent command panel at top-left corner.
 
     Parameters:
-        cmd:      command string to display (typewriter animation).
-        result:   pre-set result text (used as-is unless runcmd=True).
-        runcmd:   if True, actually execute cmd and use real output as result.
-        language: "python" / "cmd" / "powershell" -- what to run cmd as.
-        clear:    if True, clear all previous results before showing.
+        cmd:         command string to display (typewriter animation).
+        result:      pre-set result text (used as-is unless runcmd=True).
+        runcmd:      if True, actually execute cmd and use real output as result.
+        language:    "python" / "cmd" / "powershell" -- what to run cmd as.
+        clear:       if True, clear all previous results before showing.
+        font_family: font family name (default Consolas).
+        font_size:   font size in points (default 16).
     """
     global _cmd_panel
     if _cmd_panel is None:
@@ -336,6 +346,10 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False):
 
     if clear:
         _cmd_panel._result_edit.clear()
+
+    ff = font_family or FONT_FAMILY
+    fs = font_size or FONT_SIZE
+    _cmd_panel._apply_font(ff, fs)
 
     _cmd_panel._cmd_content.set_text(cmd)
     _cmd_panel._pending_result_text = actual_result
