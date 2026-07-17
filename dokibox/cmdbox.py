@@ -188,7 +188,6 @@ class _CmdPanel(QWidget):
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
 
         self._pending_result_text = ""
-        self._pending_result_append = True
         self._current_loop = None
 
         self._cmd_content = _CmdContent()
@@ -259,11 +258,7 @@ class _CmdPanel(QWidget):
 
     def _on_typing_finished(self):
         if self._pending_result_text:
-            if self._pending_result_append:
-                self._append_zero_spaced(self._pending_result_text)
-            else:
-                self._result_edit.setPlainText(self._pending_result_text)
-                self._zero_all_block_margins()
+            self._append_zero_spaced(self._pending_result_text)
             self._pending_result_text = ""
             self._scroll_result_to_bottom()
         if self._current_loop and self._current_loop.isRunning():
@@ -281,17 +276,6 @@ class _CmdPanel(QWidget):
         cur.insertText(text)
         self._result_edit.setTextCursor(cur)
 
-    def _zero_all_block_margins(self):
-        doc = self._result_edit.document()
-        block = doc.begin()
-        while block.isValid():
-            cursor = QTextCursor(block)
-            fmt = block.blockFormat()
-            fmt.setTopMargin(0)
-            fmt.setBottomMargin(0)
-            cursor.setBlockFormat(fmt)
-            block = block.next()
-
     def _scroll_result_to_bottom(self):
         cursor = self._result_edit.textCursor()
         cursor.movePosition(QTextCursor.End)
@@ -302,7 +286,7 @@ class _CmdPanel(QWidget):
 _cmd_panel = None
 
 
-def cmdbox(cmd="", result="", runcmd=False, language="python", append=True):
+def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False):
     """Show a gray semi-transparent command panel at top-left corner.
 
     Parameters:
@@ -310,7 +294,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", append=True):
         result:   pre-set result text (used as-is unless runcmd=True).
         runcmd:   if True, actually execute cmd and use real output as result.
         language: "python" / "cmd" / "powershell" -- what to run cmd as.
-        append:   if True, append result to previous output; False clears first.
+        clear:    if True, clear all previous results before showing.
     """
     global _cmd_panel
     if _cmd_panel is None:
@@ -350,9 +334,11 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", append=True):
         except Exception as e:
             actual_result = str(e)
 
+    if clear:
+        _cmd_panel._result_edit.clear()
+
     _cmd_panel._cmd_content.set_text(cmd)
     _cmd_panel._pending_result_text = actual_result
-    _cmd_panel._pending_result_append = append
     if not cmd:
         _cmd_panel._on_typing_finished()
 
