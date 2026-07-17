@@ -260,13 +260,37 @@ class _CmdPanel(QWidget):
     def _on_typing_finished(self):
         if self._pending_result_text:
             if self._pending_result_append:
-                self._result_edit.appendPlainText(self._pending_result_text)
+                self._append_zero_spaced(self._pending_result_text)
             else:
                 self._result_edit.setPlainText(self._pending_result_text)
+                self._zero_all_block_margins()
             self._pending_result_text = ""
             self._scroll_result_to_bottom()
         if self._current_loop and self._current_loop.isRunning():
             self._current_loop.quit()
+
+    def _append_zero_spaced(self, text):
+        self._result_edit.moveCursor(QTextCursor.End)
+        cur = self._result_edit.textCursor()
+        fmt = cur.blockFormat()
+        fmt.setTopMargin(0)
+        fmt.setBottomMargin(0)
+        cur.setBlockFormat(fmt)
+        if cur.block().text():
+            cur.insertBlock(fmt)
+        cur.insertText(text)
+        self._result_edit.setTextCursor(cur)
+
+    def _zero_all_block_margins(self):
+        doc = self._result_edit.document()
+        block = doc.begin()
+        while block.isValid():
+            cursor = QTextCursor(block)
+            fmt = block.blockFormat()
+            fmt.setTopMargin(0)
+            fmt.setBottomMargin(0)
+            cursor.setBlockFormat(fmt)
+            block = block.next()
 
     def _scroll_result_to_bottom(self):
         cursor = self._result_edit.textCursor()
