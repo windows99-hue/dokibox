@@ -4,9 +4,9 @@ import sys
 import ctypes
 import subprocess
 import io
-from PySide6.QtCore import Qt, QTimer, QSize, Signal, QEvent
+from PySide6.QtCore import Qt, QTimer, QSize, Signal, QEventLoop
 from PySide6.QtGui import (
-    QPainter, QColor, QPen, QFont, QFontMetrics, QTextOption, QTextCursor,
+    QPainter, QColor, QFont, QFontMetrics, QTextOption, QTextCursor,
 )
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QPlainTextEdit,
@@ -66,7 +66,6 @@ class _CmdContent(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._panel = None
         self._full_text = ""
         self._visible_count = 0
         self._cursor_visible = True
@@ -80,9 +79,6 @@ class _CmdContent(QWidget):
 
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
         self._fm = QFontMetrics(self._font)
-
-    def set_panel(self, panel):
-        self._panel = panel
 
     def set_text(self, text: str):
         self._full_text = text
@@ -187,16 +183,12 @@ class _CmdPanel(QWidget):
         self.setWindowOpacity(0.4)
 
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
-        self._fm = QFontMetrics(self._font)
-        self._line_h = self._fm.lineSpacing()
 
         self._pending_result_text = ""
         self._pending_result_append = True
-        self._queue = []
-        self._busy = False
+        self._current_loop = None
 
         self._cmd_content = _CmdContent()
-        self._cmd_content.set_panel(self)
         self._cmd_content.typing_finished.connect(self._on_typing_finished)
 
         self._cmd_scroll = QScrollArea()
@@ -205,7 +197,6 @@ class _CmdPanel(QWidget):
         self._cmd_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._cmd_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._cmd_scroll.setFrameShape(QScrollArea.NoFrame)
-        self._cmd_scroll.viewport().installEventFilter(self)
         self._cmd_scroll.setStyleSheet(
             "QScrollArea { background: %s; border: none; }"
             "QScrollBar:vertical { background: #555; width: 6px; }"
@@ -227,7 +218,6 @@ class _CmdPanel(QWidget):
         self._result_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._result_edit.setWordWrapMode(QTextOption.WrapMode.WordWrap)
         self._result_edit.document().setDocumentMargin(0)
-        self._result_edit.installEventFilter(self)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -256,24 +246,6 @@ class _CmdPanel(QWidget):
         except Exception:
             pass
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
-            self._done()
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key_Escape:
-            self._done()
-            return True
-        return super().eventFilter(obj, event)
-
-    def _done(self):
-        self.hide()
-        self.deleteLater()
-        import dokibox.cmdbox as _m
-        _m._cmd_panel = None
-        from PySide6.QtWidgets import QApplication
-        QApplication.instance().quit()
-
     def _on_typing_finished(self):
         if self._pending_result_text:
             if self._pending_result_append:
@@ -282,24 +254,8 @@ class _CmdPanel(QWidget):
                 self._result_edit.setPlainText(self._pending_result_text)
             self._pending_result_text = ""
             self._scroll_result_to_bottom()
-        self._process_queue()
-
-    def _process_queue(self):
-        if self._queue:
-            cmd_text, result_text, append = self._queue.pop(0)
-            self._busy = True
-            self._cmd_content.set_text(cmd_text)
-            self._pending_result_text = result_text
-            self._pending_result_append = append
-            if not cmd_text:
-                self._on_typing_finished()
-        else:
-            self._busy = False
-
-    def _enqueue(self, cmd_text, result_text, append):
-        self._queue.append((cmd_text, result_text, append))
-        if not self._busy:
-            self._process_queue()
+        if self._current_loop and self._current_loop.isRunning():
+            self._current_loop.quit()
 
     def _scroll_result_to_bottom(self):
         cursor = self._result_edit.textCursor()
@@ -359,4 +315,26 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", append=True):
         except Exception as e:
             actual_result = str(e)
 
-    _cmd_panel._enqueue(cmd, actual_result, append)
+    _cmd_panel._cmd_content.set_text(cmd)
+    _cmd_panel._pending_result_text = actual_result
+    _cmd_panel._pending_result_append = append
+    if not cmd:
+        _cmd_panel._on_typing_finished()
+
+    loop = QEventLoop()
+    _cmd_panel._current_loop = loop
+    _cmd_panel.destroyed.connect(loop.quit)
+    loop.exec()
+
+
+def closecmdbox():
+    """Close and destroy the cmdbox panel if it exists."""
+    global _cmd_panel
+    if _cmd_panel is not None:
+        panel = _cmd_panel
+        _cmd_panel = None
+        panel.hide()
+        panel.deleteLater()
+        loop = QEventLoop()
+        panel.destroyed.connect(loop.quit)
+        loop.exec()
