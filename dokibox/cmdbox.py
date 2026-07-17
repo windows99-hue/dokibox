@@ -55,6 +55,7 @@ class _CmdPanel(QWidget):
         sh = self.screen().size().height()
         w = int(sw / WIDTH_RATIO)
         h = int(sh / HEIGHT_RATIO)
+        self.setWindowOpacity(0.4)
         self.setGeometry(0, 0, w, h)
         self.setFixedSize(w, h)
 
