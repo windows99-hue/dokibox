@@ -109,27 +109,13 @@ class _DokiBase(QWidget):
         th = fm.height()
         text_x = int(x - tw // 2)
         text_y = int(y + fm.ascent() - th // 2)
-        for step in range(48):
-            angle = 2 * math.pi * step / 24
-            dx = int(stroke_w * math.cos(angle))
-            dy = int(stroke_w * math.sin(angle))
-            painter.setPen(QColor(stroke_color))
-            painter.drawText(text_x + dx, text_y + dy, text)
-        painter.setPen(QColor(fill_color))
-        painter.drawText(text_x, text_y, text)
+        _draw_text_stroked(painter, text_x, text_y, text, stroke_color, fill_color, stroke_w)
 
     def _draw_stroked_text_left(self, painter, x, y, text, font, fill_color, stroke_color, stroke_w):
         painter.setFont(font)
         fm = QFontMetrics(font)
         text_y = int(y + fm.ascent() - fm.height() // 2)
-        for step in range(48):
-            angle = 2 * math.pi * step / 24
-            dx = int(stroke_w * math.cos(angle))
-            dy = int(stroke_w * math.sin(angle))
-            painter.setPen(QColor(stroke_color))
-            painter.drawText(int(x) + dx, text_y + dy, text)
-        painter.setPen(QColor(fill_color))
-        painter.drawText(int(x), text_y, text)
+        _draw_text_stroked(painter, int(x), text_y, text, stroke_color, fill_color, stroke_w)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -165,5 +151,16 @@ class _DokiBase(QWidget):
         dialog.activateWindow()
         loop = QEventLoop()
         dialog.destroyed.connect(loop.quit)
-        loop.exec()
+        result_code = loop.exec()
         return dialog.result
+
+
+def _draw_text_stroked(painter, text_x, text_y, text, stroke_color, fill_color, stroke_w):
+    for step in range(48):
+        angle = 2 * math.pi * step / 24
+        dx = int(stroke_w * math.cos(angle))
+        dy = int(stroke_w * math.sin(angle))
+        painter.setPen(QColor(stroke_color))
+        painter.drawText(text_x + dx, text_y + dy, text)
+    painter.setPen(QColor(fill_color))
+    painter.drawText(text_x, text_y, text)

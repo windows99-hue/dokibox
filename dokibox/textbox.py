@@ -137,15 +137,15 @@ class _ContinueWindow(QWidget):
         bw = max(self.BORDER_W, 8)
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3
-            r = int(br + (er - br) * t)
-            g = int(bg + (eg - bg) * t)
-            b = int(bb + (eb - bb) * t)
-            p.setPen(QPen(QColor(r, g, b), 1))
+            p.setPen(QPen(QColor(
+                int(br + (er - br) * t),
+                int(bg + (eg - bg) * t),
+                int(bb + (eb - bb) * t),
+            ), 1))
             p.drawRect(i, i, self.w - i * 2, self.h - i * 2)
         p.setFont(self._font)
         fm = QFontMetrics(self._font)
-        tw = fm.horizontalAdvance(self._text)
-        x = self.w // 2 - tw // 2
+        x = self.w // 2 - fm.horizontalAdvance(self._text) // 2
         y = self.h // 2 + fm.ascent() - fm.height() // 2
         p.setPen(QColor(TEXT_COLOR))
         p.drawText(int(x), int(y), self._text)
@@ -242,19 +242,9 @@ class _TextDialog(_DokiBase):
 
     def _position_sbar(self):
         sb_w = self._sbar.width()
-        doc = self._text.document()
-        doc_m = doc.documentMargin()
-        max_w = 0.0
-        block = doc.begin()
-        while block.isValid():
-            lay = block.layout()
-            if lay is not None:
-                for i in range(lay.lineCount()):
-                    lw = lay.lineAt(i).naturalTextWidth()
-                    if lw > max_w:
-                        max_w = lw
-            block = block.next()
+        doc_m = self._text.document().documentMargin()
         limit = self.w - self._pad_right - int(doc_m)
+        max_w = self._compute_max_line_width()
         if max_w > 0:
             text_right = self._pad_left + int(doc_m + max_w)
             cap = QFontMetrics(self._text_font).height()
@@ -263,6 +253,19 @@ class _TextDialog(_DokiBase):
             text_right = limit
         x = (text_right + self.w - sb_w) // 2
         self._sbar.move(x, self._pad_top)
+
+    def _compute_max_line_width(self):
+        max_w = 0.0
+        block = self._text.document().begin()
+        while block.isValid():
+            lay = block.layout()
+            if lay is not None:
+                for i in range(lay.lineCount()):
+                    lw = lay.lineAt(i).naturalTextWidth()
+                    if lw > max_w:
+                        max_w = lw
+            block = block.next()
+        return max_w
 
     def _sync_range(self, mn, mx):
         vsb = self._text.verticalScrollBar()

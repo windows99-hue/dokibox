@@ -6,6 +6,85 @@ from PySide6.QtWidgets import QApplication
 from dokibox._base import _get_app, _get_dpi_scale
 
 
+def _process_sprites(sprites, avatar=None):
+    from dokibox.dialogbox import _process_sprites as _ps
+    return _ps(sprites, avatar)
+
+
+def _find_speaker_from_shared_box(avatar):
+    from dokibox.dialogbox import _get_shared_box
+    _box = _get_shared_box()
+    if _box is None:
+        return None
+    for i, sw in enumerate(_box._sprites):
+        if getattr(sw, '_avatar', None) is avatar:
+            return i
+    return None
+
+
+def _apply_sprite_attributes(_box, avatar_sprite_map, sprite_size_map, sprite_animation_map):
+    for i, sw in enumerate(_box._sprites):
+        if i < len(avatar_sprite_map):
+            sw._avatar = avatar_sprite_map[i]
+        if i < len(sprite_size_map):
+            w_ov, h_ov = sprite_size_map[i]
+            if w_ov != sw._width_override or h_ov != sw._height_override:
+                sw._width_override = w_ov
+                sw._height_override = h_ov
+                sw._apply_geometry(animate=False)
+        if i < len(sprite_animation_map):
+            sw._play_animation(sprite_animation_map[i])
+
+
+def _create_or_reuse_box(w, h, display_name, sprite_data, font_config, style_config,
+                         mode, default, max_length, allow_empty, overflow_mode,
+                         pinned, fdst):
+    from dokibox.dialogbox import _DialogBox, _get_shared_box, _destroy_box
+
+    _box = _get_shared_box()
+
+    if _box is not None:
+        try:
+            if _box.w == w and _box.h == h:
+                _box._update_content("", True, 50, False, overflow_mode,
+                                     display_name,
+                                     font_family=font_config.get('family'),
+                                     font_size=font_config.get('size'),
+                                     transparent=style_config.get('transparent', True),
+                                     glare=style_config.get('glare', True),
+                                     sprites=sprite_data['sprites'],
+                                     sprite_pos=sprite_data['sprite_pos'],
+                                     speaker_idx=sprite_data['speaker_idx'] or -1,
+                                     avatar_sprite_map=sprite_data['avatar_sprite_map'],
+                                     sprite_allow_cover=sprite_data.get('sprite_allow_cover', False),
+                                     sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
+                                     mode=mode, default=default, max_length=max_length,
+                                     allow_empty=allow_empty)
+                return _box
+            else:
+                _destroy_box()
+        except Exception:
+            _destroy_box()
+
+    if _get_shared_box() is None:
+        _DialogBox("", w, h, display_name,
+                   typewriter=True, chardelay=50, bold=False,
+                   pinned=pinned, fdst=fdst, overflow_mode=overflow_mode,
+                   font_family=font_config.get('family'),
+                   font_size=font_config.get('size'),
+                   transparent=style_config.get('transparent', True),
+                   glare=style_config.get('glare', True),
+                   sprites=sprite_data['sprites'],
+                   sprite_pos=sprite_data['sprite_pos'],
+                   speaker_idx=sprite_data['speaker_idx'] or -1,
+                   sprite_allow_cover=sprite_data.get('sprite_allow_cover', False),
+                   sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
+                   mode=mode, default=default, max_length=max_length,
+                   allow_empty=allow_empty)
+
+    return _get_shared_box()
+
+
 def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
                 name: Optional[str] = None, pinned: bool = True,
                 fdst: bool = False,
@@ -47,8 +126,7 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
         name = dokibox.diaenterbox(name=sayori, sprites=[sayori("left", "happy")])
         print(name)
     """
-    from dokibox.dialogbox import _DialogBox, _SpriteSlot, _HideSlot, _composite_sprite_pixmaps, _destroy_box, _get_shared_box
-    from dokibox.dialogbox import Avatar
+    from dokibox.dialogbox import Avatar, _get_shared_box, _destroy_box
 
     _get_app()
     sw = QApplication.primaryScreen().size().width()
@@ -59,103 +137,31 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
 
     display_name = name.name if isinstance(name, Avatar) else name
     avatar = name if isinstance(name, Avatar) else None
-    speaker_idx = None
-    avatar_sprite_map = []
-    sprite_size_map = []
-    sprite_animation_map = []
-    sprite_allow_cover_list = []
-    sprite_pos = None
 
-    if sprites is not None:
-        is_new_api = False
-        processed_sprites = []
-        processed_positions = []
+    sprite_data = _process_sprites(sprites, avatar)
+    sprite_data['sprite_allow_cover'] = sprite_allow_cover
 
-        for chunk in sprites:
-            if isinstance(chunk, _HideSlot):
-                is_new_api = True
-                continue
-            elif isinstance(chunk, _SpriteSlot):
-                is_new_api = True
-                if len(chunk.images) == 1:
-                    processed_sprites.append(chunk.images[0])
-                else:
-                    processed_sprites.append(_composite_sprite_pixmaps(chunk.images))
-                processed_positions.append(chunk.position)
-                avatar_sprite_map.append(chunk.avatar)
-                sprite_size_map.append((chunk.width, chunk.height))
-                sprite_animation_map.append(chunk.animation)
-                sprite_allow_cover_list.append(chunk.allow_cover)
-                if avatar is not None and chunk.avatar is avatar and speaker_idx is None:
-                    speaker_idx = len(processed_sprites) - 1
-            else:
-                processed_sprites.append(chunk)
-                sprite_size_map.append((None, None))
-                sprite_animation_map.append(None)
-                sprite_allow_cover_list.append(False)
+    if sprites is None and avatar is not None:
+        found_idx = _find_speaker_from_shared_box(avatar)
+        if found_idx is not None:
+            sprite_data['speaker_idx'] = found_idx
 
-        if is_new_api:
-            sprites = processed_sprites if processed_sprites else []
-            sprite_pos = processed_positions
+    if sprite_data['speaker_idx'] is None:
+        sprite_data['speaker_idx'] = -1
 
-    _box = _get_shared_box()
+    font_config = {'family': font_family, 'size': font_size}
+    style_config = {'transparent': transparent, 'glare': glare}
 
-    if sprites is None and avatar is not None and _box is not None:
-        for i, sw in enumerate(_box._sprites):
-            if getattr(sw, '_avatar', None) is avatar:
-                speaker_idx = i
-                break
+    _box = _create_or_reuse_box(w, h, display_name, sprite_data, font_config,
+                                 style_config, "input", default, max_length,
+                                 allow_empty, overflow_mode, pinned, fdst)
 
-    if speaker_idx is None:
-        speaker_idx = -1
-
-    if _box is not None:
-        try:
-            if _box.w == w and _box.h == h:
-                _box._update_content("", True, 50, False, overflow_mode,
-                                     display_name,
-                                     font_family=font_family, font_size=font_size,
-                                     transparent=transparent, glare=glare,
-                                     sprites=sprites, sprite_pos=sprite_pos,
-                                     speaker_idx=speaker_idx,
-                                     avatar_sprite_map=avatar_sprite_map,
-                                     sprite_allow_cover=sprite_allow_cover,
-                                     sprite_allow_cover_list=sprite_allow_cover_list,
-                                     mode="input", default=default, max_length=max_length,
-                                     allow_empty=allow_empty)
-            else:
-                _destroy_box()
-        except Exception:
-            _destroy_box()
-
-    if _get_shared_box() is None:
-        _box = _DialogBox("", w, h, display_name,
-                          typewriter=True, chardelay=50, bold=False,
-                          pinned=pinned, fdst=fdst, overflow_mode=overflow_mode,
-                          font_family=font_family, font_size=font_size,
-                          transparent=transparent, glare=glare,
-                          sprites=sprites, sprite_pos=sprite_pos,
-                          speaker_idx=speaker_idx,
-                          sprite_allow_cover=sprite_allow_cover,
-                          sprite_allow_cover_list=sprite_allow_cover_list,
-                          mode="input", default=default, max_length=max_length,
-                          allow_empty=allow_empty)
-
-    _box = _get_shared_box()
     if _box is None:
         return None
 
-    for i, sw in enumerate(_box._sprites):
-        if i < len(avatar_sprite_map):
-            sw._avatar = avatar_sprite_map[i]
-        if i < len(sprite_size_map):
-            w_ov, h_ov = sprite_size_map[i]
-            if w_ov != sw._width_override or h_ov != sw._height_override:
-                sw._width_override = w_ov
-                sw._height_override = h_ov
-                sw._apply_geometry(animate=False)
-        if i < len(sprite_animation_map):
-            sw._play_animation(sprite_animation_map[i])
+    _apply_sprite_attributes(_box, sprite_data['avatar_sprite_map'],
+                             sprite_data['sprite_size_map'],
+                             sprite_data['sprite_animation_map'])
 
     _diaenterbox_loop = QEventLoop()
     _box.dismissed.connect(_diaenterbox_loop.quit, Qt.SingleShotConnection)

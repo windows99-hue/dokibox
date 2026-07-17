@@ -1,12 +1,12 @@
 ﻿# -*- coding: utf-8 -*-
 """dokibox.ynbox -- DDLC-style yes/no dialog"""
-import math
 import locale
 from typing import Optional, Tuple
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
 from PySide6.QtWidgets import QToolTip
-from dokibox._base import _DokiBase, _hex_to_rgb, BODY_COLOR
+from dokibox._base import _DokiBase, BODY_COLOR
+from dokibox._widgets import text_wrap, draw_stroked_button
 
 MSG_COLOR = "#000000"
 BTN_STROKE_COLOR = "#BD539D"
@@ -30,33 +30,36 @@ _BTN_TEXTS = {
     'ru': ("Да", "Нет"),
 }
 
+_LANG_MAP = {
+    0x0804: 'zh', 0x0404: 'zh', 0x0C04: 'zh', 0x1004: 'zh',
+    0x0411: 'ja',
+    0x0412: 'ko',
+    0x0419: 'ru',
+}
+
+_LANG_KEYWORDS = {
+    'zh': ('zh', 'chinese'),
+    'ja': ('ja', 'japanese'),
+    'ko': ('ko', 'korean'),
+    'ru': ('ru', 'russian'),
+}
+
 
 def get_system_locale():
     try:
         import ctypes
         lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-        lang_map = {
-            0x0804: 'zh', 0x0404: 'zh', 0x0C04: 'zh', 0x1004: 'zh',
-            0x0411: 'ja',
-            0x0412: 'ko',
-            0x0419: 'ru',
-        }
-        if lang_id in lang_map:
-            return lang_map[lang_id]
+        if lang_id in _LANG_MAP:
+            return _LANG_MAP[lang_id]
     except Exception:
         pass
     try:
         lang, _ = locale.getdefaultlocale()
         if lang:
-            lang = lang.lower()
-            if 'zh' in lang or 'chinese' in lang:
-                return 'zh'
-            if 'ja' in lang or 'japanese' in lang:
-                return 'ja'
-            if 'ko' in lang or 'korean' in lang:
-                return 'ko'
-            if 'ru' in lang or 'russian' in lang:
-                return 'ru'
+            lang_lower = lang.lower()
+            for code, keywords in _LANG_KEYWORDS.items():
+                if any(kw in lang_lower for kw in keywords):
+                    return code
     except Exception:
         pass
     return 'en'
@@ -80,27 +83,6 @@ class _YnDialog(_DokiBase):
         self._tooltip_pos = None
         super().__init__(msg, title, pinned=pinned)
 
-    def _wrap_lines(self, text, font, max_w):
-        raw_lines = text.split('\n')
-        wrapped_lines = []
-        for line in raw_lines:
-            fm = QFontMetrics(font)
-            if fm.horizontalAdvance(line) <= max_w:
-                wrapped_lines.append(line)
-            else:
-                current = ""
-                for ch in line:
-                    test = current + ch
-                    if fm.horizontalAdvance(test) <= max_w:
-                        current = test
-                    else:
-                        if current:
-                            wrapped_lines.append(current)
-                        current = ch
-                if current:
-                    wrapped_lines.append(current)
-        return wrapped_lines
-
     def _calc_size(self, msg):
         s = self._dpi_s
         pad_x = int(PAD_X * s)
@@ -114,9 +96,7 @@ class _YnDialog(_DokiBase):
         self._msg_font = QFont(self._font_family, msg_fs, QFont.Bold)
         self._btn_font = QFont(self._font_family, btn_fs, QFont.Bold)
 
-        fm_msg = QFontMetrics(self._msg_font)
         fm_btn = QFontMetrics(self._btn_font)
-
         self._yes_w = fm_btn.horizontalAdvance(self._yes_text)
         self._no_w = fm_btn.horizontalAdvance(self._no_text)
         self._side_margin = int(self._yes_w * 1.5)
@@ -127,13 +107,14 @@ class _YnDialog(_DokiBase):
         screen_w = self.screen().size().width()
         max_msg_w = max(screen_w - pad_x * 2, min_btn_w - pad_x * 2, 200)
 
-        wrapped = self._wrap_lines(msg, self._msg_font, max_msg_w)
+        wrapped = text_wrap(msg, self._msg_font, max_msg_w)
         self._wrapped_msg = wrapped
+        fm_msg = QFontMetrics(self._msg_font)
         self._msg_line_h = fm_msg.lineSpacing()
         self._msg_total_h = self._msg_line_h * len(wrapped)
         self._btn_line_h = fm_btn.lineSpacing()
 
-        msg_w = max(fm_msg.horizontalAdvance(line) for line in wrapped) if wrapped else 0
+        msg_w = max((fm_msg.horizontalAdvance(line) for line in wrapped), default=0)
         w = max(int(msg_w + pad_x * 2), int(min_btn_w), 300)
         w = min(w, screen_w - self.BORDER_W * 2)
         h = max(pad_top + self._msg_total_h + pad_btns
@@ -152,10 +133,12 @@ class _YnDialog(_DokiBase):
         btn_yes_x = int(self.BORDER_W + self._side_margin + self._yes_w / 2)
         btn_no_x = int(self.w - self.BORDER_W - self._side_margin - self._no_w / 2)
 
-        self._draw_button(painter, btn_yes_x, btn_y, self._yes_text,
-                          self._btn_yes_hover, 'yes')
-        self._draw_button(painter, btn_no_x, btn_y, self._no_text,
-                          self._btn_no_hover, 'no')
+        self._btn_yes_rect = draw_stroked_button(
+            painter, btn_yes_x, btn_y, self._yes_text, self._btn_font,
+            self._btn_stroke, hover=self._btn_yes_hover)
+        self._btn_no_rect = draw_stroked_button(
+            painter, btn_no_x, btn_y, self._no_text, self._btn_font,
+            self._btn_stroke, hover=self._btn_no_hover)
 
     def _draw_msg_lines(self, painter, msg_y):
         painter.setFont(self._msg_font)
@@ -166,36 +149,6 @@ class _YnDialog(_DokiBase):
             x = self.w // 2 - tw // 2
             y = msg_y - self._msg_total_h // 2 + self._msg_line_h // 2 + j * self._msg_line_h + fm.ascent() - self._msg_line_h // 2
             painter.drawText(int(x), int(y), line)
-
-    def _draw_button(self, painter, x, y, text, hover, which):
-        sw = self._btn_stroke
-        painter.setFont(self._btn_font)
-        fm = QFontMetrics(self._btn_font)
-        tw = fm.horizontalAdvance(text)
-        text_x = int(x - tw // 2)
-        text_y = int(y + fm.ascent() - fm.height() // 2)
-
-        fill_color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
-        fill_rgb = _hex_to_rgb(fill_color)
-        stroke_rgb = _hex_to_rgb(BTN_STROKE_COLOR)
-
-        for step in range(48):
-            angle = 2 * math.pi * step / 36
-            dx = int(sw * math.cos(angle))
-            dy = int(sw * math.sin(angle))
-            painter.setPen(QColor(*stroke_rgb))
-            painter.drawText(text_x + dx, text_y + dy, text)
-
-        painter.setPen(QColor(*fill_rgb))
-        painter.drawText(text_x, text_y, text)
-
-        br = fm.boundingRect(text)
-        rect = (text_x - 15, text_y + br.top() - 10,
-                tw + 30, fm.height() + 20)
-        if which == 'yes':
-            self._btn_yes_rect = rect
-        else:
-            self._btn_no_rect = rect
 
     def _hit_button(self, pos):
         for rect, handler in [
@@ -213,22 +166,21 @@ class _YnDialog(_DokiBase):
         self._hit_button(event.position().toPoint())
 
     def _update_hover(self, pos):
-        yes_hover = False
-        no_hover = False
-        if self._btn_yes_rect:
-            rx, ry, rw, rh = self._btn_yes_rect
-            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
-                yes_hover = True
-        if self._btn_no_rect:
-            rx, ry, rw, rh = self._btn_no_rect
-            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
-                no_hover = True
+        yes_hover = self._check_rect(pos, self._btn_yes_rect)
+        no_hover = self._check_rect(pos, self._btn_no_rect)
         changed = (yes_hover != self._btn_yes_hover or no_hover != self._btn_no_hover)
         self._btn_yes_hover = yes_hover
         self._btn_no_hover = no_hover
         if changed:
             self.update()
         return yes_hover or no_hover
+
+    @staticmethod
+    def _check_rect(pos, rect):
+        if rect:
+            rx, ry, rw, rh = rect
+            return rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+        return False
 
     def enterEvent(self, event):
         self._update_hover(event.position().toPoint())

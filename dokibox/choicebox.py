@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """dokibox.choicebox -- DDLC-style multi-choice dialog (floating windows per option)"""
 from typing import Optional, List
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QEventLoop
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics, QCursor
 from PySide6.QtWidgets import QApplication, QWidget, QToolTip
 from dokibox._base import _get_app, _hex_to_rgb, _get_dpi_scale
+from dokibox._widgets import text_wrap
 
 BORDER_COLOR = "#FFBBE3"
 BODY_COLOR = "#FEE6F4"
@@ -36,14 +37,12 @@ class _Panel(QWidget):
         self.pw = int(pw)
         self._opt_font = QFont(font_family or "Microsoft YaHei", opt_fs, QFont.Normal)
         fm = QFontMetrics(self._opt_font)
-        th = fm.lineSpacing()
-        self.ph = int(th + opt_pad_y * 2 + border_w * 2)
+        self.ph = int(fm.lineSpacing() + opt_pad_y * 2 + border_w * 2)
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
-
         self.setFixedSize(self.pw, self.ph)
 
     def paintEvent(self, event):
@@ -60,10 +59,11 @@ class _Panel(QWidget):
         bw = max(self._border_w, 6)
         for i in range(bw):
             t = (i / max(bw - 1, 1)) ** 3
-            r = int(br + (er - br) * t)
-            g = int(bg + (eg - bg) * t)
-            b = int(bb + (eb - bb) * t)
-            painter.setPen(QPen(QColor(r, g, b), 1))
+            painter.setPen(QPen(QColor(
+                int(br + (er - br) * t),
+                int(bg + (eg - bg) * t),
+                int(bb + (eb - bb) * t),
+            ), 1))
             painter.drawRect(i, i, self.pw - i * 2, self.ph - i * 2)
 
     def _draw_option(self, painter):
@@ -92,8 +92,7 @@ class _Panel(QWidget):
 
     def mouseMoveEvent(self, event):
         if self._tooltip:
-            gp = event.globalPosition().toPoint()
-            QToolTip.showText(gp, self._tooltip, self)
+            QToolTip.showText(event.globalPosition().toPoint(), self._tooltip, self)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -157,8 +156,7 @@ class _ChoiceManager:
 
         if force is not None and 0 <= force < len(choices):
             p = self._panels[force]
-            gc = p.mapToGlobal(QPoint(p.width() // 2, p.height() // 2))
-            QCursor.setPos(gc)
+            QCursor.setPos(p.mapToGlobal(QPoint(p.width() // 2, p.height() // 2)))
 
     def _on_select(self, index):
         self.result = index
@@ -177,30 +175,14 @@ class _ChoiceManager:
         fm = QFontMetrics(f)
         max_lbl_w = max(self._unified_w - int(40 * s), 200)
 
-        raw_lines = msg.split('\n')
-        wrapped_lines = []
-        for line in raw_lines:
-            if fm.horizontalAdvance(line) <= max_lbl_w:
-                wrapped_lines.append(line)
-            else:
-                current = ""
-                for ch in line:
-                    test = current + ch
-                    if fm.horizontalAdvance(test) <= max_lbl_w:
-                        current = test
-                    else:
-                        if current:
-                            wrapped_lines.append(current)
-                        current = ch
-                if current:
-                    wrapped_lines.append(current)
+        wrapped_lines = text_wrap(msg, f, max_lbl_w)
 
         line_h = fm.lineSpacing()
         total_h = line_h * len(wrapped_lines) + msg_pad_y * 2
-        text_w = max(fm.horizontalAdvance(line) for line in wrapped_lines) if wrapped_lines else 0
+        text_w_val = max((fm.horizontalAdvance(line) for line in wrapped_lines), default=0)
 
         self._msg_win = _MsgLabel(wrapped_lines, f, line_h, msg_pad_y,
-                                   max(int(text_w + int(40 * s)), self._unified_w),
+                                   max(int(text_w_val + int(40 * s)), self._unified_w),
                                    int(total_h),
                                    self._pinned, self._on_select)
         self._msg_w = self._msg_win.width()
@@ -221,13 +203,11 @@ class _ChoiceManager:
         start_y = (sh - total_h) // 2
 
         if self._msg_win:
-            msg_x = (sw - self._msg_w) // 2
-            self._msg_win.move(msg_x, start_y)
+            self._msg_win.move((sw - self._msg_w) // 2, start_y)
             start_y += self._msg_h + gap
 
         for panel in self._panels:
-            px = (sw - panel.pw) // 2
-            panel.set_position(px, start_y)
+            panel.set_position((sw - panel.pw) // 2, start_y)
             start_y += panel.ph + gap
 
 
@@ -256,8 +236,8 @@ class _MsgLabel(QWidget):
         painter.setPen(QColor("#000000"))
         fm = QFontMetrics(self._font)
         for j, line in enumerate(self._lines):
-            tw = fm.horizontalAdvance(line)
             y = self._msg_pad_y + self._line_h // 2 + j * self._line_h + fm.ascent() - self._line_h // 2
+            tw = fm.horizontalAdvance(line)
             painter.drawText(int(self.width() // 2 - tw // 2), int(y), line)
         painter.end()
 
@@ -292,7 +272,6 @@ def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "
     mgr = _ChoiceManager(msg, choices, title, tooltip, force, pinned=pinned,
                          font_family=font_family, font_size=font_size)
 
-    from PySide6.QtCore import QEventLoop
     loop = QEventLoop()
     for p in mgr._panels:
         p.destroyed.connect(lambda obj=None, l=loop: l.quit())

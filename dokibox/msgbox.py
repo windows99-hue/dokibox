@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """dokibox.msgbox -- DDLC-style message dialog (single OK button)"""
-import math
 from typing import Optional
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
+from PySide6.QtGui import QPainter, QColor, QFont, QFontMetrics
 from PySide6.QtWidgets import QToolTip
 from dokibox._base import _DokiBase, _get_app, _hex_to_rgb, BODY_COLOR
+from dokibox._widgets import text_wrap, draw_stroked_button
 
 MSG_COLOR = "#000000"
 BTN_STROKE_COLOR = "#BD539D"
@@ -33,27 +33,6 @@ class _MsgDialog(_DokiBase):
         self._tooltip_shown = False
         super().__init__(msg, title, pinned=pinned)
 
-    def _wrap_lines(self, text, font, max_w):
-        raw_lines = text.split('\n')
-        wrapped_lines = []
-        for line in raw_lines:
-            fm = QFontMetrics(font)
-            if fm.horizontalAdvance(line) <= max_w:
-                wrapped_lines.append(line)
-            else:
-                current = ""
-                for ch in line:
-                    test = current + ch
-                    if fm.horizontalAdvance(test) <= max_w:
-                        current = test
-                    else:
-                        if current:
-                            wrapped_lines.append(current)
-                        current = ch
-                if current:
-                    wrapped_lines.append(current)
-        return wrapped_lines
-
     def _calc_size(self, msg):
         s = self._dpi_s
         pad_x = int(PAD_X * s)
@@ -67,19 +46,16 @@ class _MsgDialog(_DokiBase):
         self._msg_font = QFont(self._font_family, msg_fs, QFont.Bold)
         self._btn_font = QFont(self._font_family, btn_fs, QFont.Bold)
 
-        fm_msg = QFontMetrics(self._msg_font)
-        fm_btn = QFontMetrics(self._btn_font)
-
         screen_w = self.screen().size().width()
         max_msg_w = max(screen_w - pad_x * 2, 200)
 
-        wrapped = self._wrap_lines(msg, self._msg_font, max_msg_w)
+        wrapped = text_wrap(msg, self._msg_font, max_msg_w)
         self._wrapped_msg = wrapped
-        self._msg_line_h = fm_msg.lineSpacing()
+        self._msg_line_h = QFontMetrics(self._msg_font).lineSpacing()
         self._msg_total_h = self._msg_line_h * len(wrapped)
-        self._btn_line_h = fm_btn.lineSpacing()
+        self._btn_line_h = QFontMetrics(self._btn_font).lineSpacing()
 
-        msg_w = max(fm_msg.horizontalAdvance(line) for line in wrapped) if wrapped else 0
+        msg_w = max((QFontMetrics(self._msg_font).horizontalAdvance(line) for line in wrapped), default=0)
         w = max(int(msg_w + pad_x * 2), 250)
         w = min(w, screen_w - 24)
         h = max(pad_top + self._msg_total_h + pad_btns
@@ -95,7 +71,9 @@ class _MsgDialog(_DokiBase):
         self._draw_msg_lines(painter, msg_y)
 
         btn_y = self.h - self._pad_bot - self._btn_line_h // 2
-        self._draw_button(painter, self.w // 2, btn_y, "OK", self._btn_ok_hover)
+        self._btn_ok_rect = draw_stroked_button(
+            painter, self.w // 2, btn_y, "OK", self._btn_font,
+            self._btn_stroke, hover=self._btn_ok_hover)
 
     def _draw_msg_lines(self, painter, msg_y):
         painter.setFont(self._msg_font)
@@ -107,47 +85,17 @@ class _MsgDialog(_DokiBase):
             y = msg_y - self._msg_total_h // 2 + self._msg_line_h // 2 + j * self._msg_line_h + fm.ascent() - self._msg_line_h // 2
             painter.drawText(int(x), int(y), line)
 
-    def _draw_button(self, painter, x, y, text, hover):
-        sw = self._btn_stroke
-        painter.setFont(self._btn_font)
-        fm = QFontMetrics(self._btn_font)
-        tw = fm.horizontalAdvance(text)
-        text_x = int(x - tw // 2)
-        text_y = int(y + fm.ascent() - fm.height() // 2)
-
-        fill_color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
-        fill_rgb = _hex_to_rgb(fill_color)
-        stroke_rgb = _hex_to_rgb(BTN_STROKE_COLOR)
-
-        for step in range(48):
-            angle = 2 * math.pi * step / 36
-            dx = int(sw * math.cos(angle))
-            dy = int(sw * math.sin(angle))
-            painter.setPen(QColor(*stroke_rgb))
-            painter.drawText(text_x + dx, text_y + dy, text)
-
-        painter.setPen(QColor(*fill_rgb))
-        painter.drawText(text_x, text_y, text)
-
-        br = fm.boundingRect(text)
-        self._btn_ok_rect = (
-            text_x - 15, text_y + br.top() - 10,
-            tw + 30, fm.height() + 20
-        )
-
     def _on_click_local(self, event):
         if self._btn_ok_rect:
             rx, ry, rw, rh = self._btn_ok_rect
             pos = event.position().toPoint()
             if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
                 self._done(True)
-                return
 
     def enterEvent(self, event):
-        if self._btn_ok_rect:
-            pos = event.position().toPoint()
-            rx, ry, rw, rh = self._btn_ok_rect
-            self._btn_ok_hover = rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+        hover = self._check_hover(event.position().toPoint())
+        if hover != self._btn_ok_hover:
+            self._btn_ok_hover = hover
             self.update()
 
     def leaveEvent(self, event):
@@ -157,17 +105,14 @@ class _MsgDialog(_DokiBase):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         if self._btn_ok_rect:
-            pos = event.position().toPoint()
-            rx, ry, rw, rh = self._btn_ok_rect
-            hover = rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+            hover = self._check_hover(event.position().toPoint())
             if hover != self._btn_ok_hover:
                 self._btn_ok_hover = hover
                 self.update()
         if self._tooltip:
             if self._btn_ok_hover and not self._tooltip_shown:
                 self._tooltip_shown = True
-                gp = event.globalPosition().toPoint()
-                QToolTip.showText(gp, self._tooltip, self)
+                QToolTip.showText(event.globalPosition().toPoint(), self._tooltip, self)
             elif not self._btn_ok_hover:
                 self._tooltip_shown = False
                 QToolTip.hideText()
@@ -175,6 +120,12 @@ class _MsgDialog(_DokiBase):
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key_Escape, Qt.Key_Return, Qt.Key_Enter):
             self._done(True)
+
+    def _check_hover(self, pos):
+        if self._btn_ok_rect:
+            rx, ry, rw, rh = self._btn_ok_rect
+            return rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+        return False
 
 
 def msgbox(msg: str = "", title: str = "", tooltip: Optional[str] = None,

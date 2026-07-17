@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QPlainTextEdit,
 )
 from dokibox._base import _get_app, _get_dpi_scale
+from dokibox._widgets import wrap_line_single
 
 BG_COLOR = "#888888"
 BG_ALPHA = 0.4
@@ -48,21 +49,7 @@ def _remove_window_shadow(hwnd):
 
 
 def _wrap_text(text, fm, max_w):
-    lines = []
-    current = ""
-    for ch in text:
-        if ch == '\n':
-            lines.append(current)
-            current = ""
-            continue
-        test = current + ch
-        if fm.horizontalAdvance(test) <= max_w:
-            current = test
-        else:
-            lines.append(current)
-            current = ch
-    lines.append(current)
-    return lines if lines else [""]
+    return wrap_line_single(text, fm, max_w) or [""]
 
 
 class _CmdContent(QWidget):
@@ -108,9 +95,7 @@ class _CmdContent(QWidget):
         self.update()
 
     def _wrapped_lines(self):
-        max_w = self.width() - 20
-        if max_w <= 0:
-            max_w = 200
+        max_w = max(self.width() - 20, 200 if self.width() <= 20 else 40)
         visible = self._full_text[:self._visible_count]
         prefix_w = self._fm.horizontalAdvance("> ")
         return _wrap_text(visible, self._fm, max(max_w - prefix_w, 40))
@@ -144,9 +129,7 @@ class _CmdContent(QWidget):
         prefix_w = self._fm.horizontalAdvance("> ")
         indent_x = base_x + prefix_w
 
-        lines = self._wrapped_lines()
-        if not lines:
-            lines = [""]
+        lines = self._wrapped_lines() or [""]
 
         for i, line in enumerate(lines):
             y = int(base_y + i * lh)
@@ -157,7 +140,7 @@ class _CmdContent(QWidget):
                 painter.drawText(int(indent_x), y, line)
 
         if self._cursor_visible:
-            last_line = lines[-1] if lines else ""
+            last_line = lines[-1]
             if len(lines) == 1:
                 cw = self._fm.horizontalAdvance("> " + last_line)
                 cx = base_x + cw + 2
@@ -305,6 +288,35 @@ class _CmdPanel(QWidget):
 _cmd_panel = None
 
 
+def _execute_command(cmd, language):
+    """Execute cmd in the given language and return the result string."""
+    if language == "python":
+        buf = io.StringIO()
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = buf, buf
+        try:
+            exec(compile(cmd, "<cmdbox>", "exec"))
+        finally:
+            sys.stdout, sys.stderr = old_stdout, old_stderr
+        return buf.getvalue()
+    elif language == "cmd":
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+        result = r.stdout
+        if r.stderr:
+            result += r.stderr
+        return result
+    elif language == "powershell":
+        r = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", cmd],
+            capture_output=True, text=True, timeout=30,
+        )
+        result = r.stdout
+        if r.stderr:
+            result += r.stderr
+        return result
+    return ""
+
+
 def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
            font_family=None, font_size=None, chardelay=50):
     """Show a gray semi-transparent command panel at top-left corner.
@@ -330,30 +342,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
     actual_result = result
     if runcmd and cmd:
         try:
-            if language == "python":
-                buf = io.StringIO()
-                old_stdout, old_stderr = sys.stdout, sys.stderr
-                sys.stdout, sys.stderr = buf, buf
-                try:
-                    exec(compile(cmd, "<cmdbox>", "exec"))
-                finally:
-                    sys.stdout, sys.stderr = old_stdout, old_stderr
-                actual_result = buf.getvalue()
-            elif language == "cmd":
-                r = subprocess.run(
-                    cmd, shell=True, capture_output=True, text=True, timeout=30,
-                )
-                actual_result = r.stdout
-                if r.stderr:
-                    actual_result += r.stderr
-            elif language == "powershell":
-                r = subprocess.run(
-                    ["powershell", "-NoProfile", "-Command", cmd],
-                    capture_output=True, text=True, timeout=30,
-                )
-                actual_result = r.stdout
-                if r.stderr:
-                    actual_result += r.stderr
+            actual_result = _execute_command(cmd, language)
         except Exception as e:
             actual_result = str(e)
 

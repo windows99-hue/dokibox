@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """dokibox.enterbox -- DDLC-style input dialog with text entry"""
 import math
+from typing import Optional
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
 from PySide6.QtWidgets import QToolTip, QLineEdit
-from typing import Optional
 from dokibox._base import _DokiBase, _get_app, _hex_to_rgb, BODY_COLOR
+from dokibox._widgets import text_wrap, draw_stroked_button
 
 MSG_COLOR = "#000000"
 BTN_STROKE_COLOR = "#BD539D"
@@ -64,27 +65,19 @@ class _CustomLineEdit(QLineEdit):
             click_x = event.pos().x() - self._base_x
             fm = QFontMetrics(self.font())
             text = self.text()
-            new_pos = len(text)
             accumulated = 0
             for i, ch in enumerate(text):
                 char_w = fm.horizontalAdvance(ch)
                 if click_x < accumulated + char_w / 2:
-                    new_pos = i
-                    break
+                    self.setCursorPosition(i)
+                    return
                 accumulated += char_w
-            self.setCursorPosition(new_pos)
+            self.setCursorPosition(len(text))
             return
         super().mousePressEvent(event)
 
     def _draw_stroked(self, painter, x, y, text):
-        for step in range(24):
-            angle = 2 * math.pi * step / 24
-            dx = int(INPUT_STROKE_W * math.cos(angle))
-            dy = int(INPUT_STROKE_W * math.sin(angle))
-            painter.setPen(QColor(INPUT_STROKE))
-            painter.drawText(int(x) + dx, y + dy, text)
-        painter.setPen(QColor(INPUT_FILL))
-        painter.drawText(int(x), y, text)
+        _draw_text_stroked_local(painter, int(x), y, text, INPUT_STROKE, INPUT_FILL, INPUT_STROKE_W)
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -107,14 +100,12 @@ class _CustomLineEdit(QLineEdit):
         if text_width <= visible_width:
             self._base_x = 8 + (visible_width - text_width) / 2
         else:
-            scroll = max(0, cursor_rel_x - visible_width)
-            scroll = min(scroll, text_width - visible_width)
+            scroll = max(0, min(cursor_rel_x - visible_width, text_width - visible_width))
             self._base_x = 8 - scroll
 
         if self.hasSelectedText():
             sel_start = self.selectionStart()
             sel_end = sel_start + len(self.selectedText())
-
             before = text[:sel_start]
             sel_text = text[sel_start:sel_end]
             after = text[sel_end:]
@@ -124,12 +115,9 @@ class _CustomLineEdit(QLineEdit):
 
             if before:
                 self._draw_stroked(p, int(self._base_x), text_y, before)
-
             sel_y = rect.top() + (rect.height() - body_h) // 2
             p.fillRect(int(self._base_x + bw), int(sel_y), int(sw), int(body_h), QColor(BTN_STROKE_COLOR))
-
             self._draw_stroked(p, int(self._base_x + bw), text_y, sel_text)
-
             if after:
                 self._draw_stroked(p, int(self._base_x + bw + sw), text_y, after)
         else:
@@ -139,7 +127,6 @@ class _CustomLineEdit(QLineEdit):
             cursor_x = self._base_x + cursor_rel_x
             cursor_h = body_h + 1
             cursor_y = rect.top() + (rect.height() - cursor_h) // 2
-
             p.setPen(QPen(QColor(CURSOR_COLOR), 2))
             p.drawLine(int(cursor_x), int(cursor_y), int(cursor_x), int(cursor_y + cursor_h))
 
@@ -178,27 +165,6 @@ class _EnterDialog(_DokiBase):
     def _on_submit(self):
         self._done(self._input.text())
 
-    def _wrap_lines(self, text, font, max_w):
-        raw_lines = text.split('\n')
-        wrapped_lines = []
-        for line in raw_lines:
-            fm = QFontMetrics(font)
-            if fm.horizontalAdvance(line) <= max_w:
-                wrapped_lines.append(line)
-            else:
-                current = ""
-                for ch in line:
-                    test = current + ch
-                    if fm.horizontalAdvance(test) <= max_w:
-                        current = test
-                    else:
-                        if current:
-                            wrapped_lines.append(current)
-                        current = ch
-                if current:
-                    wrapped_lines.append(current)
-        return wrapped_lines
-
     def _calc_size(self, msg):
         s = self._dpi_s
         pad_x = int(PAD_X * s)
@@ -220,13 +186,13 @@ class _EnterDialog(_DokiBase):
         screen_w = self.screen().size().width()
         max_msg_w = max(screen_w - pad_x * 2, 200)
 
-        wrapped = self._wrap_lines(msg, self._msg_font, max_msg_w)
+        wrapped = text_wrap(msg, self._msg_font, max_msg_w)
         self._wrapped_msg = wrapped
         self._msg_line_h = fm_msg.lineSpacing()
         self._msg_total_h = self._msg_line_h * len(wrapped)
         self._btn_line_h = fm_btn.lineSpacing()
 
-        msg_w = max(fm_msg.horizontalAdvance(line) for line in wrapped) if wrapped else 0
+        msg_w = max((fm_msg.horizontalAdvance(line) for line in wrapped), default=0)
         w = max(int(msg_w + pad_x * 2), 280)
         w = min(w, screen_w - 24)
         h = max(pad_top + self._msg_total_h + input_gap + input_h
@@ -250,7 +216,9 @@ class _EnterDialog(_DokiBase):
 
         btn_y = (self._input_y + self._input_h + self._input_btn_gap
                  + self._btn_line_h // 2)
-        self._draw_button(painter, self.w // 2, btn_y, "OK", self._btn_ok_hover)
+        self._btn_ok_rect = draw_stroked_button(
+            painter, self.w // 2, btn_y, "OK", self._btn_font,
+            self._btn_stroke, hover=self._btn_ok_hover)
 
     def _draw_msg_lines(self, painter, msg_y):
         painter.setFont(self._msg_font)
@@ -263,47 +231,20 @@ class _EnterDialog(_DokiBase):
                  + j * self._msg_line_h + fm.ascent() - self._msg_line_h // 2)
             painter.drawText(int(x), int(y), line)
 
-    def _draw_button(self, painter, x, y, text, hover):
-        sw = self._btn_stroke
-        painter.setFont(self._btn_font)
-        fm = QFontMetrics(self._btn_font)
-        tw = fm.horizontalAdvance(text)
-        text_x = int(x - tw // 2)
-        text_y = int(y + fm.ascent() - fm.height() // 2)
-
-        fill_color = BTN_HOVER_COLOR if hover else BTN_FILL_COLOR
-        fill_rgb = _hex_to_rgb(fill_color)
-        stroke_rgb = _hex_to_rgb(BTN_STROKE_COLOR)
-
-        for step in range(48):
-            angle = 2 * math.pi * step / 36
-            dx = int(sw * math.cos(angle))
-            dy = int(sw * math.sin(angle))
-            painter.setPen(QColor(*stroke_rgb))
-            painter.drawText(text_x + dx, text_y + dy, text)
-
-        painter.setPen(QColor(*fill_rgb))
-        painter.drawText(text_x, text_y, text)
-
-        br = fm.boundingRect(text)
-        self._btn_ok_rect = (
-            text_x - 15, text_y + br.top() - 10,
-            tw + 30, fm.height() + 20
-        )
+    def _check_hover(self, pos):
+        if self._btn_ok_rect:
+            rx, ry, rw, rh = self._btn_ok_rect
+            return rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+        return False
 
     def _on_click_local(self, event):
-        if self._btn_ok_rect:
-            rx, ry, rw, rh = self._btn_ok_rect
-            pos = event.position().toPoint()
-            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
-                self._done(self._input.text())
-                return
+        if self._check_hover(event.position().toPoint()):
+            self._done(self._input.text())
 
     def enterEvent(self, event):
-        if self._btn_ok_rect:
-            pos = event.position().toPoint()
-            rx, ry, rw, rh = self._btn_ok_rect
-            self._btn_ok_hover = rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+        hover = self._check_hover(event.position().toPoint())
+        if hover != self._btn_ok_hover:
+            self._btn_ok_hover = hover
             self.update()
 
     def leaveEvent(self, event):
@@ -313,17 +254,14 @@ class _EnterDialog(_DokiBase):
     def mouseMoveEvent(self, event):
         super().mouseMoveEvent(event)
         if self._btn_ok_rect:
-            pos = event.position().toPoint()
-            rx, ry, rw, rh = self._btn_ok_rect
-            hover = rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh
+            hover = self._check_hover(event.position().toPoint())
             if hover != self._btn_ok_hover:
                 self._btn_ok_hover = hover
                 self.update()
         if self._tooltip:
             if self._btn_ok_hover and not self._tooltip_shown:
                 self._tooltip_shown = True
-                gp = event.globalPosition().toPoint()
-                QToolTip.showText(gp, "OK", self)
+                QToolTip.showText(event.globalPosition().toPoint(), "OK", self)
             elif not self._btn_ok_hover:
                 self._tooltip_shown = False
                 QToolTip.hideText()
@@ -359,3 +297,14 @@ def enterbox(msg: str = "", default: str = "",
     return _EnterDialog.run(msg, default=default, tooltip=tooltip,
                             pinned=pinned, font_family=font_family,
                             font_size=font_size, max_length=max_length)
+
+
+def _draw_text_stroked_local(painter, text_x, text_y, text, stroke_color, fill_color, stroke_w):
+    for step in range(24):
+        angle = 2 * math.pi * step / 24
+        dx = int(stroke_w * math.cos(angle))
+        dy = int(stroke_w * math.sin(angle))
+        painter.setPen(QColor(stroke_color))
+        painter.drawText(int(text_x) + dx, text_y + dy, text)
+    painter.setPen(QColor(fill_color))
+    painter.drawText(int(text_x), text_y, text)
