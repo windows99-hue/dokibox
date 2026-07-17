@@ -141,6 +141,7 @@ class _CmdContent(QWidget):
         base_x = 8
         base_y = 6 + self._fm.ascent()
         prefix_w = self._fm.horizontalAdvance("> ")
+        indent_x = base_x + prefix_w
 
         lines = self._wrapped_lines()
         if not lines:
@@ -150,17 +151,18 @@ class _CmdContent(QWidget):
             y = int(base_y + i * lh)
             if i == 0:
                 painter.drawText(base_x, y, ">")
-                painter.drawText(int(base_x + prefix_w), y, line)
+                painter.drawText(int(indent_x), y, line)
             else:
-                painter.drawText(base_x, y, line)
+                painter.drawText(int(indent_x), y, line)
 
         if self._cursor_visible:
             last_line = lines[-1] if lines else ""
             if len(lines) == 1:
                 cw = self._fm.horizontalAdvance("> " + last_line)
+                cx = base_x + cw + 2
             else:
                 cw = self._fm.horizontalAdvance(last_line)
-            cx = 8 + cw + 2
+                cx = indent_x + cw + 2
             cy = base_y + (len(lines) - 1) * lh
             painter.drawText(int(cx), int(cy), "_")
 
@@ -213,7 +215,7 @@ class _CmdPanel(QWidget):
         self._result_edit.setFrameStyle(0)
         self._result_edit.setFont(self._font)
         self._result_edit.setStyleSheet(
-            "QPlainTextEdit { background: transparent; color: %s; border: none; padding: 6px 10px; }"
+            "QPlainTextEdit { background: transparent; color: %s; border: none; padding: 6px 0px; }"
             "QScrollBar:vertical { background: #555; width: 6px; }"
             "QScrollBar::handle:vertical { background: #aaa; min-height: 16px; }"
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }" % TEXT_COLOR
@@ -222,6 +224,8 @@ class _CmdPanel(QWidget):
         self._result_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._result_edit.setWordWrapMode(QTextOption.WrapMode.WordWrap)
         self._result_edit.document().setDocumentMargin(0)
+        self._result_edit.setViewportMargins(
+            8 + QFontMetrics(self._font).horizontalAdvance("> "), 0, 0, 0)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -261,6 +265,8 @@ class _CmdPanel(QWidget):
         self._cmd_content._font = font
         self._cmd_content._fm = QFontMetrics(font)
         self._result_edit.setFont(font)
+        indent = 8 + QFontMetrics(font).horizontalAdvance("> ")
+        self._result_edit.setViewportMargins(indent, 0, 0, 0)
         self._cmd_content.update()
 
     def _on_typing_finished(self):
