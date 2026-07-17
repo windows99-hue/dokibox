@@ -361,6 +361,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
     _cmd_panel._pending_result_text = actual_result
     if not cmd:
         _cmd_panel._on_typing_finished()
+        return
 
     loop = QEventLoop()
     _cmd_panel._current_loop = loop
