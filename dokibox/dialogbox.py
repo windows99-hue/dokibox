@@ -1604,17 +1604,16 @@ class _DialogBox(QWidget):
 
         painter.setFont(font)
         fm = QFontMetrics(font)
-        text_y = int(y + fm.ascent() - fm.height() // 2)
         max_w = self.w - self._pad_x * 2
 
         if self._overflow_mode == "wrap" and text:
-            self._draw_input_wrap(painter, x, text_y, text, font, fm, max_w)
+            self._draw_input_wrap(painter, x, y, text, font, fm, max_w)
         elif self._overflow_mode == "overflow" and text:
-            self._draw_input_overflow(painter, x, text_y, text, font, fm)
+            self._draw_input_overflow(painter, x, y, text, font, fm)
         else:
-            self._draw_input_simple(painter, x, text_y, text, font, fm, max_w)
+            self._draw_input_simple(painter, x, y, text, font, fm, max_w)
 
-    def _draw_input_wrap(self, painter, x, text_y, text, font, fm, max_w):
+    def _draw_input_wrap(self, painter, x, base_y, text, font, fm, max_w):
         segments = text.split('\n')
         lines = []
         positions = []
@@ -1628,7 +1627,6 @@ class _DialogBox(QWidget):
             raw_pos += 1
 
         line_h = self._line_h
-        base_y = text_y
         for li, line in enumerate(lines):
             self._draw_stroked(painter, x, base_y + li * line_h, line, font)
 
@@ -1636,14 +1634,13 @@ class _DialogBox(QWidget):
             cursor_line_idx, cursor_col_offset = _find_cursor_in_wrap(lines, positions, self._cursor_pos)
             cursor_x = x + fm.horizontalAdvance(lines[cursor_line_idx][:cursor_col_offset])
             cursor_h = fm.ascent() + fm.descent()
-            cur_y = base_y + cursor_line_idx * line_h - fm.ascent()
+            cur_y = int(base_y + cursor_line_idx * line_h - fm.height() // 2)
             painter.setPen(QPen(QColor("#CF80B5"), 2))
             painter.drawLine(int(cursor_x), cur_y, int(cursor_x), cur_y + cursor_h)
 
-    def _draw_input_overflow(self, painter, x, text_y, text, font, fm):
+    def _draw_input_overflow(self, painter, x, base_y, text, font, fm):
         raw_lines = text.split('\n')
         line_h = self._line_h
-        base_y = text_y
 
         cursor_line_idx, cursor_col_offset = _find_cursor_in_overflow(raw_lines, self._cursor_pos, text)
 
@@ -1653,11 +1650,11 @@ class _DialogBox(QWidget):
         if self._mode == "input" and self.hasFocus() and self._cursor_visible and self._cursor_pos >= 0:
             cursor_x = x + fm.horizontalAdvance(raw_lines[cursor_line_idx][:cursor_col_offset])
             cursor_h = fm.ascent() + fm.descent()
-            cur_y = base_y + cursor_line_idx * line_h - fm.ascent()
+            cur_y = int(base_y + cursor_line_idx * line_h - fm.height() // 2)
             painter.setPen(QPen(QColor("#CF80B5"), 2))
             painter.drawLine(int(cursor_x), cur_y, int(cursor_x), cur_y + cursor_h)
 
-    def _draw_input_simple(self, painter, x, text_y, text, font, fm, max_w):
+    def _draw_input_simple(self, painter, x, base_y, text, font, fm, max_w):
         if self._mode == "input" and self.hasFocus() and fm.horizontalAdvance(text) <= max_w:
             cursor_x = x + fm.horizontalAdvance(text[:self._cursor_pos])
         elif self._mode == "input" and self.hasFocus() and self._cursor_pos >= 0:
@@ -1668,7 +1665,7 @@ class _DialogBox(QWidget):
             cursor_x = x + cursor_rel - scroll
 
         if text:
-            self._draw_stroked(painter, x, text_y, text, font)
+            self._draw_stroked(painter, x, base_y, text, font)
 
         if self._mode == "input" and self.hasFocus() and self._cursor_visible and self._cursor_pos >= 0:
             if fm.horizontalAdvance(text) > max_w:
@@ -1678,7 +1675,7 @@ class _DialogBox(QWidget):
                 scroll = min(scroll, max(0, full_w - max_w))
                 cursor_x = x + cursor_rel - scroll
             cursor_h = fm.ascent() + fm.descent()
-            cursor_y = text_y - fm.ascent()
+            cursor_y = int(base_y - fm.height() // 2)
             painter.setPen(QPen(QColor("#CF80B5"), 2))
             painter.drawLine(int(cursor_x), cursor_y, int(cursor_x), cursor_y + cursor_h)
 
