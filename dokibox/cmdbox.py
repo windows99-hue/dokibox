@@ -49,14 +49,17 @@ def _wrap_text(text, fm, max_w):
     lines = []
     current = ""
     for ch in text:
+        if ch == '\n':
+            lines.append(current)
+            current = ""
+            continue
         test = current + ch
         if fm.horizontalAdvance(test) <= max_w:
             current = test
         else:
             lines.append(current)
             current = ch
-    if current:
-        lines.append(current)
+    lines.append(current)
     return lines if lines else [""]
 
 
