@@ -1,0 +1,3 @@
+import dokibox
+
+dokibox.cmdbox()

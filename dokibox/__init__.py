@@ -8,3 +8,4 @@ from dokibox.dialogbox import dialogbox, Avatar
 from dokibox.diaenterbox import diaenterbox
 from dokibox.garbled import garbled
 from dokibox.textbox import textbox
+from dokibox.cmdbox import cmdbox
