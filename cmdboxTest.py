@@ -1,9 +1,4 @@
-import sys
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer
 import dokibox
-
-app = QApplication(sys.argv)
 
 dokibox.cmdbox("print('hello world')", runcmd=True, language="python")
 dokibox.closecmdbox(1000)
