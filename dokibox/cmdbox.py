@@ -11,6 +11,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QPlainTextEdit,
 )
+from dokibox._base import _get_app, _get_dpi_scale
 
 BG_COLOR = "#888888"
 BG_ALPHA = 0.4
@@ -172,8 +173,7 @@ class _CmdContent(QWidget):
 class _CmdPanel(QWidget):
 
     def __init__(self, pinned=True):
-        import dokibox._base as _b
-        _b._get_app()
+        _get_app()
         super().__init__(None)
         self._pinned = pinned
         self._screen = self.screen()
@@ -361,7 +361,8 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
         _cmd_panel._result_edit.clear()
 
     ff = font_family or FONT_FAMILY
-    fs = font_size or FONT_SIZE
+    dpi_s = 1.0 / _get_dpi_scale()
+    fs = int((font_size or FONT_SIZE) * dpi_s)
     _cmd_panel._apply_font(ff, fs)
 
     _cmd_panel._cmd_content.set_text(cmd, chardelay)
