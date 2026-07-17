@@ -348,10 +348,18 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False):
     loop.exec()
 
 
-def closecmdbox():
-    """Close and destroy the cmdbox panel if it exists."""
+def closecmdbox(delay=0):
+    """Close and destroy the cmdbox panel if it exists.
+
+    Args:
+        delay: wait this many milliseconds before closing (default 0).
+    """
     global _cmd_panel
     if _cmd_panel is not None:
+        if delay > 0:
+            loop = QEventLoop()
+            QTimer.singleShot(delay, loop.quit)
+            loop.exec()
         panel = _cmd_panel
         _cmd_panel = None
         panel.hide()
