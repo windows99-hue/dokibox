@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QPlainTextEdit,
 )
 from dokibox._base import _get_app, _get_dpi_scale
-from dokibox._widgets import wrap_line_single
 
 BG_COLOR = "#888888"
 BG_ALPHA = 0.4
@@ -49,7 +48,21 @@ def _remove_window_shadow(hwnd):
 
 
 def _wrap_text(text, fm, max_w):
-    return wrap_line_single(text, fm, max_w) or [""]
+    lines = []
+    current = ""
+    for ch in text:
+        if ch == '\n':
+            lines.append(current)
+            current = ""
+            continue
+        test = current + ch
+        if fm.horizontalAdvance(test) <= max_w:
+            current = test
+        else:
+            lines.append(current)
+            current = ch
+    lines.append(current)
+    return lines if lines else [""]
 
 
 class _CmdContent(QWidget):
