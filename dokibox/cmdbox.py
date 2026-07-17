@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 BG_COLOR = "#888888"
+BG_ALPHA = 0.4
 TEXT_COLOR = "#ffffff"
 FONT_FAMILY = "Consolas"
 FONT_SIZE = 16
@@ -132,7 +133,6 @@ class _CmdContent(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(BG_COLOR))
         painter.setFont(self._font)
         painter.setPen(QColor(TEXT_COLOR))
 
@@ -182,8 +182,8 @@ class _CmdPanel(QWidget):
         if pinned:
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
+        self.setAttribute(Qt.WA_TranslucentBackground)
         self.setFocusPolicy(Qt.StrongFocus)
-        self.setWindowOpacity(0.4)
 
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
 
@@ -200,11 +200,13 @@ class _CmdPanel(QWidget):
         self._cmd_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._cmd_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._cmd_scroll.setFrameShape(QScrollArea.NoFrame)
+        self._cmd_scroll.viewport().setStyleSheet("background: transparent;")
+        self._cmd_scroll.viewport().setAutoFillBackground(False)
         self._cmd_scroll.setStyleSheet(
-            "QScrollArea { background: %s; border: none; }"
+            "QScrollArea { background: transparent; border: none; }"
             "QScrollBar:vertical { background: #555; width: 6px; }"
             "QScrollBar::handle:vertical { background: #aaa; min-height: 16px; }"
-            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }" % BG_COLOR
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         )
 
         self._result_edit = QPlainTextEdit()
@@ -212,10 +214,10 @@ class _CmdPanel(QWidget):
         self._result_edit.setFrameStyle(0)
         self._result_edit.setFont(self._font)
         self._result_edit.setStyleSheet(
-            "QPlainTextEdit { background: %s; color: %s; border: none; padding: 6px 10px; }"
+            "QPlainTextEdit { background: transparent; color: %s; border: none; padding: 6px 10px; }"
             "QScrollBar:vertical { background: #555; width: 6px; }"
             "QScrollBar::handle:vertical { background: #aaa; min-height: 16px; }"
-            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }" % (BG_COLOR, TEXT_COLOR)
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }" % TEXT_COLOR
         )
         self._result_edit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._result_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -248,6 +250,12 @@ class _CmdPanel(QWidget):
             )
         except Exception:
             pass
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        r, g, b = 136, 136, 136
+        painter.fillRect(self.rect(), QColor(r, g, b, int(255 * BG_ALPHA)))
+        painter.end()
 
     def _on_typing_finished(self):
         if self._pending_result_text:

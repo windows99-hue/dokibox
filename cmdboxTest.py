@@ -6,11 +6,10 @@ import dokibox
 app = QApplication(sys.argv)
 
 dokibox.cmdbox("print('hello world')", runcmd=True, language="python")
+dokibox.dialogbox("Hello, world!",fdst=True)
 dokibox.cmdbox("x = 1 + 2 + 3\nprint('result:', x)", runcmd=True, language="python")
 dokibox.cmdbox("echo hello from cmd", runcmd=True, language="cmd")
 
 dokibox.dialogbox("看到了吗")
 dokibox.closecmdbox()
 dokibox.dialogbox("算算数真好玩嘿嘿")
-# QTimer.singleShot(10000, app.quit)
-# sys.exit(app.exec())
