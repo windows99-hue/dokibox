@@ -49,6 +49,10 @@ class DdlcBlockTest(QWidget):
         self.test_textbox_btn = QPushButton("测试 textbox", self)
         self.test_textbox_btn.clicked.connect(self.test_textbox)
         button_layout.addWidget(self.test_textbox_btn)
+
+        self.test_cmdbox_btn = QPushButton("测试 cmdbox (Monika用代码)", self)
+        self.test_cmdbox_btn.clicked.connect(self.test_cmdbox)
+        button_layout.addWidget(self.test_cmdbox_btn)
         
         main_layout.addLayout(button_layout)
         
@@ -326,7 +330,51 @@ class DdlcBlockTest(QWidget):
         except Exception as e:
             self.label.setText(f"❌ textbox测试出错: {str(e)}")
 
+    def test_cmdbox(self):
+        self.label.setText("开始测试 cmdbox (Monika写代码)...")
+        QTimer.singleShot(0, self._test_cmdbox_scene)
+
+    def _test_cmdbox_scene(self):
+        try:
+            self.label.setText("Monika 正在写代码...")
+
+            dokibox.dialogbox("让我来展示一下我的编程能力~", name=self.monika,
+                            sprites=[self.monika("center", "normal")])
+
+            dokibox.cmdbox("import os\nprint('当前目录:', os.getcwd())",
+                           runcmd=True, language="python")
+
+            dokibox.dialogbox("看，我能查看当前目录!", name=self.monika,
+                            sprites=[self.monika("center", "happy")])
+
+            dokibox.cmdbox("print('1 + 2 + 3 =', 1 + 2 + 3)\nprint('Hello from Monika!')",
+                           runcmd=True, language="python")
+
+            dokibox.dialogbox("我还会算数~", name=self.monika,
+                            sprites=[self.monika("center", "happy2")])
+
+            dokibox.cmdbox("echo Monika says hello from cmd!",
+                           runcmd=True, language="cmd")
+
+            dokibox.dialogbox("甚至连cmd命令我也能用!", name=self.monika,
+                            sprites=[self.monika("center", "normal")])
+
+            dokibox.cmdbox("print('你看，我可以\\n换行输出\\n多行内容!')",
+                           runcmd=True, language="python")
+
+            dokibox.dialogbox("代码就展示到这里吧~好玩吗？", name=self.monika,
+                            sprites=[self.monika("center", "happy")], fdst=True)
+
+            dokibox.closecmdbox()
+
+            self.label.setText("✅ cmdbox 测试完成")
+
+        except Exception as e:
+            self.label.setText(f"❌ cmdbox 测试出错: {str(e)}")
+
     def clear_status(self):
+        self.label.setText("状态已清空，准备进行新的测试")
+        self.label_status.setText("检测中...")
         self.label.setText("状态已清空，准备进行新的测试")
         self.label_status.setText("检测中...")
 
