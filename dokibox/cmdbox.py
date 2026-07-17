@@ -4,7 +4,7 @@ import sys
 import ctypes
 import subprocess
 import io
-from PySide6.QtCore import Qt, QTimer, QSize, Signal
+from PySide6.QtCore import Qt, QTimer, QSize, Signal, QEvent
 from PySide6.QtGui import (
     QPainter, QColor, QPen, QFont, QFontMetrics, QTextOption, QTextCursor,
 )
@@ -183,6 +183,7 @@ class _CmdPanel(QWidget):
         if pinned:
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
+        self.setFocusPolicy(Qt.StrongFocus)
         self.setWindowOpacity(0.4)
 
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
@@ -202,6 +203,7 @@ class _CmdPanel(QWidget):
         self._cmd_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._cmd_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._cmd_scroll.setFrameShape(QScrollArea.NoFrame)
+        self._cmd_scroll.viewport().installEventFilter(self)
         self._cmd_scroll.setStyleSheet(
             "QScrollArea { background: %s; border: none; }"
             "QScrollBar:vertical { background: #555; width: 6px; }"
@@ -223,6 +225,7 @@ class _CmdPanel(QWidget):
         self._result_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._result_edit.setWordWrapMode(QTextOption.WrapMode.WordWrap)
         self._result_edit.document().setDocumentMargin(0)
+        self._result_edit.installEventFilter(self)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -255,11 +258,19 @@ class _CmdPanel(QWidget):
         if event.key() == Qt.Key_Escape:
             self._done()
 
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.KeyPress and event.key() == Qt.Key_Escape:
+            self._done()
+            return True
+        return super().eventFilter(obj, event)
+
     def _done(self):
         self.hide()
         self.deleteLater()
         import dokibox.cmdbox as _m
         _m._cmd_panel = None
+        from PySide6.QtWidgets import QApplication
+        QApplication.instance().quit()
 
     def _on_typing_finished(self):
         if self._pending_result_text:
@@ -303,6 +314,9 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", append=True):
     if _cmd_panel is None:
         _cmd_panel = _CmdPanel()
         _cmd_panel.show()
+        _cmd_panel.raise_()
+        _cmd_panel.activateWindow()
+        _cmd_panel.setFocus()
 
     actual_result = result
     if runcmd and cmd:
