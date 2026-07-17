@@ -192,6 +192,8 @@ class _CmdPanel(QWidget):
 
         self._pending_result_text = ""
         self._pending_result_append = True
+        self._queue = []
+        self._busy = False
 
         self._cmd_content = _CmdContent()
         self._cmd_content.set_panel(self)
@@ -280,15 +282,24 @@ class _CmdPanel(QWidget):
                 self._result_edit.setPlainText(self._pending_result_text)
             self._pending_result_text = ""
             self._scroll_result_to_bottom()
+        self._process_queue()
 
-    def set_cmd(self, text: str):
-        self._cmd_content.set_text(text)
+    def _process_queue(self):
+        if self._queue:
+            cmd_text, result_text, append = self._queue.pop(0)
+            self._busy = True
+            self._cmd_content.set_text(cmd_text)
+            self._pending_result_text = result_text
+            self._pending_result_append = append
+            if not cmd_text:
+                self._on_typing_finished()
+        else:
+            self._busy = False
 
-    def _set_pending_result(self, text: str, append: bool):
-        self._pending_result_text = text
-        self._pending_result_append = append
-        if not self._cmd_content._full_text:
-            self._on_typing_finished()
+    def _enqueue(self, cmd_text, result_text, append):
+        self._queue.append((cmd_text, result_text, append))
+        if not self._busy:
+            self._process_queue()
 
     def _scroll_result_to_bottom(self):
         cursor = self._result_edit.textCursor()
@@ -348,5 +359,4 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", append=True):
         except Exception as e:
             actual_result = str(e)
 
-    _cmd_panel.set_cmd(cmd)
-    _cmd_panel._set_pending_result(actual_result, append)
+    _cmd_panel._enqueue(cmd, actual_result, append)
