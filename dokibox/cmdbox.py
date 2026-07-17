@@ -189,7 +189,7 @@ class _CmdPanel(QWidget):
 
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
 
-        self._pending_result_text = ""
+        self._pending_result = ""
         self._current_loop = None
 
         self._cmd_content = _CmdContent()
@@ -270,10 +270,16 @@ class _CmdPanel(QWidget):
         self._cmd_content.update()
 
     def _on_typing_finished(self):
-        if self._pending_result_text:
-            self._append_zero_spaced(self._pending_result_text)
-            self._pending_result_text = ""
+        pending = self._pending_result
+        if callable(pending):
+            try:
+                pending = pending()
+            except Exception as e:
+                pending = str(e)
+        if pending:
+            self._append_zero_spaced(pending)
             self._scroll_result_to_bottom()
+        self._pending_result = ""
         if self._current_loop and self._current_loop.isRunning():
             self._current_loop.quit()
 
@@ -305,7 +311,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
 
     Parameters:
         cmd:         command string to display (typewriter animation).
-        result:      pre-set result text (used as-is unless runcmd=True).
+        result:      result text or callable (if callable, invoked after typing).
         runcmd:      if True, actually execute cmd and use real output as result.
         language:    "python" / "cmd" / "powershell" -- what to run cmd as.
         clear:       if True, clear all previous results before showing.
@@ -358,7 +364,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
     _cmd_panel._apply_font(ff, fs)
 
     _cmd_panel._cmd_content.set_text(cmd)
-    _cmd_panel._pending_result_text = actual_result
+    _cmd_panel._pending_result = actual_result
     if not cmd:
         _cmd_panel._on_typing_finished()
         return
