@@ -4,9 +4,9 @@ import sys
 import ctypes
 import subprocess
 import io
-from PySide6.QtCore import Qt, QTimer, QSize
+from PySide6.QtCore import Qt, QTimer, QSize, Signal
 from PySide6.QtGui import (
-    QPainter, QColor, QPen, QFont, QFontMetrics, QTextOption,
+    QPainter, QColor, QPen, QFont, QFontMetrics, QTextOption, QTextCursor,
 )
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QPlainTextEdit,
@@ -18,6 +18,7 @@ FONT_FAMILY = "Consolas"
 FONT_SIZE = 16
 
 WIDTH_RATIO = 2.7
+HEIGHT_RATIO = 3.5
 
 DWMWA_BORDER_COLOR = 34
 DWMWA_SHADOW_OPACITY = 33
@@ -61,6 +62,8 @@ def _wrap_text(text, fm, max_w):
 
 class _CmdContent(QWidget):
 
+    typing_finished = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._panel = None
@@ -85,7 +88,7 @@ class _CmdContent(QWidget):
         self._full_text = text
         self._visible_count = 0
         if text:
-            self._typing_timer.start(25)
+            self._typing_timer.start(50)
         else:
             self._typing_timer.stop()
         self._update_geometry()
@@ -97,6 +100,7 @@ class _CmdContent(QWidget):
             self.update()
         else:
             self._typing_timer.stop()
+            self.typing_finished.emit()
 
     def _toggle_cursor(self):
         self._cursor_visible = not self._cursor_visible
@@ -126,8 +130,6 @@ class _CmdContent(QWidget):
 
     def _update_geometry(self):
         self.updateGeometry()
-        if self._panel:
-            self._panel._resize_window()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -187,8 +189,12 @@ class _CmdPanel(QWidget):
         self._fm = QFontMetrics(self._font)
         self._line_h = self._fm.lineSpacing()
 
+        self._pending_result_text = ""
+        self._pending_result_append = True
+
         self._cmd_content = _CmdContent()
         self._cmd_content.set_panel(self)
+        self._cmd_content.typing_finished.connect(self._on_typing_finished)
 
         self._cmd_scroll = QScrollArea()
         self._cmd_scroll.setWidget(self._cmd_content)
@@ -225,7 +231,9 @@ class _CmdPanel(QWidget):
         layout.addWidget(self._result_edit, 2)
 
         panel_w = int(self._screen_w / WIDTH_RATIO)
-        self.setGeometry(0, 0, panel_w, 100)
+        panel_h = int(self._screen_h / HEIGHT_RATIO)
+        self.setGeometry(0, 0, panel_w, panel_h)
+        self.setFixedSize(panel_w, panel_h)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -242,7 +250,6 @@ class _CmdPanel(QWidget):
             )
         except Exception:
             pass
-        self._resize_window()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -254,37 +261,29 @@ class _CmdPanel(QWidget):
         import dokibox.cmdbox as _m
         _m._cmd_panel = None
 
+    def _on_typing_finished(self):
+        if self._pending_result_text:
+            if self._pending_result_append:
+                self._result_edit.appendPlainText(self._pending_result_text)
+            else:
+                self._result_edit.setPlainText(self._pending_result_text)
+            self._pending_result_text = ""
+            self._scroll_result_to_bottom()
+
     def set_cmd(self, text: str):
         self._cmd_content.set_text(text)
 
-    def set_result(self, text: str):
-        self._result_edit.setPlainText(text)
-        self._resize_window()
+    def _set_pending_result(self, text: str, append: bool):
+        self._pending_result_text = text
+        self._pending_result_append = append
+        if not self._cmd_content._full_text:
+            self._on_typing_finished()
 
-    def append_result(self, text: str):
-        if text:
-            self._result_edit.appendPlainText(text)
-        self._resize_window()
-
-    def _resize_window(self):
-        panel_w = int(self._screen_w / WIDTH_RATIO)
-        max_cmd_h = int(self._screen_h / 3)
-        max_result_h = int(self._screen_h * 2 / 3)
-
-        cmd_lines = self._cmd_content._line_count()
-
-        result_lines = 0
-        result_max_w = panel_w - 20
-        raw_lines = self._result_edit.toPlainText().split('\n')
-        for line in raw_lines:
-            result_lines += max(len(_wrap_text(line, self._fm, result_max_w)), 1)
-        result_lines = max(result_lines, 1)
-
-        cmd_h = min(cmd_lines * self._line_h + 20, max_cmd_h)
-        result_h = min(result_lines * self._line_h + 20, max_result_h)
-        total_h = max(cmd_h + result_h, 80)
-
-        self.resize(panel_w, total_h)
+    def _scroll_result_to_bottom(self):
+        cursor = self._result_edit.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        self._result_edit.setTextCursor(cursor)
+        self._result_edit.ensureCursorVisible()
 
 
 _cmd_panel = None
@@ -336,8 +335,4 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", append=True):
             actual_result = str(e)
 
     _cmd_panel.set_cmd(cmd)
-
-    if append:
-        _cmd_panel.append_result(actual_result)
-    else:
-        _cmd_panel.set_result(actual_result)
+    _cmd_panel._set_pending_result(actual_result, append)
