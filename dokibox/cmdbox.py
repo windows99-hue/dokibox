@@ -84,11 +84,11 @@ class _CmdContent(QWidget):
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
         self._fm = QFontMetrics(self._font)
 
-    def set_text(self, text: str):
+    def set_text(self, text: str, chardelay=50):
         self._full_text = text
         self._visible_count = 0
         if text:
-            self._typing_timer.start(50)
+            self._typing_timer.start(chardelay)
         else:
             self._typing_timer.stop()
         self._update_geometry()
@@ -306,7 +306,7 @@ _cmd_panel = None
 
 
 def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
-           font_family=None, font_size=None):
+           font_family=None, font_size=None, chardelay=50):
     """Show a gray semi-transparent command panel at top-left corner.
 
     Parameters:
@@ -317,6 +317,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
         clear:       if True, clear all previous results before showing.
         font_family: font family name (default Consolas).
         font_size:   font size in points (default 16).
+        chardelay:   delay in ms between each character in typewriter (default 50).
     """
     global _cmd_panel
     if _cmd_panel is None:
@@ -363,7 +364,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
     fs = font_size or FONT_SIZE
     _cmd_panel._apply_font(ff, fs)
 
-    _cmd_panel._cmd_content.set_text(cmd)
+    _cmd_panel._cmd_content.set_text(cmd, chardelay)
     _cmd_panel._pending_result = actual_result
     if not cmd:
         _cmd_panel._on_typing_finished()
