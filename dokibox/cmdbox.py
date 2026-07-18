@@ -13,8 +13,8 @@ from PySide6.QtWidgets import (
 )
 from dokibox._base import _get_app, _get_dpi_scale
 
-BG_COLOR = "#888888"
-BG_ALPHA = 0.4
+BG_COLOR = "#333333"
+BG_ALPHA = 0.75
 TEXT_COLOR = "#ffffff"
 FONT_FAMILY = "Consolas"
 FONT_SIZE = 20
@@ -252,8 +252,9 @@ class _CmdPanel(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        r, g, b = 136, 136, 136
-        painter.fillRect(self.rect(), QColor(r, g, b, int(255 * BG_ALPHA)))
+        color = QColor(BG_COLOR)
+        color.setAlpha(int(255 * BG_ALPHA))
+        painter.fillRect(self.rect(), color)
         painter.end()
 
     def _apply_font(self, family, size):
