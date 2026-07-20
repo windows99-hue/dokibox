@@ -242,8 +242,8 @@ class Avatar:
         return _SpriteSlot(self, position, images, animation=animation,
                            width=width, height=height, allow_cover=sprite_allow_cover)
 
-    def hide(self):
-        return _HideSlot(self)
+    def hide(self, animation="fade"):
+        return _HideSlot(self, animation)
 
 
 class _SpriteSlot:
@@ -263,10 +263,11 @@ class _SpriteSlot:
 
 class _HideSlot:
     """Internal: mark an avatar as leaving the stage."""
-    __slots__ = ("avatar",)
+    __slots__ = ("avatar", "animation")
 
-    def __init__(self, avatar):
+    def __init__(self, avatar, animation="fade"):
         self.avatar = avatar
+        self.animation = animation
 
 
 def _composite_sprite_pixmaps(images):
@@ -302,6 +303,7 @@ def _process_sprites(sprites, avatar=None):
         'sprite_animation_map': [],
         'sprite_allow_cover_list': [],
         'speaker_idx': None,
+        'avatar_hide_animations': {},
     }
     if sprites is None:
         return result
@@ -313,6 +315,7 @@ def _process_sprites(sprites, avatar=None):
     for chunk in sprites:
         if isinstance(chunk, _HideSlot):
             is_new_api = True
+            result['avatar_hide_animations'][chunk.avatar] = chunk.animation
             continue
         elif isinstance(chunk, _SpriteSlot):
             is_new_api = True
@@ -572,12 +575,17 @@ class _SpriteWindow(QWidget):
         painter.drawPixmap(sx, sy, scaled)
         painter.end()
 
-    def destroy_sprite(self):
+    def destroy_sprite(self, animation="fade"):
         try:
             self._stop_animation()
             self._stop_fade()
             self._stop_offset_anim()
-            self._fade_out_and_destroy()
+            if animation == "rleft":
+                self._slide_out_right_and_destroy()
+            elif animation == "lleft":
+                self._slide_out_left_and_destroy()
+            else:
+                self._fade_out_and_destroy()
         except Exception:
             pass
 
@@ -600,6 +608,70 @@ class _SpriteWindow(QWidget):
             progress = tick[0] / max(num_ticks - 1, 1)
             t = easing.valueForProgress(min(progress, 1.0))
             self._opacity_val = start_opacity * (1.0 - t)
+            self.repaint()
+            tick[0] += 1
+            if tick[0] >= num_ticks:
+                self._opacity_val = 0.0
+                self.repaint()
+                timer.stop()
+                timer.deleteLater()
+                self.hide()
+                self.deleteLater()
+
+        timer.timeout.connect(on_tick)
+        timer.start()
+
+    def _slide_out_right_and_destroy(self):
+        num_ticks = 35
+        easing = QEasingCurve(QEasingCurve.InCubic)
+        start_geom = self.geometry()
+        start_opacity = self._opacity_val
+        tick = [0]
+
+        screen = QApplication.primaryScreen()
+        sw = screen.size().width()
+        target_x = sw + start_geom.width()
+
+        timer = QTimer(self)
+        timer.setInterval(10)
+
+        def on_tick():
+            progress = tick[0] / max(num_ticks - 1, 1)
+            t = easing.valueForProgress(min(progress, 1.0))
+            self._opacity_val = start_opacity * (1.0 - t)
+            new_x = int(start_geom.x() + (target_x - start_geom.x()) * t)
+            self.move(new_x, start_geom.y())
+            self.repaint()
+            tick[0] += 1
+            if tick[0] >= num_ticks:
+                self._opacity_val = 0.0
+                self.repaint()
+                timer.stop()
+                timer.deleteLater()
+                self.hide()
+                self.deleteLater()
+
+        timer.timeout.connect(on_tick)
+        timer.start()
+
+    def _slide_out_left_and_destroy(self):
+        num_ticks = 35
+        easing = QEasingCurve(QEasingCurve.InCubic)
+        start_geom = self.geometry()
+        start_opacity = self._opacity_val
+        tick = [0]
+
+        target_x = -start_geom.width()
+
+        timer = QTimer(self)
+        timer.setInterval(10)
+
+        def on_tick():
+            progress = tick[0] / max(num_ticks - 1, 1)
+            t = easing.valueForProgress(min(progress, 1.0))
+            self._opacity_val = start_opacity * (1.0 - t)
+            new_x = int(start_geom.x() + (target_x - start_geom.x()) * t)
+            self.move(new_x, start_geom.y())
             self.repaint()
             tick[0] += 1
             if tick[0] >= num_ticks:
@@ -706,6 +778,7 @@ class _DialogBox(QWidget):
         self._sprites = []
         self._sprite_allow_cover = sprite_allow_cover
         self._sprite_allow_cover_list = sprite_allow_cover_list
+        self._avatar_hide_animations = {}
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size or 20
 
@@ -906,7 +979,9 @@ class _DialogBox(QWidget):
 
         for old_i, sw in enumerate(self._sprites):
             if old_i not in used_old_indices:
-                sw.destroy_sprite()
+                av = getattr(sw, '_avatar', None)
+                animation = self._avatar_hide_animations.get(av, "fade") if av is not None else "fade"
+                sw.destroy_sprite(animation)
 
         self._sprites = new_sprites
 
@@ -951,7 +1026,9 @@ class _DialogBox(QWidget):
             self._sprites.append(sw)
 
         for i in range(new_count, old_count):
-            self._sprites[i].destroy_sprite()
+            av = getattr(self._sprites[i], '_avatar', None)
+            animation = self._avatar_hide_animations.get(av, "fade") if av is not None else "fade"
+            self._sprites[i].destroy_sprite(animation)
         self._sprites = self._sprites[:new_count]
 
     def _update_sprites_state_only(self, speaker_idx):
@@ -960,7 +1037,9 @@ class _DialogBox(QWidget):
 
     def _destroy_sprites(self):
         for sw in self._sprites:
-            sw.destroy_sprite()
+            av = getattr(sw, '_avatar', None)
+            animation = self._avatar_hide_animations.get(av, "fade") if av is not None else "fade"
+            sw.destroy_sprite(animation)
         self._sprites = []
 
     def closeEvent(self, event):
@@ -982,7 +1061,7 @@ class _DialogBox(QWidget):
                         font_family=None, font_size=None, transparent=None, glare=None,
                         sprites=None, sprite_pos=None, speaker_idx=None,
                         avatar_sprite_map=None, sprite_allow_cover=None,
-                        sprite_allow_cover_list=None,
+                        sprite_allow_cover_list=None, avatar_hide_animations=None,
                          mode=None, default=None, max_length=None, allow_empty=None):
         if self._after_timer:
             try:
@@ -1014,7 +1093,8 @@ class _DialogBox(QWidget):
             self._blink_timer.start(530)
             self._recalc_input_geometry()
 
-        self._refresh_sprites(sprites, sprite_pos, speaker_idx, avatar_sprite_map)
+        self._refresh_sprites(sprites, sprite_pos, speaker_idx, avatar_sprite_map,
+                               avatar_hide_animations)
 
         self.show()
         self.raise_()
@@ -1116,7 +1196,10 @@ class _DialogBox(QWidget):
         self.setGeometry(x, win_y, self._canvas_w, self._cv_h)
         self.setFixedSize(self._canvas_w, self._cv_h)
 
-    def _refresh_sprites(self, sprites, sprite_pos, speaker_idx, avatar_sprite_map):
+    def _refresh_sprites(self, sprites, sprite_pos, speaker_idx, avatar_sprite_map,
+                          avatar_hide_animations=None):
+        if avatar_hide_animations is not None:
+            self._avatar_hide_animations = avatar_hide_animations
         if sprites is not None:
             self._update_sprites(sprites, sprite_pos, speaker_idx, avatar_map=avatar_sprite_map)
             QApplication.processEvents()
@@ -1902,6 +1985,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                                      avatar_sprite_map=sprite_data['avatar_sprite_map'],
                                      sprite_allow_cover=sprite_data.get('sprite_allow_cover', False),
                                      sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
+                                     avatar_hide_animations=sprite_data.get('avatar_hide_animations', {}),
                                      mode="dialog")
             else:
                 _destroy_box()
