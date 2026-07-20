@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """dokibox.historybox -- history display window with dotted background"""
+import math
+import ctypes
 from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
 from PySide6.QtGui import QPainter, QColor, QBrush
 from PySide6.QtWidgets import QWidget
@@ -20,6 +22,8 @@ class _HistoryBox(QWidget):
         super().__init__(None)
         self.result = None
         self._data = data
+
+        ctypes.windll.winmm.timeBeginPeriod(1)
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
@@ -45,7 +49,7 @@ class _HistoryBox(QWidget):
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
-        self._timer.start(33)
+        self._timer.start(16)
 
     def _grid_params(self):
         h = self.height()
@@ -73,15 +77,15 @@ class _HistoryBox(QWidget):
         dr, step_x, row_h = self._grid_params()
         m = dr * 3
 
-        first_row = int((self._offset_y - dr - m) / row_h) - 1
-        last_row = int((self._offset_y + h + m - dr) / row_h) + 1
+        first_row = math.floor((self._offset_y - dr - m) / row_h)
+        last_row = math.ceil((self._offset_y + h + m - dr) / row_h)
 
         for r in range(first_row, last_row + 1):
             row_offset = step_x // 2 if r % 2 == 1 else 0
             y = dr + r * row_h - self._offset_y
 
-            first_col = int((self._offset_x - dr - row_offset - m) / step_x) - 1
-            last_col = int((self._offset_x + w + m - dr - row_offset) / step_x) + 1
+            first_col = math.floor((self._offset_x - dr - row_offset - m) / step_x)
+            last_col = math.ceil((self._offset_x + w + m - dr - row_offset) / step_x)
 
             for c in range(first_col, last_col + 1):
                 x = dr + row_offset + c * step_x - self._offset_x
