@@ -3,6 +3,7 @@
 import math
 import sys
 import ctypes
+import locale
 from typing import Optional, Union, List
 from PySide6.QtCore import (
     Qt, QTimer, QEventLoop, QRectF, QPointF, Signal,
@@ -37,9 +38,36 @@ SPRITE_SILENT_OPACITY = 1.0
 SPRITE_ANIM_DURATION = 220
 SPRITE_FADE_DURATION = 180
 
-MENU_ITEMS = ["历史", "快进", "自动", "保存", "加载", "设置"]
 MENU_COLOR = QColor("#59242C")
 MENU_HOVER_COLOR = QColor("#ffffff")
+
+_MENU_I18N = {
+    "zh": ["历史", "快进", "自动", "保存", "加载", "设置"],
+    "ja": ["履歴", "スキップ", "自動", "セーブ", "ロード", "設定"],
+    "en": ["History", "Skip", "Auto", "Save", "Load", "Settings"],
+}
+
+
+def _detect_lang():
+    try:
+        if sys.platform == "win32":
+            lid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            lang = {0x0804: "zh", 0x0404: "zh", 0x0C04: "zh", 0x0411: "ja"}.get(lid)
+            if lang:
+                return lang
+        loc = locale.getdefaultlocale()
+        if loc and loc[0]:
+            lc = loc[0].lower()
+            if lc.startswith("zh"):
+                return "zh"
+            if lc.startswith("ja"):
+                return "ja"
+    except Exception:
+        pass
+    return "en"
+
+
+MENU_LABELS = _MENU_I18N.get(_detect_lang(), _MENU_I18N["en"])
 
 
 def _hex_to_rgb(h):
@@ -915,7 +943,7 @@ class _DialogBox(QWidget):
         font = QFont(self._font_family, self._menu_fs, QFont.Bold)
         fm = QFontMetrics(font)
         total_w = self.w - self._pad_x * 2
-        items = MENU_ITEMS
+        items = MENU_LABELS
         item_widths = [fm.horizontalAdvance(it) for it in items]
         total_text_w = sum(item_widths)
         n = len(items)
@@ -1574,7 +1602,7 @@ class _DialogBox(QWidget):
             return
         font = QFont(self._font_family, self._body_fs, QFont.Bold)
         painter.setFont(font)
-        for i, item in enumerate(MENU_ITEMS):
+        for i, item in enumerate(MENU_LABELS):
             if i == self._menu_hover_idx:
                 painter.setPen(MENU_HOVER_COLOR)
             else:
