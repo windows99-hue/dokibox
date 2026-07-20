@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""dokibox.historybox -- history display window with dotted background"""
+"""dokibox.historybox -- history display window , style like DDLC Menu"""
 import math
 import sys
 import ctypes
@@ -391,6 +391,24 @@ class _HistoryBox(QWidget):
 
 
 def historybox(data="", pinned=True):
+    """DDLC-menu-style history viewer showing past dialog records.
+
+    Args:
+        data:   history records. Can be:
+                - empty str (default): reads from internal dialogbox history.
+                - str: treated as a single message with no speaker name.
+                - list of (name, msg) tuples or dicts with "name"/"msg" keys.
+        pinned: keep the window always on top (default True).
+
+    Returns:
+        None
+
+    Usage:
+        import dokibox
+        dokibox.historybox()                       # show all dialog history
+        dokibox.historybox("Hello world!")          # single plain message
+        dokibox.historybox([("Alice", "Hi"), ("Bob", "Hey")])  # custom records
+    """
     if not data:
         from dokibox.dialogbox import _history
         records = list(_history)

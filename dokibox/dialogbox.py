@@ -2283,6 +2283,20 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         glare:         draw a white semicircular highlight at the bottom of the dialog (default True).
         sprites:       list of Avatar calls specifying character and position.
         sprite_allow_cover: If True, allow sprites at the same position to overlap (default False).
+        savecall:      callback for the "Save" menu button. Overrides the global
+                       ``dokibox.dialogbox.save`` if set. When None and no global
+                       is set, the button appears disabled (#AA646F).
+        loadcall:      callback for the "Load" menu button. Same priority rules
+                       as savecall.
+        settingscall:  callback for the "Settings" menu button. Same priority
+                       rules as savecall.
+
+    Global callbacks::
+        dokibox.dialogbox.save = my_save_func
+        dokibox.dialogbox.load = my_load_func
+        dokibox.dialogbox.settings = my_settings_func
+        These are fallbacks when savecall / loadcall / settingscall are not
+        provided. If neither is set, the corresponding menu button is disabled.
 
     Usage:
         sayori = Avatar(name="Sayori", emotes={"happy": ["sayori_happy.png"]})
