@@ -40,6 +40,7 @@ SPRITE_FADE_DURATION = 180
 
 MENU_COLOR = QColor("#59242C")
 MENU_HOVER_COLOR = QColor("#ffffff")
+MENU_DISABLED_COLOR = QColor("#AA646F")
 
 _MENU_I18N = {
     "zh": ["历史", "快进", "自动", "保存", "加载", "设置"],
@@ -884,7 +885,8 @@ class _DialogBox(QWidget):
                  font_family=None, font_size=None, transparent=True, glare=True,
                  sprites=None, sprite_pos=None, speaker_idx=None,
                  sprite_allow_cover=False, sprite_allow_cover_list=None,
-                 mode="dialog", default="", max_length=None, allow_empty=False):
+                 mode="dialog", default="", max_length=None, allow_empty=False,
+                 savecall=None, loadcall=None, settingscall=None):
         global _box
 
         if overflow_mode not in ("wrap", "overflow"):
@@ -917,6 +919,9 @@ class _DialogBox(QWidget):
         self._sprite_allow_cover = sprite_allow_cover
         self._sprite_allow_cover_list = sprite_allow_cover_list
         self._avatar_hide_animations = {}
+        self._savecall = savecall
+        self._loadcall = loadcall
+        self._settingscall = settingscall
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size or 20
 
@@ -1232,7 +1237,8 @@ class _DialogBox(QWidget):
                         sprites=None, sprite_pos=None, speaker_idx=None,
                         avatar_sprite_map=None, sprite_allow_cover=None,
                         sprite_allow_cover_list=None, avatar_hide_animations=None,
-                          mode=None, default=None, max_length=None, allow_empty=None):
+                          mode=None, default=None, max_length=None, allow_empty=None,
+                          savecall=None, loadcall=None, settingscall=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -1241,6 +1247,13 @@ class _DialogBox(QWidget):
             self._after_timer.deleteLater()
             self._after_timer = None
         self._stop_auto_advance()
+
+        if savecall is not None:
+            self._savecall = savecall
+        if loadcall is not None:
+            self._loadcall = loadcall
+        if settingscall is not None:
+            self._settingscall = settingscall
 
         self._apply_content_params(mode, overflow_mode, typewriter, chardelay, bold,
                                     transparent, glare, sprite_allow_cover, sprite_allow_cover_list,
@@ -1637,7 +1650,9 @@ class _DialogBox(QWidget):
         font = QFont(self._font_family, self._body_fs, QFont.Bold)
         painter.setFont(font)
         for i, item in enumerate(MENU_LABELS):
-            if i == self._menu_hover_idx or (i == 1 and self._skip_mode) or (i == 2 and self._auto_mode):
+            if not self._is_menu_enabled(i):
+                painter.setPen(MENU_DISABLED_COLOR)
+            elif i == self._menu_hover_idx or (i == 1 and self._skip_mode) or (i == 2 and self._auto_mode):
                 painter.setPen(MENU_HOVER_COLOR)
             else:
                 painter.setPen(MENU_COLOR)
@@ -1754,6 +1769,18 @@ class _DialogBox(QWidget):
                     self._stop_auto_advance()
                 self.update()
                 return
+            if hit_idx == 3:
+                if self._savecall is not None:
+                    _call_menu_callback(self._savecall)
+                return
+            if hit_idx == 4:
+                if self._loadcall is not None:
+                    _call_menu_callback(self._loadcall)
+                return
+            if hit_idx == 5:
+                if self._settingscall is not None:
+                    _call_menu_callback(self._settingscall)
+                return
             if hit_idx != -1:
                 return
             self._stop_auto_advance()
@@ -1764,6 +1791,8 @@ class _DialogBox(QWidget):
 
     def mouseMoveEvent(self, event):
         new_idx = self._menu_hit_index(event.position())
+        if new_idx != -1 and not self._is_menu_enabled(new_idx):
+            new_idx = -1
         if new_idx != self._menu_hover_idx:
             self._menu_hover_idx = new_idx
             self.update()
@@ -1788,6 +1817,15 @@ class _DialogBox(QWidget):
 
     def _menu_hit_test(self, pos):
         return self._menu_hit_index(pos) != -1
+
+    def _is_menu_enabled(self, idx):
+        if idx == 3:
+            return self._savecall is not None
+        if idx == 4:
+            return self._loadcall is not None
+        if idx == 5:
+            return self._settingscall is not None
+        return True
 
     def keyPressEvent(self, event):
         if self._mode == "input":
@@ -2083,6 +2121,14 @@ class _DialogBox(QWidget):
         return QRectF(cursor_x, y, 2, fm.height())
 
 
+def _call_menu_callback(callback):
+    global _box
+    saved_box = _box
+    _box = None
+    try:
+        callback()
+    finally:
+        _box = saved_box
 
 
 def _iter_avatar_sprites(sprites):
@@ -2215,7 +2261,8 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
               font_family: str = None, font_size: int = None,
               transparent: bool = True, glare: bool = True,
               sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
-              sprite_allow_cover: bool = False) -> None:
+              sprite_allow_cover: bool = False,
+              savecall=None, loadcall=None, settingscall=None) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
     Args:
@@ -2246,6 +2293,9 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
     global _box
 
     _get_app()
+    effective_save = savecall if savecall is not None else dialogbox.save
+    effective_load = loadcall if loadcall is not None else dialogbox.load
+    effective_settings = settingscall if settingscall is not None else dialogbox.settings
     sw = QApplication.primaryScreen().size().width()
     if w is None:
         w = min(int(sw * 0.7), 1200)
@@ -2283,7 +2333,10 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                                      sprite_allow_cover=sprite_data.get('sprite_allow_cover', False),
                                      sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
                                      avatar_hide_animations=sprite_data.get('avatar_hide_animations', {}),
-                                     mode="dialog")
+                                     mode="dialog",
+                                     savecall=effective_save,
+                                     loadcall=effective_load,
+                                     settingscall=effective_settings)
             else:
                 _destroy_box()
         except Exception:
@@ -2299,7 +2352,10 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                           speaker_idx=sprite_data['speaker_idx'],
                           sprite_allow_cover=sprite_data.get('sprite_allow_cover', False),
                           sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
-                          mode="dialog")
+                          mode="dialog",
+                          savecall=effective_save,
+                          loadcall=effective_load,
+                          settingscall=effective_settings)
 
     for i, sw in enumerate(_box._sprites):
         if i < len(sprite_data['avatar_sprite_map']):
@@ -2319,3 +2375,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 
     if fdst:
         _destroy_box()
+
+dialogbox.save = None
+dialogbox.load = None
+dialogbox.settings = None
