@@ -4,7 +4,7 @@ import math
 import sys
 import ctypes
 from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
-from PySide6.QtGui import QPainter, QColor, QBrush
+from PySide6.QtGui import QPainter, QColor, QBrush, QPainterPath
 from PySide6.QtWidgets import QWidget
 from dokibox._base import _get_app
 
@@ -93,7 +93,22 @@ class _HistoryBox(QWidget):
                 x = dr + row_offset + c * step_x - self._offset_x
                 painter.drawEllipse(QPointF(x, y), dr, dr)
 
+        self._draw_left_curtain(painter, w, h)
+
         painter.end()
+
+    def _draw_left_curtain(self, painter, w, h):
+        top_x = w * 0.12
+        bot_x = w * 0.12
+        bulge = w * 0.3
+        path = QPainterPath()
+        path.moveTo(0, -h * 0.2)
+        path.lineTo(top_x, -h * 0.2)
+        path.cubicTo(bulge, h * (-0.15), bulge, h * 1.15, bot_x, h * 1.2)
+        path.lineTo(0, h * 1.2)
+        path.closeSubpath()
+        painter.setBrush(QColor("#FFBDE1"))
+        painter.drawPath(path)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
