@@ -53,6 +53,10 @@ class DdlcBlockTest(QWidget):
         self.test_cmdbox_btn = QPushButton("测试 cmdbox (Monika用代码)", self)
         self.test_cmdbox_btn.clicked.connect(self.test_cmdbox)
         button_layout.addWidget(self.test_cmdbox_btn)
+
+        self.test_notice_btn = QPushButton("测试 notice", self)
+        self.test_notice_btn.clicked.connect(self.test_notice)
+        button_layout.addWidget(self.test_notice_btn)
         
         main_layout.addLayout(button_layout)
         
@@ -371,6 +375,50 @@ class DdlcBlockTest(QWidget):
 
         except Exception as e:
             self.label.setText(f"❌ cmdbox 测试出错: {str(e)}")
+
+    def test_notice(self):
+        self.label.setText("开始测试 notice...")
+        QTimer.singleShot(0, self._test_notice)
+
+    def _test_notice(self):
+        try:
+            self.label.setText("notice 测试1: 基本调用 (默认 last=3)")
+            dokibox.notice("这是一条基本通知", block=True)
+
+            self.label.setText("notice 测试2: 自定义存活时间 last=1.5")
+            dokibox.notice("1.5秒后消失", last=1.5, block=True)
+
+            self.label.setText("notice 测试3: 长文本")
+            dokibox.notice("这是一条很长很长的通知消息用于测试长文本的显示效果", last=2, block=True)
+
+            self.label.setText("notice 测试4: 空消息")
+            dokibox.notice("", last=1, block=True)
+
+            self.label.setText("notice 测试5: block=True 短时间连续调用")
+            dokibox.notice("第一条", last=1, block=True)
+            dokibox.notice("第二条", last=1, block=True)
+            dokibox.notice("第三条", last=1, block=True)
+
+            self.label.setText("notice 测试6: block=False 与 dialogbox 同时显示")
+            dokibox.notice("通知 + 对话框同时显示!", last=3, block=False)
+            dokibox.dialogbox("看，左上角有一个通知同时显示着！", name=self.monika,
+                            sprites=[self.monika("center", "happy")])
+            dokibox.dialogbox("notice 是非阻塞的，可以和 dialogbox 一起用~", name=self.monika,
+                            sprites=[self.monika("center", "normal")], fdst=True)
+
+            self.label.setText("notice 测试7: 多条 block=False 通知堆叠 + dialogbox")
+            dokibox.notice("堆叠通知 1", last=4, block=False)
+            dokibox.notice("堆叠通知 2", last=4, block=False)
+            dokibox.notice("堆叠通知 3", last=4, block=False)
+            dokibox.dialogbox("左上角有三条通知堆叠在一起！", name=self.monika,
+                            sprites=[self.monika("center", "happy2")])
+            dokibox.dialogbox("它们各自主活，到期自动关闭~", name=self.monika,
+                            sprites=[self.monika("center", "normal")], fdst=True)
+
+            self.label.setText("✅ notice 全部测试完成")
+
+        except Exception as e:
+            self.label.setText(f"❌ notice 测试出错: {str(e)}")
 
     def clear_status(self):
         self.label.setText("状态已清空，准备进行新的测试")
