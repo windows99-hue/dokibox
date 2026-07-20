@@ -887,6 +887,7 @@ class _DialogBox(QWidget):
         self._glare = glare
         self._menu_hover_idx = -1
         self._auto_mode = False
+        self._skip_mode = False
         self._auto_advance_timer = None
         self.setMouseTracking(True)
         self._sprites = []
@@ -1228,6 +1229,8 @@ class _DialogBox(QWidget):
 
         if self._mode == "dialog":
             self._init_typewriter_state(msg)
+            if self._skip_mode:
+                self._start_auto_advance()
             try:
                 self._blink_timer.stop()
             except Exception:
@@ -1255,7 +1258,7 @@ class _DialogBox(QWidget):
         if mode is not None:
             self._mode = mode
         self._overflow_mode = overflow_mode
-        self._typewriter = typewriter
+        self._typewriter = False if self._skip_mode else typewriter
         self._chardelay = chardelay
         self._bold = bold
         self._typing = False
@@ -1398,7 +1401,7 @@ class _DialogBox(QWidget):
             self._typing = False
             self._typing_done = True
             self._after_timer = None
-            if self._auto_mode:
+            if self._auto_mode or self._skip_mode:
                 self._start_auto_advance()
             return
 
@@ -1428,7 +1431,7 @@ class _DialogBox(QWidget):
         self._cur_line = len(self._typewriter_lines)
         self._cur_char = 0
         self.update()
-        if self._auto_mode and self._full_msg:
+        if (self._auto_mode or self._skip_mode) and self._full_msg:
             self._start_auto_advance()
 
     def paintEvent(self, event):
@@ -1611,7 +1614,7 @@ class _DialogBox(QWidget):
         font = QFont(self._font_family, self._body_fs, QFont.Bold)
         painter.setFont(font)
         for i, item in enumerate(MENU_LABELS):
-            if i == self._menu_hover_idx or (i == 2 and self._auto_mode):
+            if i == self._menu_hover_idx or (i == 1 and self._skip_mode) or (i == 2 and self._auto_mode):
                 painter.setPen(MENU_HOVER_COLOR)
             else:
                 painter.setPen(MENU_COLOR)
@@ -1700,10 +1703,25 @@ class _DialogBox(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             hit_idx = self._menu_hit_index(event.position())
+            if hit_idx == 1:
+                self._skip_mode = not self._skip_mode
+                if self._skip_mode:
+                    self._auto_mode = False
+                    self._typewriter = False
+                    if self._typing:
+                        self._finish_typewriter()
+                    elif self._typing_done and self._full_msg:
+                        self._start_auto_advance()
+                else:
+                    self._stop_auto_advance()
+                self.update()
+                return
             if hit_idx == 2:
                 self._auto_mode = not self._auto_mode
-                if self._auto_mode and self._typing_done and self._full_msg:
-                    self._start_auto_advance()
+                if self._auto_mode:
+                    self._skip_mode = False
+                    if self._typing_done and self._full_msg:
+                        self._start_auto_advance()
                 elif not self._auto_mode:
                     self._stop_auto_advance()
                 self.update()
@@ -1813,7 +1831,10 @@ class _DialogBox(QWidget):
 
     def _start_auto_advance(self):
         self._stop_auto_advance()
-        wait_ms = max(1000, 1500 + len(self._full_msg) * 20)
+        if self._skip_mode:
+            wait_ms = 100
+        else:
+            wait_ms = max(1000, 1500 + len(self._full_msg) * 20)
         self._auto_advance_timer = QTimer(self)
         self._auto_advance_timer.setSingleShot(True)
         self._auto_advance_timer.timeout.connect(self._done)
