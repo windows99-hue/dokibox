@@ -2,7 +2,7 @@
 """dokibox.noticebox -- top-left notice/toast notification"""
 import sys
 import ctypes
-from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QEventLoop
 from PySide6.QtGui import (
     QPainter, QColor, QFont, QFontMetrics, QLinearGradient, QBrush, QPen,
 )
@@ -124,7 +124,7 @@ class _NoticeWidget(QWidget):
 _notices = []
 
 
-def notice(msg="", last=3):
+def notice(msg="", last=3, block=False):
     screen = _get_app().primaryScreen()
     sw = screen.size().width()
     w = int(sw * NOTICE_WIDTH_RATIO)
@@ -136,6 +136,12 @@ def notice(msg="", last=3):
     widget.destroyed.connect(lambda obj=widget: _cleanup(obj))
     widget.show()
     widget.raise_()
+
+    if block:
+        loop = QEventLoop()
+        widget.destroyed.connect(loop.quit)
+        loop.exec()
+
     return widget
 
 

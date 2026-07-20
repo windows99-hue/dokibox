@@ -14,4 +14,4 @@ from dokibox.diaenterbox import diaenterbox
 from dokibox.garbled import garbled
 from dokibox.textbox import textbox
 from dokibox.cmdbox import cmdbox, closecmdbox
-from dokibox.noticebox import notice
+from dokibox.notice import notice
