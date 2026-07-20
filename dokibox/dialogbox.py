@@ -37,6 +37,10 @@ SPRITE_SILENT_OPACITY = 1.0
 SPRITE_ANIM_DURATION = 220
 SPRITE_FADE_DURATION = 180
 
+MENU_ITEMS = ["历史", "快进", "自动", "保存", "加载", "设置"]
+MENU_COLOR = QColor("#59242C")
+MENU_HOVER_COLOR = QColor("#ffffff")
+
 
 def _hex_to_rgb(h):
     h = h.lstrip('#')
@@ -853,6 +857,8 @@ class _DialogBox(QWidget):
         self._after_timer = None
         self._transparent = transparent
         self._glare = glare
+        self._menu_hover_idx = -1
+        self.setMouseTracking(True)
         self._sprites = []
         self._sprite_allow_cover = sprite_allow_cover
         self._sprite_allow_cover_list = sprite_allow_cover_list
@@ -900,6 +906,35 @@ class _DialogBox(QWidget):
         self._stroke_w = max(1, int(sw_raw * s))
         self._triangle_s = int(16 * s)
         self.r = self._corner_radius
+        self._menu_fs = max(10, int(self._body_fs * 0.65))
+        self._menu_height = int(30 * s)
+        self._menu_base_y = self.h - self._menu_height - int(4 * s)
+        self._calc_menu_layout()
+
+    def _calc_menu_layout(self):
+        font = QFont(self._font_family, self._menu_fs, QFont.Medium)
+        fm = QFontMetrics(font)
+        total_w = self.w - self._pad_x * 2
+        items = MENU_ITEMS
+        item_widths = [fm.horizontalAdvance(it) for it in items]
+        total_text_w = sum(item_widths)
+        n = len(items)
+        dpi = _get_dpi_scale()
+        s = 1.0 / dpi
+        if n > 1:
+            gap = max(int(8 * s), (total_w - total_text_w) // (n - 1))
+        else:
+            gap = 0
+
+        self._menu_text_xs = []
+        self._menu_rects = []
+        x = self._pad_x
+        for i, (it, iw) in enumerate(zip(items, item_widths)):
+            self._menu_text_xs.append(x)
+            self._menu_rects.append(QRectF(x - 6, 0, iw + 12, self._menu_height))
+            x += iw + gap
+
+        self._menu_text_y = int(self._menu_height // 2 + fm.ascent() - fm.height() // 2)
 
     def _calc_name_tag(self):
         dpi = _get_dpi_scale()
@@ -1386,6 +1421,7 @@ class _DialogBox(QWidget):
 
         self._draw_outline(painter, dl, top, w, h, r)
         self._draw_triangle(painter, dl, top, w, h)
+        self._draw_menu_items(painter, dl, top)
 
         if self._mode == "dialog":
             if self._overflow_mode != "overflow":
@@ -1531,6 +1567,20 @@ class _DialogBox(QWidget):
         painter.setPen(Qt.NoPen)
         painter.fillPath(path, QColor("#ffffff"))
 
+    def _draw_menu_items(self, painter, dl, top):
+        if not self._menu_rects:
+            return
+        font = QFont(self._font_family, self._menu_fs, QFont.Medium)
+        painter.setFont(font)
+        for i, item in enumerate(MENU_ITEMS):
+            if i == self._menu_hover_idx:
+                painter.setPen(MENU_HOVER_COLOR)
+            else:
+                painter.setPen(MENU_COLOR)
+            tx = dl + self._menu_text_xs[i]
+            ty = top + self._menu_base_y + self._menu_text_y
+            painter.drawText(int(tx), ty, item)
+
     def _text_area_width(self):
         return self.w - self._pad_x * 2
 
@@ -1611,10 +1661,39 @@ class _DialogBox(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            if self._menu_hit_test(event.position()):
+                return
             if self._mode == "input":
                 self._submit()
             else:
                 self._on_click()
+
+    def mouseMoveEvent(self, event):
+        new_idx = self._menu_hit_index(event.position())
+        if new_idx != self._menu_hover_idx:
+            self._menu_hover_idx = new_idx
+            self.update()
+
+    def enterEvent(self, event):
+        pass
+
+    def leaveEvent(self, event):
+        if self._menu_hover_idx != -1:
+            self._menu_hover_idx = -1
+            self.update()
+
+    def _menu_hit_index(self, pos):
+        dl = self._dialog_left
+        top = self._dialog_top
+        px = pos.x() - dl
+        py = pos.y() - top - self._menu_base_y
+        for i, rect in enumerate(self._menu_rects):
+            if rect.contains(QPointF(px, py)):
+                return i
+        return -1
+
+    def _menu_hit_test(self, pos):
+        return self._menu_hit_index(pos) != -1
 
     def keyPressEvent(self, event):
         if self._mode == "input":
