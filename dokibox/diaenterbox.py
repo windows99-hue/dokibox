@@ -170,6 +170,10 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
 
     result = _box.result
 
+    if result is not None and result.strip():
+        from dokibox.dialogbox import _history
+        _history.append((display_name, result))
+
     if fdst:
         _destroy_box()
 
