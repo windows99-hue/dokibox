@@ -103,8 +103,9 @@ def remove_window_shadow(hwnd):
     ctypes.windll.dwmapi.DwmSetWindowAttribute(
         hwnd, DWMWA_SHADOW_OPACITY, ctypes.byref(zero_val), ctypes.sizeof(zero_val))
 
-
 _box = None
+_history = []
+
 
 
 def _normalize_sprites(sprites):
@@ -1703,6 +1704,9 @@ class _DialogBox(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             hit_idx = self._menu_hit_index(event.position())
+            if hit_idx == 0:
+                self._show_history()
+                return
             if hit_idx == 1:
                 self._skip_mode = not self._skip_mode
                 if self._skip_mode:
@@ -1848,6 +1852,24 @@ class _DialogBox(QWidget):
                 pass
             self._auto_advance_timer.deleteLater()
             self._auto_advance_timer = None
+
+    def _show_history(self):
+        if not _history:
+            return
+        lines = []
+        for name, msg in _history:
+            msg_flat = msg.replace('\n', ' ')
+            if name:
+                lines.append(f"{name}：{msg_flat}")
+            else:
+                lines.append(msg_flat)
+        self._stop_auto_advance()
+        global _box
+        saved_box = _box
+        _box = None
+        from dokibox.textbox import textbox
+        textbox('\n'.join(lines), pinned=self._pinned)
+        _box = saved_box
 
     def _on_click(self):
         if self._typewriter and self._typing:
@@ -2153,6 +2175,7 @@ def _destroy_box():
         _box = None
 
 
+
 def _get_shared_box():
     return _box
 
@@ -2203,6 +2226,9 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 
     display_name = name.name if isinstance(name, Avatar) else name
     avatar = name if isinstance(name, Avatar) else None
+
+    if msg:
+        _history.append((display_name, msg))
 
     sprite_data = _process_sprites(sprites, avatar)
     sprite_data['sprite_allow_cover'] = sprite_allow_cover
