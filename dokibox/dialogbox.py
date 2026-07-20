@@ -107,6 +107,26 @@ _box = None
 _history = []
 
 
+def addhistory(data):
+    """向历史记录中添加对话，支持列表或JSON字符串。
+    
+    data 可以是：
+      - [(name, msg), ...]  元组列表
+      - [{"name": "...", "msg": "..."}, ...]  字典列表
+      - JSON 字符串
+    """
+    global _history
+    if isinstance(data, str):
+        import json
+        records = json.loads(data)
+    else:
+        records = data
+    for item in records:
+        if isinstance(item, (list, tuple)):
+            _history.append((str(item[0]), str(item[1])))
+        elif isinstance(item, dict):
+            _history.append((str(item.get("name", "") or ""), str(item.get("msg", "") or "")))
+
 
 def _normalize_sprites(sprites):
     if sprites is None:

@@ -9,7 +9,7 @@ from dokibox.ynbox import ynbox
 from dokibox.choicebox import choicebox
 from dokibox.msgbox import msgbox
 from dokibox.enterbox import enterbox
-from dokibox.dialogbox import dialogbox, Avatar
+from dokibox.dialogbox import dialogbox, Avatar, addhistory
 from dokibox.diaenterbox import diaenterbox
 from dokibox.garbled import garbled
 from dokibox.textbox import textbox
