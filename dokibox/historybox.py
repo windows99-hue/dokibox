@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """dokibox.historybox -- history display window with dotted background"""
-from PySide6.QtCore import Qt, QEventLoop, QPointF
+from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer
 from PySide6.QtGui import QPainter, QColor, QBrush
 from PySide6.QtWidgets import QWidget
 from dokibox._base import _get_app
@@ -9,6 +9,8 @@ from dokibox._base import _get_app
 DOT_COLOR = "#FFEEF8"
 DOT_GAP_X = 160
 DOT_GAP_Y = 45
+DOT_SPEED_X = 1.40
+DOT_SPEED_Y = 1.40
 
 
 class _HistoryBox(QWidget):
@@ -38,6 +40,10 @@ class _HistoryBox(QWidget):
 
         self._dots = self._generate_dots()
 
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(33)
+
     def _generate_dots(self):
         w = self.width()
         h = self.height()
@@ -53,11 +59,30 @@ class _HistoryBox(QWidget):
             offset_x = step_x // 2 if row % 2 == 1 else 0
             x = max(0, offset_x)
             while x < w + step_x:
-                dots.append((x, y))
+                dots.append([float(x), float(y)])
                 x += step_x
             y += row_h
             row += 1
         return dots
+
+    def _tick(self):
+        w = self.width()
+        h = self.height()
+        m = self._dr() * 3
+
+        for dot in self._dots:
+            dot[0] -= DOT_SPEED_X
+            dot[1] -= DOT_SPEED_Y
+
+            if dot[0] < -m:
+                dot[0] += w + m * 2
+            if dot[1] < -m:
+                dot[1] += h + m * 2
+
+        self.update()
+
+    def _dr(self):
+        return self.height() / 17
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -67,8 +92,7 @@ class _HistoryBox(QWidget):
         painter.setPen(Qt.NoPen)
         painter.setBrush(QBrush(QColor(DOT_COLOR)))
 
-        h = self.height()
-        dr = h / 14
+        dr = self._dr()
         for x, y in self._dots:
             painter.drawEllipse(QPointF(x, y), dr, dr)
 
@@ -89,6 +113,7 @@ class _HistoryBox(QWidget):
             self._done()
 
     def _done(self):
+        self._timer.stop()
         self.result = None
         self.hide()
         self.deleteLater()
