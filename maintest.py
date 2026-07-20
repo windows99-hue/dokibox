@@ -1,253 +1,253 @@
-"""
-dokibox 全功能测试
-=================
+# """
+# dokibox 全功能测试
+# =================
 
-覆盖内容：
+# 覆盖内容：
 
-✓ ynbox
-    - 默认参数
-    - tooltip
-    - 自定义按钮
-    - 中文按钮
-    - 长文本
-    - 多行文本
-    - 返回值
+# ✓ ynbox
+#     - 默认参数
+#     - tooltip
+#     - 自定义按钮
+#     - 中文按钮
+#     - 长文本
+#     - 多行文本
+#     - 返回值
 
-✓ msgbox
-    - 默认
-    - tooltip
-    - 长文本
-    - 多行
-    - 返回值
+# ✓ msgbox
+#     - 默认
+#     - tooltip
+#     - 长文本
+#     - 多行
+#     - 返回值
 
-✓ choicebox
-    - 默认
-    - msg为空
-    - force
-    - tooltip
-    - 中文
-    - 长列表
-    - 返回值(None)
-    - 返回字符串
+# ✓ choicebox
+#     - 默认
+#     - msg为空
+#     - force
+#     - tooltip
+#     - 中文
+#     - 长列表
+#     - 返回值(None)
+#     - 返回字符串
 
-✓ dialogbox
-    - 默认
-    - name
-    - width
-    - height
-    - typewriter=True
-    - typewriter=False
-    - chardelay
-    - bold
-    - overflow_mode=wrap
-    - overflow_mode=overflow
-    - overflow_mode=hide
-    - 长文本
-    - 多行文本
-"""
+# ✓ dialogbox
+#     - 默认
+#     - name
+#     - width
+#     - height
+#     - typewriter=True
+#     - typewriter=False
+#     - chardelay
+#     - bold
+#     - overflow_mode=wrap
+#     - overflow_mode=overflow
+#     - overflow_mode=hide
+#     - 长文本
+#     - 多行文本
+# """
 
 import dokibox
 
 
-print("=" * 60)
-print("dokibox 全面测试")
-print("=" * 60)
+# print("=" * 60)
+# print("dokibox 全面测试")
+# print("=" * 60)
 
 
-# ==========================================================
-# ynbox
-# ==========================================================
+# # ==========================================================
+# # ynbox
+# # ==========================================================
 
-print("\n[1] ynbox 默认")
+# print("\n[1] ynbox 默认")
 
-result = dokibox.ynbox("Delete?")
-print(result)
+# result = dokibox.ynbox("Delete?")
+# print(result)
 
 
-print("\n[2] ynbox tooltip")
+# print("\n[2] ynbox tooltip")
 
-result = dokibox.ynbox(
-    "Delete selected file?",
-    tooltip="This action cannot be undone."
-)
-print(result)
+# result = dokibox.ynbox(
+#     "Delete selected file?",
+#     tooltip="This action cannot be undone."
+# )
+# print(result)
 
 
-print("\n[3] ynbox 中文按钮")
+# print("\n[3] ynbox 中文按钮")
 
-result = dokibox.ynbox(
-    "确定删除吗？",
-    btn_texts=("确定", "取消")
-)
-print(result)
+# result = dokibox.ynbox(
+#     "确定删除吗？",
+#     btn_texts=("确定", "取消")
+# )
+# print(result)
 
 
-print("\n[4] ynbox 自定义按钮")
+# print("\n[4] ynbox 自定义按钮")
 
-result = dokibox.ynbox(
-    "Overwrite existing file?",
-    btn_texts=("Overwrite", "Keep")
-)
-print(result)
+# result = dokibox.ynbox(
+#     "Overwrite existing file?",
+#     btn_texts=("Overwrite", "Keep")
+# )
+# print(result)
 
 
-print("\n[5] ynbox 多行")
+# print("\n[5] ynbox 多行")
 
-result = dokibox.ynbox(
-    "Delete save file?\n\nThis operation cannot be undone."
-)
-print(result)
+# result = dokibox.ynbox(
+#     "Delete save file?\n\nThis operation cannot be undone."
+# )
+# print(result)
 
 
-print("\n[6] ynbox 超长文本")
+# print("\n[6] ynbox 超长文本")
 
-result = dokibox.ynbox(
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-    "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
-    "Ut enim ad minim veniam."
-)
-print(result)
+# result = dokibox.ynbox(
+#     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+#     "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+#     "Ut enim ad minim veniam."
+# )
+# print(result)
 
 
-# ==========================================================
-# msgbox
-# ==========================================================
+# # ==========================================================
+# # msgbox
+# # ==========================================================
 
-print("\n[7] msgbox 默认")
+# print("\n[7] msgbox 默认")
 
-dokibox.msgbox("Operation successful!")
+# dokibox.msgbox("Operation successful!")
 
 
-print("\n[8] msgbox tooltip")
+# print("\n[8] msgbox tooltip")
 
-dokibox.msgbox(
-    "Saved successfully!",
-    tooltip="File written to disk."
-)
+# dokibox.msgbox(
+#     "Saved successfully!",
+#     tooltip="File written to disk."
+# )
 
 
-print("\n[9] msgbox 多行")
+# print("\n[9] msgbox 多行")
 
-dokibox.msgbox(
-    "Download Complete!\n\nYou may close this window."
-)
+# dokibox.msgbox(
+#     "Download Complete!\n\nYou may close this window."
+# )
 
 
-print("\n[10] msgbox 长文本")
+# print("\n[10] msgbox 长文本")
 
-dokibox.msgbox(
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-    "Vestibulum euismod nisl vitae justo consequat, sed posuere "
-    "arcu faucibus."
-)
+# dokibox.msgbox(
+#     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
+#     "Vestibulum euismod nisl vitae justo consequat, sed posuere "
+#     "arcu faucibus."
+# )
 
 
-print("\n[11] msgbox 返回值")
+# print("\n[11] msgbox 返回值")
 
-result = dokibox.msgbox("Return value test")
-print(result)
+# result = dokibox.msgbox("Return value test")
+# print(result)
 
 
-# ==========================================================
-# choicebox
-# ==========================================================
+# # ==========================================================
+# # choicebox
+# # ==========================================================
 
-print("\n[12] choicebox 默认")
+# print("\n[12] choicebox 默认")
 
-choice = dokibox.choicebox(
-    "Choose difficulty",
-    [
-        "Easy",
-        "Normal",
-        "Hard"
-    ]
-)
+# choice = dokibox.choicebox(
+#     "Choose difficulty",
+#     [
+#         "Easy",
+#         "Normal",
+#         "Hard"
+#     ]
+# )
 
-print(choice)
+# print(choice)
 
 
-print("\n[13] choicebox force")
+# print("\n[13] choicebox force")
 
-choice = dokibox.choicebox(
-    "Choose a character",
-    [
-        "Sayori",
-        "Yuri",
-        "Natsuki",
-        "Monika"
-    ],
-    force=2
-)
+# choice = dokibox.choicebox(
+#     "Choose a character",
+#     [
+#         "Sayori",
+#         "Yuri",
+#         "Natsuki",
+#         "Monika"
+#     ],
+#     force=2
+# )
 
-print(choice)
+# print(choice)
 
 
-print("\n[14] choicebox tooltip")
+# print("\n[14] choicebox tooltip")
 
-choice = dokibox.choicebox(
-    "Select language",
-    [
-        "English",
-        "日本語",
-        "简体中文"
-    ],
-    tooltip="Only affects this session."
-)
+# choice = dokibox.choicebox(
+#     "Select language",
+#     [
+#         "English",
+#         "日本語",
+#         "简体中文"
+#     ],
+#     tooltip="Only affects this session."
+# )
 
-print(choice)
+# print(choice)
 
 
-print("\n[15] choicebox msg为空")
+# print("\n[15] choicebox msg为空")
 
-choice = dokibox.choicebox(
-    "",
-    [
-        "Apple",
-        "Orange",
-        "Banana"
-    ]
-)
+# choice = dokibox.choicebox(
+#     "",
+#     [
+#         "Apple",
+#         "Orange",
+#         "Banana"
+#     ]
+# )
 
-print(choice)
+# print(choice)
 
 
-print("\n[16] choicebox 中文")
+# print("\n[16] choicebox 中文")
 
-choice = dokibox.choicebox(
-    "请选择角色",
-    [
-        "纱世里",
-        "优里",
-        "夏树",
-        "莫妮卡"
-    ]
-)
+# choice = dokibox.choicebox(
+#     "请选择角色",
+#     [
+#         "纱世里",
+#         "优里",
+#         "夏树",
+#         "莫妮卡"
+#     ]
+# )
 
-print(choice)
+# print(choice)
 
 
-print("\n[17] choicebox 长列表")
+# print("\n[17] choicebox 长列表")
 
-choice = dokibox.choicebox(
-    "Select one item",
-    [f"Item {i}" for i in range(1, 31)]
-)
+# choice = dokibox.choicebox(
+#     "Select one item",
+#     [f"Item {i}" for i in range(1, 31)]
+# )
 
-print(choice)
+# print(choice)
 
 
-print("\n[18] choicebox Esc测试")
+# print("\n[18] choicebox Esc测试")
 
-choice = dokibox.choicebox(
-    "Press Esc to return None",
-    [
-        "One",
-        "Two",
-        "Three"
-    ]
-)
+# choice = dokibox.choicebox(
+#     "Press Esc to return None",
+#     [
+#         "One",
+#         "Two",
+#         "Three"
+#     ]
+# )
 
-print(repr(choice))
+# print(repr(choice))
 
 
 # ==========================================================
@@ -384,61 +384,61 @@ dokibox.dialogbox(
 )
 
 
-# ==========================================================
-# enterbox
-# ==========================================================
+# # ==========================================================
+# # enterbox
+# # ==========================================================
 
-print("\n[32] enterbox 默认")
+# print("\n[32] enterbox 默认")
 
-result = dokibox.enterbox("Enter your name:")
-print(repr(result))
-
-
-print("\n[33] enterbox 带默认值")
-
-result = dokibox.enterbox(
-    "Enter your name:",
-    default="Player"
-)
-print(repr(result))
+# result = dokibox.enterbox("Enter your name:")
+# print(repr(result))
 
 
-print("\n[34] enterbox 多行提示")
+# print("\n[33] enterbox 带默认值")
 
-result = dokibox.enterbox(
-    "Save File\nEnter a filename:"
-)
-print(repr(result))
-
-
-print("\n[35] enterbox tooltip")
-
-result = dokibox.enterbox(
-    "Input value:",
-    tooltip="Click OK to confirm."
-)
-print(repr(result))
+# result = dokibox.enterbox(
+#     "Enter your name:",
+#     default="Player"
+# )
+# print(repr(result))
 
 
-print("\n[36] enterbox Esc取消")
+# print("\n[34] enterbox 多行提示")
 
-result = dokibox.enterbox(
-    "Press Esc to cancel"
-)
-print(repr(result))
-
-
-print("\n[37] enterbox 中文")
-
-result = dokibox.enterbox(
-    "请输入你的名字：",
-    default="MC",
-    max_length=12
-)
-print(repr(result))
+# result = dokibox.enterbox(
+#     "Save File\nEnter a filename:"
+# )
+# print(repr(result))
 
 
-print("\n")
-print("=" * 60)
-print("所有测试结束")
-print("=" * 60)
+# print("\n[35] enterbox tooltip")
+
+# result = dokibox.enterbox(
+#     "Input value:",
+#     tooltip="Click OK to confirm."
+# )
+# print(repr(result))
+
+
+# print("\n[36] enterbox Esc取消")
+
+# result = dokibox.enterbox(
+#     "Press Esc to cancel"
+# )
+# print(repr(result))
+
+
+# print("\n[37] enterbox 中文")
+
+# result = dokibox.enterbox(
+#     "请输入你的名字：",
+#     default="MC",
+#     max_length=12
+# )
+# print(repr(result))
+
+
+# print("\n")
+# print("=" * 60)
+# print("所有测试结束")
+# print("=" * 60)

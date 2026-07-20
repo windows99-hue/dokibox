@@ -906,32 +906,34 @@ class _DialogBox(QWidget):
         self._stroke_w = max(1, int(sw_raw * s))
         self._triangle_s = int(16 * s)
         self.r = self._corner_radius
-        self._menu_fs = max(10, int(self._body_fs * 0.65))
-        self._menu_height = int(30 * s)
+        self._menu_fs = max(10, self._body_fs - 3)
+        self._menu_height = self._line_h
         self._menu_base_y = self.h - self._menu_height - int(4 * s)
         self._calc_menu_layout()
 
     def _calc_menu_layout(self):
-        font = QFont(self._font_family, self._menu_fs, QFont.Medium)
+        font = QFont(self._font_family, self._menu_fs, QFont.Bold)
         fm = QFontMetrics(font)
         total_w = self.w - self._pad_x * 2
         items = MENU_ITEMS
         item_widths = [fm.horizontalAdvance(it) for it in items]
         total_text_w = sum(item_widths)
         n = len(items)
-        dpi = _get_dpi_scale()
-        s = 1.0 / dpi
         if n > 1:
-            gap = max(int(8 * s), (total_w - total_text_w) // (n - 1))
+            target_w = self.w // 2
+            gap = (target_w - total_text_w) // (n - 1)
         else:
             gap = 0
 
+        total_menu_w = total_text_w + gap * (n - 1)
+        start_x = (self.w - total_menu_w) // 2
+
         self._menu_text_xs = []
         self._menu_rects = []
-        x = self._pad_x
+        x = start_x
         for i, (it, iw) in enumerate(zip(items, item_widths)):
             self._menu_text_xs.append(x)
-            self._menu_rects.append(QRectF(x - 6, 0, iw + 12, self._menu_height))
+            self._menu_rects.append(QRectF(x - 10, 0, iw + 20, self._menu_height))
             x += iw + gap
 
         self._menu_text_y = int(self._menu_height // 2 + fm.ascent() - fm.height() // 2)
@@ -1570,7 +1572,7 @@ class _DialogBox(QWidget):
     def _draw_menu_items(self, painter, dl, top):
         if not self._menu_rects:
             return
-        font = QFont(self._font_family, self._menu_fs, QFont.Medium)
+        font = QFont(self._font_family, self._body_fs, QFont.Bold)
         painter.setFont(font)
         for i, item in enumerate(MENU_ITEMS):
             if i == self._menu_hover_idx:
