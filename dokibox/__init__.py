@@ -15,3 +15,4 @@ from dokibox.garbled import garbled
 from dokibox.textbox import textbox
 from dokibox.cmdbox import cmdbox, closecmdbox
 from dokibox.notice import notice
+from dokibox.historybox import historybox
