@@ -339,4 +339,10 @@ class _HistoryBox(QWidget):
 
 
 def historybox(data="", pinned=True):
+    if not data:
+        from dokibox.dialogbox import _history
+        lines = []
+        for name, msg in _history:
+            lines.append(f"【{name}】{msg}")
+        data = "\n\n".join(lines)
     return _HistoryBox.run(data, pinned=pinned)

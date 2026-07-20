@@ -1876,19 +1876,12 @@ class _DialogBox(QWidget):
     def _show_history(self):
         if not _history:
             return
-        lines = []
-        for name, msg in _history:
-            msg_flat = msg.replace('\n', ' ')
-            if name:
-                lines.append(f"{name}：{msg_flat}")
-            else:
-                lines.append(msg_flat)
         self._stop_auto_advance()
         global _box
         saved_box = _box
         _box = None
-        from dokibox.textbox import textbox
-        textbox('\n'.join(lines), pinned=self._pinned)
+        from dokibox.historybox import historybox
+        historybox(pinned=self._pinned)
         _box = saved_box
 
     def _on_click(self):
