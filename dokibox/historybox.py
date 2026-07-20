@@ -14,10 +14,11 @@ from dokibox._widgets import draw_stroked_text_left
 
 class _StrokedTextArea(QWidget):
 
-    def __init__(self, parent, text, font, fill_color, stroke_color, stroke_w):
+    def __init__(self, parent, records, font, bold_font, fill_color, stroke_color, stroke_w):
         super().__init__(parent)
-        self._text = text
+        self._records = records
         self._font = font
+        self._bold_font = bold_font
         self._fill = fill_color
         self._stroke = stroke_color
         self._stroke_w = stroke_w
@@ -32,22 +33,57 @@ class _StrokedTextArea(QWidget):
 
     def _wrap_lines(self, area_w):
         fm = QFontMetrics(self._font)
-        self._line_h = fm.lineSpacing()
-        raw_lines = self._text.split('\n')
+        bm = QFontMetrics(self._bold_font)
+        self._line_h = max(fm.lineSpacing(), bm.lineSpacing())
         self._lines = []
-        for line in raw_lines:
-            if not line:
-                self._lines.append('')
-                continue
-            current = ''
-            for ch in line:
-                if fm.horizontalAdvance(current + ch) <= area_w:
-                    current += ch
+
+        for idx, (name, msg) in enumerate(self._records):
+            if idx > 0:
+                self._lines.append([])
+
+            prefix = f"{name}："
+            prefix_w = bm.horizontalAdvance(prefix)
+
+            raw_lines = msg.split('\n')
+            for li, raw_line in enumerate(raw_lines):
+                if li == 0:
+                    if not raw_line:
+                        self._lines.append([(prefix, True)])
+                        continue
+                    avail = area_w - prefix_w
+                    if avail <= 0:
+                        self._lines.append([(prefix, True)])
+                        avail = area_w
+                    current = ''
+                    for ch in raw_line:
+                        if fm.horizontalAdvance(current + ch) <= avail:
+                            current += ch
+                        else:
+                            segs = [(prefix, True)] if avail == area_w - prefix_w else []
+                            if current:
+                                segs.append((current, False))
+                            self._lines.append(segs)
+                            current = ch
+                            avail = area_w
+                    segs = [(prefix, True)] if avail == area_w - prefix_w else []
+                    if current:
+                        segs.append((current, False))
+                    if segs:
+                        self._lines.append(segs)
                 else:
-                    self._lines.append(current)
-                    current = ch
-            if current:
-                self._lines.append(current)
+                    if not raw_line:
+                        self._lines.append([])
+                        continue
+                    current = ''
+                    for ch in raw_line:
+                        if fm.horizontalAdvance(current + ch) <= area_w:
+                            current += ch
+                        else:
+                            self._lines.append([(current, False)])
+                            current = ch
+                    if current:
+                        self._lines.append([(current, False)])
+
         total_h = len(self._lines) * self._line_h
         self.setFixedHeight(total_h)
 
@@ -73,8 +109,16 @@ class _StrokedTextArea(QWidget):
 
         for i in range(start_line, end_line):
             y = i * self._line_h - self._scroll + self._line_h // 2
-            draw_stroked_text_left(painter, 0, int(y), self._lines[i],
-                                   self._font, self._fill, self._stroke, self._stroke_w)
+            segments = self._lines[i]
+            if not segments:
+                continue
+            x = 0
+            for text, is_bold in segments:
+                font = self._bold_font if is_bold else self._font
+                draw_stroked_text_left(painter, int(x), int(y), text,
+                                       font, self._fill, self._stroke, self._stroke_w)
+                fm = QFontMetrics(font)
+                x += fm.horizontalAdvance(text)
 
         painter.end()
 
@@ -120,11 +164,11 @@ SBAR_W = 20
 
 class _HistoryBox(QWidget):
 
-    def __init__(self, data, pinned=True):
+    def __init__(self, records, pinned=True):
         _get_app()
         super().__init__(None)
         self.result = None
-        self._data = data
+        self._records = records
 
         if sys.platform == "win32":
             ctypes.windll.winmm.timeBeginPeriod(1)
@@ -169,7 +213,8 @@ class _HistoryBox(QWidget):
         th = int(h * 0.72)
 
         text_font = QFont("Microsoft YaHei", TEXT_FONT_SIZE)
-        self._text = _StrokedTextArea(self, self._data, text_font,
+        bold_font = QFont("Microsoft YaHei", TEXT_FONT_SIZE, QFont.Bold)
+        self._text = _StrokedTextArea(self, self._records, text_font, bold_font,
                                       "#ffffff", "#000000", 2)
 
         self._setup_scrollbar(tx, ty, tw, th)
@@ -343,8 +388,9 @@ class _HistoryBox(QWidget):
 def historybox(data="", pinned=True):
     if not data:
         from dokibox.dialogbox import _history
-        lines = []
-        for name, msg in _history:
-            lines.append(f"【{name}】{msg}")
-        data = "\n\n".join(lines)
-    return _HistoryBox.run(data, pinned=pinned)
+        records = list(_history)
+    elif isinstance(data, str):
+        records = [("", data)]
+    else:
+        records = data
+    return _HistoryBox.run(records, pinned=pinned)
