@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """dokibox.historybox -- history display window with dotted background"""
-from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer
+from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
 from PySide6.QtGui import QPainter, QColor, QBrush
 from PySide6.QtWidgets import QWidget
 from dokibox._base import _get_app
@@ -9,8 +9,8 @@ from dokibox._base import _get_app
 DOT_COLOR = "#FFEEF8"
 DOT_GAP_X = 160
 DOT_GAP_Y = 45
-DOT_SPEED_X = 1.40
-DOT_SPEED_Y = 1.40
+DOT_SPEED_X = 42.0
+DOT_SPEED_Y = 42.0
 
 
 class _HistoryBox(QWidget):
@@ -40,6 +40,8 @@ class _HistoryBox(QWidget):
 
         self._offset_x = 0.0
         self._offset_y = 0.0
+        self._elapsed = QElapsedTimer()
+        self._elapsed.start()
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
@@ -53,8 +55,9 @@ class _HistoryBox(QWidget):
         return dr, step_x, row_h
 
     def _tick(self):
-        self._offset_x += DOT_SPEED_X
-        self._offset_y += DOT_SPEED_Y
+        dt = self._elapsed.restart() / 1000.0
+        self._offset_x += DOT_SPEED_X * dt
+        self._offset_y += DOT_SPEED_Y * dt
         self.update()
 
     def paintEvent(self, event):
