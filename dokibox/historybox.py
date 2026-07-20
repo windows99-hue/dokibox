@@ -38,51 +38,24 @@ class _HistoryBox(QWidget):
         self.setGeometry(x, y, w, h)
         self.setFixedSize(w, h)
 
-        self._dots = self._generate_dots()
+        self._offset_x = 0.0
+        self._offset_y = 0.0
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._timer.start(33)
 
-    def _generate_dots(self):
-        w = self.width()
+    def _grid_params(self):
         h = self.height()
-
         dr = h / 17
         step_x = int(dr * 2 + DOT_GAP_X)
         row_h = int(dr * 2 + DOT_GAP_Y)
-
-        dots = []
-        row = 0
-        y = dr
-        while y < h + row_h:
-            offset_x = step_x // 2 if row % 2 == 1 else 0
-            x = max(0, offset_x)
-            while x < w + step_x:
-                dots.append([float(x), float(y)])
-                x += step_x
-            y += row_h
-            row += 1
-        return dots
+        return dr, step_x, row_h
 
     def _tick(self):
-        w = self.width()
-        h = self.height()
-        m = self._dr() * 3
-
-        for dot in self._dots:
-            dot[0] -= DOT_SPEED_X
-            dot[1] -= DOT_SPEED_Y
-
-            if dot[0] < -m:
-                dot[0] += w + m * 2
-            if dot[1] < -m:
-                dot[1] += h + m * 2
-
+        self._offset_x += DOT_SPEED_X
+        self._offset_y += DOT_SPEED_Y
         self.update()
-
-    def _dr(self):
-        return self.height() / 17
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -92,9 +65,24 @@ class _HistoryBox(QWidget):
         painter.setPen(Qt.NoPen)
         painter.setBrush(QBrush(QColor(DOT_COLOR)))
 
-        dr = self._dr()
-        for x, y in self._dots:
-            painter.drawEllipse(QPointF(x, y), dr, dr)
+        w = self.width()
+        h = self.height()
+        dr, step_x, row_h = self._grid_params()
+        m = dr * 3
+
+        first_row = int((self._offset_y - dr - m) / row_h) - 1
+        last_row = int((self._offset_y + h + m - dr) / row_h) + 1
+
+        for r in range(first_row, last_row + 1):
+            row_offset = step_x // 2 if r % 2 == 1 else 0
+            y = dr + r * row_h - self._offset_y
+
+            first_col = int((self._offset_x - dr - row_offset - m) / step_x) - 1
+            last_col = int((self._offset_x + w + m - dr - row_offset) / step_x) + 1
+
+            for c in range(first_col, last_col + 1):
+                x = dr + row_offset + c * step_x - self._offset_x
+                painter.drawEllipse(QPointF(x, y), dr, dr)
 
         painter.end()
 
