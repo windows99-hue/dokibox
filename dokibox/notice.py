@@ -45,10 +45,12 @@ def _remove_window_shadow(hwnd):
 
 class _NoticeWidget(QWidget):
 
-    def __init__(self, msg, last, x, y, w):
+    def __init__(self, msg, last, x, y, w, block_loop=None):
         _get_app()
         super().__init__(None)
         self._msg = msg
+        self._y = y
+        self._block_loop = block_loop
         h = NOTICE_HEIGHT
 
         flags = Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
@@ -66,6 +68,18 @@ class _NoticeWidget(QWidget):
         self._close_timer.timeout.connect(self._fade_out)
         self._close_timer.start(int(last * 1000))
 
+    def set_notice_y(self, y):
+        self._y = y
+        if sys.platform == 'win32':
+            hwnd = int(self.winId())
+            ctypes.windll.user32.SetWindowPos(
+                hwnd, 0,
+                self.x(), y, 0, 0,
+                0x0001 | 0x0004,
+            )
+        else:
+            self.move(self.x(), y)
+
     def _fade_out(self):
         self._anim = QPropertyAnimation(self._opacity, b"opacity")
         self._anim.setDuration(FADE_DURATION)
@@ -77,6 +91,9 @@ class _NoticeWidget(QWidget):
 
     def _close(self):
         self.hide()
+        _cleanup_and_reposition(self)
+        if self._block_loop and self._block_loop.isRunning():
+            self._block_loop.quit()
         self.deleteLater()
 
     def showEvent(self, event):
@@ -131,22 +148,28 @@ def notice(msg="", last=3, block=False):
     h = NOTICE_HEIGHT
     x = 0
     y = TOP_MARGIN + len(_notices) * (h + 4)
-    widget = _NoticeWidget(msg, last, x, y, w)
+
+    loop = None
+    if block:
+        loop = QEventLoop()
+
+    widget = _NoticeWidget(msg, last, x, y, w, block_loop=loop)
     _notices.append(widget)
-    widget.destroyed.connect(lambda obj=widget: _cleanup(obj))
     widget.show()
     widget.raise_()
 
     if block:
-        loop = QEventLoop()
-        widget.destroyed.connect(loop.quit)
         loop.exec()
 
     return widget
 
 
-def _cleanup(obj):
+def _cleanup_and_reposition(obj):
     try:
         _notices.remove(obj)
     except ValueError:
         pass
+    for i, widget in enumerate(_notices):
+        y = TOP_MARGIN + i * (NOTICE_HEIGHT + 4)
+        if widget._y != y:
+            widget.set_notice_y(y)

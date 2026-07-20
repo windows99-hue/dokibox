@@ -404,7 +404,7 @@ class DdlcBlockTest(QWidget):
             dokibox.dialogbox("看，左上角有一个通知同时显示着！", name=self.monika,
                             sprites=[self.monika("center", "happy")])
             dokibox.dialogbox("notice 是非阻塞的，可以和 dialogbox 一起用~", name=self.monika,
-                            sprites=[self.monika("center", "normal")], fdst=True)
+                            sprites=[self.monika("center", "normal")])
 
             self.label.setText("notice 测试7: 多条 block=False 通知堆叠 + dialogbox")
             dokibox.notice("堆叠通知 1", last=4, block=False)
