@@ -1722,6 +1722,8 @@ class _DialogBox(QWidget):
         painter.drawText(int(x), text_y, text)
 
     def mousePressEvent(self, event):
+        if _box is None:
+            return
         if event.button() == Qt.LeftButton:
             hit_idx = self._menu_hit_index(event.position())
             if hit_idx == 0:
@@ -1885,12 +1887,16 @@ class _DialogBox(QWidget):
         _box = saved_box
 
     def _on_click(self):
+        if _box is None:
+            return
         if self._typewriter and self._typing:
             self._finish_typewriter()
         else:
             self._done()
 
     def _done(self):
+        if _box is None:
+            return
         self.dismissed.emit()
 
     def _submit(self):
