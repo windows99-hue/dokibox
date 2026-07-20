@@ -4,9 +4,10 @@ import math
 import sys
 import ctypes
 from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
-from PySide6.QtGui import QPainter, QColor, QBrush, QPainterPath
+from PySide6.QtGui import QPainter, QColor, QBrush, QPainterPath, QFont
 from PySide6.QtWidgets import QWidget
 from dokibox._base import _get_app
+from dokibox._widgets import draw_stroked_text_left
 
 
 DOT_COLOR = "#FFEEF8"
@@ -94,6 +95,10 @@ class _HistoryBox(QWidget):
                 painter.drawEllipse(QPointF(x, y), dr, dr)
 
         self._draw_left_curtain(painter, w, h)
+
+        title_font = QFont("Microsoft YaHei", 18, QFont.Bold)
+        draw_stroked_text_left(painter, int(w / 20), int(h / 15), "历史",
+                               title_font, "#ffffff", "#BD539D", 6)
 
         painter.end()
 
