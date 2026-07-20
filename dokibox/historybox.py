@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """dokibox.historybox -- history display window with dotted background"""
 import math
+import sys
 import ctypes
 from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
 from PySide6.QtGui import QPainter, QColor, QBrush
@@ -23,7 +24,8 @@ class _HistoryBox(QWidget):
         self.result = None
         self._data = data
 
-        ctypes.windll.winmm.timeBeginPeriod(1)
+        if sys.platform == "win32":
+            ctypes.windll.winmm.timeBeginPeriod(1)
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
