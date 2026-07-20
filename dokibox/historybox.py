@@ -101,14 +101,19 @@ class _HistoryBox(QWidget):
         top_x = w * 0.12
         bot_x = w * 0.12
         bulge = w * 0.3
-        path = QPainterPath()
-        path.moveTo(0, -h * 0.2)
-        path.lineTo(top_x, -h * 0.2)
-        path.cubicTo(bulge, h * (-0.15), bulge, h * 1.15, bot_x, h * 1.2)
-        path.lineTo(0, h * 1.2)
-        path.closeSubpath()
-        painter.setBrush(QColor("#FFBDE1"))
-        painter.drawPath(path)
+
+        def draw_shape(tx, tb, bu, color):
+            path = QPainterPath()
+            path.moveTo(0, -h * 0.2)
+            path.lineTo(tx, -h * 0.2)
+            path.cubicTo(bu, h * (-0.15), bu, h * 1.15, tb, h * 1.2)
+            path.lineTo(0, h * 1.2)
+            path.closeSubpath()
+            painter.setBrush(QColor(color))
+            painter.drawPath(path)
+
+        draw_shape(top_x, bot_x, bulge, "#FFBDE1")
+        draw_shape(top_x - w * 0.03, bot_x - w * 0.03, bulge - w * 0.03, "#FEE6F4")
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
