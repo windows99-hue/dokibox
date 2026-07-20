@@ -685,6 +685,75 @@ class _SpriteWindow(QWidget):
         timer.timeout.connect(on_tick)
         timer.start()
 
+    def _enter_from_left(self):
+        target_geom = self._compute_max_geometry()
+        start_x = -target_geom.width()
+        start_opacity = self._opacity_val
+
+        num_ticks = 35
+        easing = QEasingCurve(QEasingCurve.OutCubic)
+        tick = [0]
+
+        self.move(start_x, target_geom.y())
+        self._opacity_val = 0.0
+        self.repaint()
+
+        timer = QTimer(self)
+        timer.setInterval(10)
+
+        def on_tick():
+            progress = tick[0] / max(num_ticks - 1, 1)
+            t = easing.valueForProgress(min(progress, 1.0))
+            self._opacity_val = t
+            new_x = int(start_x + (target_geom.x() - start_x) * t)
+            self.move(new_x, target_geom.y())
+            self.repaint()
+            tick[0] += 1
+            if tick[0] >= num_ticks:
+                self._opacity_val = 1.0
+                self.move(target_geom.x(), target_geom.y())
+                self.repaint()
+                timer.stop()
+                timer.deleteLater()
+
+        timer.timeout.connect(on_tick)
+        timer.start()
+
+    def _enter_from_right(self):
+        target_geom = self._compute_max_geometry()
+        screen = QApplication.primaryScreen()
+        sw = screen.size().width()
+        start_x = sw + target_geom.width()
+
+        num_ticks = 35
+        easing = QEasingCurve(QEasingCurve.OutCubic)
+        tick = [0]
+
+        self.move(start_x, target_geom.y())
+        self._opacity_val = 0.0
+        self.repaint()
+
+        timer = QTimer(self)
+        timer.setInterval(10)
+
+        def on_tick():
+            progress = tick[0] / max(num_ticks - 1, 1)
+            t = easing.valueForProgress(min(progress, 1.0))
+            self._opacity_val = t
+            new_x = int(start_x + (target_geom.x() - start_x) * t)
+            self.move(new_x, target_geom.y())
+            self.repaint()
+            tick[0] += 1
+            if tick[0] >= num_ticks:
+                self._opacity_val = 1.0
+                self.move(target_geom.x(), target_geom.y())
+                self.repaint()
+                timer.stop()
+                timer.deleteLater()
+
+        timer.timeout.connect(on_tick)
+        timer.start()
+
     def _instant_destroy(self):
         try:
             self._stop_animation()
@@ -705,6 +774,15 @@ class _SpriteWindow(QWidget):
     anim_offset_y = Property(float, _get_offset_y, _set_offset_y)
 
     def _play_animation(self, anim_type):
+        if anim_type == "lenter":
+            self._stop_fade()
+            self._enter_from_left()
+            return
+        if anim_type == "renter":
+            self._stop_fade()
+            self._enter_from_right()
+            return
+
         if self._offset_anim is not None:
             self._offset_anim.stop()
             self._offset_anim.deleteLater()

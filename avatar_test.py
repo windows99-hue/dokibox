@@ -105,13 +105,13 @@ monika = dokibox.Avatar(name="Monika", emotes={
 sayori2 = copy.deepcopy(sayori)
 
 if __name__ == "__main__":
-    dokibox.dialogbox("哇，这里的风景也太舒服啦！",name=sayori,sprites=[sayori("center", "happy")])
+    dokibox.dialogbox("哇，这里的风景也太舒服啦！",name=sayori,sprites=[sayori("center", "happy",animation="lenter")])
     dokibox.dialogbox("你好，纱世里。没想到会在这里碰到你。",name=yuri,sprites=[sayori("left", "normal"),yuri("right", "normal")])
     dokibox.dialogbox("诶！优里！？你也来这边散步嘛？太巧啦！",name=sayori,sprites=[sayori("left", "surprised"),yuri("right", "normal")])
     dokibox.dialogbox("嗯，夏树说这边的林间很安静、景色很好，我便过来逛逛。这里的绿植确实让人心情很平和。",name=yuri,sprites=[sayori("left", "surprised"),yuri("right", "smiled")])
     dokibox.dialogbox("原来是这样！难怪到处都是郁郁葱葱的，也太漂亮啦～",name=sayori,sprites=[sayori("left", "happy"),yuri("right", "smiled")])
     dokibox.dialogbox("这么舒服的地方，如果能配上甜甜的曲奇就更完美啦～诶嘿嘿~",name=sayori)
-    dokibox.dialogbox("曲奇？！我就说我书包里的曲奇少了好几块！纱世里，是不是你偷偷吃掉的！",name=natsuki,sprites=[natsuki("center", "angry"),sayori("left", "panicked").hide,yuri("right", "shocked")])
+    dokibox.dialogbox("曲奇？！我就说我书包里的曲奇少了好几块！纱世里，是不是你偷偷吃掉的！",name=natsuki,sprites=[natsuki("center", "angry"),sayori("left", "panicked"),yuri("right", "shocked")])
     dokibox.dialogbox("等等…！夏树、纱世里、优里？你们三个怎么都在这里？！",name=os.getlogin(),sprites=[natsuki("center", "shocked"),sayori("left", "shocked"),yuri("right", "shocked")])
     dokibox.dialogbox("看来大家都不约而同找到了这个好去处呢。哈喽，各位。",name=monika,sprites=[sayori("left", "shocked"),monika("center", "normal", sprite_allow_cover=True),yuri("right", "shocked"),natsuki("center", "shocked")])
     dokibox.dialogbox("莫妮卡！？你居然也来这里了！今天也太热闹了吧！",name=sayori, sprites=[sayori("left", "surprised"),monika("center", "normal"),yuri("right", "shocked"),natsuki("right", "curious")])
