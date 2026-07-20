@@ -70,15 +70,7 @@ class _NoticeWidget(QWidget):
 
     def set_notice_y(self, y):
         self._y = y
-        if sys.platform == 'win32':
-            hwnd = int(self.winId())
-            ctypes.windll.user32.SetWindowPos(
-                hwnd, 0,
-                self.x(), y, 0, 0,
-                0x0001 | 0x0004,
-            )
-        else:
-            self.move(self.x(), y)
+        self.move(self.x(), y)
 
     def _fade_out(self):
         self._anim = QPropertyAnimation(self._opacity, b"opacity")
@@ -90,8 +82,8 @@ class _NoticeWidget(QWidget):
         self._anim.start()
 
     def _close(self):
-        self.hide()
         _cleanup_and_reposition(self)
+        self.hide()
         if self._block_loop and self._block_loop.isRunning():
             self._block_loop.quit()
         self.deleteLater()
@@ -131,7 +123,7 @@ class _NoticeWidget(QWidget):
         painter.setFont(font)
         painter.setPen(QColor(TEXT_COLOR))
         fm = QFontMetrics(font)
-        tx = int(LEFT_PADDING / _get_dpi_scale())
+        tx = LEFT_PADDING
         ty = int((h + fm.ascent()) // 2 - 1)
         painter.drawText(tx, ty, self._msg)
 
