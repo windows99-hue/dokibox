@@ -166,7 +166,7 @@ class _HistoryBox(QWidget):
         tx = int(w * 0.28)
         ty = int(h * 0.14)
         tw = int(w - w * 0.28 - TEXT_PAD_RIGHT)
-        th = int(h * 0.68)
+        th = int(h * 0.72)
 
         text_font = QFont("Microsoft YaHei", TEXT_FONT_SIZE)
         self._text = _StrokedTextArea(self, self._data, text_font,
@@ -190,6 +190,7 @@ class _HistoryBox(QWidget):
             self._sbar.setRange(0, content_h - visible_h)
             self._sbar.setPageStep(visible_h)
             self._sbar.setVisible(True)
+            self._sbar.setValue(content_h - visible_h)
         else:
             self._sbar.setRange(0, 0)
             self._sbar.setVisible(False)
