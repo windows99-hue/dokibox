@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0] - 2026-07-20
+
+### Added
+
+1. 添加了historybox
+2. 给dialogbox添加了下方的四个按钮
+
 ## [2.7.1] - 2026-07-20
 
 ### Added
