@@ -4,17 +4,118 @@ import math
 import sys
 import ctypes
 from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
-from PySide6.QtGui import QPainter, QColor, QBrush, QPainterPath, QFont, QFontMetrics
-from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import (
+    QPainter, QColor, QBrush, QPainterPath, QFont, QFontMetrics,
+)
+from PySide6.QtWidgets import QWidget, QScrollBar
 from dokibox._base import _get_app
 from dokibox._widgets import draw_stroked_text_left
 
+
+class _StrokedTextArea(QWidget):
+
+    def __init__(self, parent, text, font, fill_color, stroke_color, stroke_w):
+        super().__init__(parent)
+        self._text = text
+        self._font = font
+        self._fill = fill_color
+        self._stroke = stroke_color
+        self._stroke_w = stroke_w
+        self._lines = []
+        self._line_h = 0
+        self._scroll = 0
+        self.setMouseTracking(True)
+
+    def set_geometry(self, x, y, w, h):
+        self.setGeometry(x, y, w, h)
+        self._wrap_lines(w)
+
+    def _wrap_lines(self, area_w):
+        fm = QFontMetrics(self._font)
+        self._line_h = fm.lineSpacing()
+        raw_lines = self._text.split('\n')
+        self._lines = []
+        for line in raw_lines:
+            if not line:
+                self._lines.append('')
+                continue
+            current = ''
+            for ch in line:
+                if fm.horizontalAdvance(current + ch) <= area_w:
+                    current += ch
+                else:
+                    self._lines.append(current)
+                    current = ch
+            if current:
+                self._lines.append(current)
+        total_h = len(self._lines) * self._line_h
+        self.setFixedHeight(total_h)
+
+    def scroll_to(self, value):
+        self._scroll = value
+        self.update()
+
+    def line_height(self):
+        return self._line_h
+
+    def total_lines(self):
+        return len(self._lines)
+
+    def paintEvent(self, event):
+        if not self._lines:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        start_line = self._scroll // self._line_h
+        end_line = min(len(self._lines),
+                       (self._scroll + self.parent().height()) // self._line_h + 2)
+
+        for i in range(start_line, end_line):
+            y = i * self._line_h - self._scroll + self._line_h // 2
+            draw_stroked_text_left(painter, 0, int(y), self._lines[i],
+                                   self._font, self._fill, self._stroke, self._stroke_w)
+
+        painter.end()
 
 DOT_COLOR = "#FFEEF8"
 DOT_GAP_X = 160
 DOT_GAP_Y = 45
 DOT_SPEED_X = 42.0
 DOT_SPEED_Y = 42.0
+
+SBAR_QSS = """
+QScrollBar:vertical {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 transparent, stop:0.44 transparent,
+        stop:0.45 #000000, stop:0.55 #000000,
+        stop:0.56 transparent, stop:1 transparent);
+    width: %(sbw)dpx;
+    margin: 0px;
+}
+QScrollBar::handle:vertical {
+    background: #ffffff;
+    border: 1px solid #000000;
+    border-radius: 0px;
+    min-height: 60px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #D5D3CE;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: transparent;
+}
+"""
+
+TEXT_PAD_LEFT = 50
+TEXT_PAD_TOP = 20
+TEXT_PAD_RIGHT = 30
+TEXT_PAD_BOT = 20
+TEXT_FONT_SIZE = 18
+SBAR_W = 20
 
 
 class _HistoryBox(QWidget):
@@ -55,6 +156,43 @@ class _HistoryBox(QWidget):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._timer.start(16)
+
+        self._setup_text()
+
+    def _setup_text(self):
+        w = self.width()
+        h = self.height()
+
+        tx = int(w * 0.28)
+        ty = int(h * 0.14)
+        tw = int(w - w * 0.28 - TEXT_PAD_RIGHT)
+        th = int(h * 0.68)
+
+        text_font = QFont("Microsoft YaHei", TEXT_FONT_SIZE)
+        self._text = _StrokedTextArea(self, self._data, text_font,
+                                      "#ffffff", "#000000", 2)
+        self._text.set_geometry(tx, ty, tw, th)
+
+        self._setup_scrollbar(tx, ty, tw, th)
+
+    def _setup_scrollbar(self, tx, ty, tw, th):
+        sb_w = SBAR_W
+        self._sbar = QScrollBar(Qt.Vertical, self)
+        self._sbar.setStyleSheet(SBAR_QSS % {"sbw": sb_w, "bg": "#E4E2DD"})
+        self._sbar.setGeometry(tx + tw - sb_w, ty, sb_w, th)
+        self._sbar.valueChanged.connect(self._text.scroll_to)
+        self._sync_scroll_range()
+
+    def _sync_scroll_range(self):
+        content_h = self._text.total_lines() * self._text.line_height()
+        visible_h = self._sbar.height()
+        if content_h > visible_h:
+            self._sbar.setRange(0, content_h - visible_h)
+            self._sbar.setPageStep(visible_h)
+            self._sbar.setVisible(True)
+        else:
+            self._sbar.setRange(0, 0)
+            self._sbar.setVisible(False)
 
     def _grid_params(self):
         h = self.height()
@@ -171,6 +309,11 @@ class _HistoryBox(QWidget):
         if self._hover_return:
             self._hover_return = False
             self.update()
+
+    def wheelEvent(self, event):
+        if self._sbar.isVisible():
+            delta = event.angleDelta().y()
+            self._sbar.setValue(self._sbar.value() - delta)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:

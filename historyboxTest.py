@@ -1,3 +1,8 @@
 import dokibox
 
-dokibox.historybox("123")
+s = ""
+
+for i in range(20):
+    s += "a\n"
+
+dokibox.historybox(s)
