@@ -9,11 +9,13 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QWidget, QGraphicsOpacityEffect
 from dokibox._base import _get_app, _get_dpi_scale
 
-NOTICE_HEIGHT = 28
-NOTICE_WIDTH_RATIO = 0.55
-FONT_SIZE = 12
+NOTICE_HEIGHT = 60
+NOTICE_WIDTH_RATIO = 0.35
+FONT_SIZE = 16
 TEXT_COLOR = "#555555"
 FADE_DURATION = 300
+TOP_MARGIN = 60
+LEFT_PADDING = 16
 
 DWMWA_BORDER_COLOR = 34
 DWMWA_SHADOW_OPACITY = 33
@@ -47,8 +49,7 @@ class _NoticeWidget(QWidget):
         _get_app()
         super().__init__(None)
         self._msg = msg
-        dpi_s = 1.0 / _get_dpi_scale()
-        h = int(NOTICE_HEIGHT * dpi_s)
+        h = NOTICE_HEIGHT
 
         flags = Qt.FramelessWindowHint | Qt.Tool | Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
@@ -113,8 +114,7 @@ class _NoticeWidget(QWidget):
         painter.setFont(font)
         painter.setPen(QColor(TEXT_COLOR))
         fm = QFontMetrics(font)
-        tw = fm.horizontalAdvance(self._msg)
-        tx = int((w - tw) // 2)
+        tx = int(LEFT_PADDING / _get_dpi_scale())
         ty = int((h + fm.ascent()) // 2 - 1)
         painter.drawText(tx, ty, self._msg)
 
@@ -129,10 +129,10 @@ def notice(msg="", last=3):
     sw = screen.size().width()
     dpi_s = 1.0 / _get_dpi_scale()
     w = int(sw * NOTICE_WIDTH_RATIO)
-    h = int(NOTICE_HEIGHT * dpi_s)
+    h = NOTICE_HEIGHT
     x = 0
-    offset = len(_notices) * (h + 4)
-    widget = _NoticeWidget(msg, last, x, offset, w)
+    y = TOP_MARGIN + len(_notices) * (h + 4)
+    widget = _NoticeWidget(msg, last, x, y, w)
     _notices.append(widget)
     widget.show()
     widget.raise_()
