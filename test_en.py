@@ -11,6 +11,7 @@ with patch('locale.getdefaultlocale', return_value=('en_US', 'UTF-8')):
     import dokibox
     
     dokibox.ynbox("Will you love me forever?", btn_texts=None)
+    dokibox.dialogbox("English test")
 
 if __name__ == "__main__":
     idx = dokibox.choicebox("", ["Sayori", "Yuri", "Natsuki", "Monika"])

@@ -1878,6 +1878,8 @@ class _DialogBox(QWidget):
     def _show_history(self):
         if not _history:
             return
+        was_auto = self._auto_mode
+        was_skip = self._skip_mode
         self._stop_auto_advance()
         global _box
         saved_box = _box
@@ -1885,6 +1887,11 @@ class _DialogBox(QWidget):
         from dokibox.historybox import historybox
         historybox(pinned=self._pinned)
         _box = saved_box
+        if was_auto or was_skip:
+            self._auto_mode = was_auto
+            self._skip_mode = was_skip
+            if self._typing_done and self._full_msg:
+                self._start_auto_advance()
 
     def _on_click(self):
         if _box is None:
