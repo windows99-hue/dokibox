@@ -98,7 +98,9 @@ class _HistoryBox(QWidget):
 
         title_font = QFont("Microsoft YaHei", 18, QFont.Bold)
         draw_stroked_text_left(painter, int(w / 20), int(h / 15), "历史",
-                               title_font, "#ffffff", "#BD539D", 6)
+                               title_font, "#ffffff", "#BD539D", 3)
+        draw_stroked_text_left(painter, int(w / 20), int(h - h / 10), "返回游戏",
+                               title_font, "#ffffff", "#BD539D", 3)
 
         painter.end()
 
