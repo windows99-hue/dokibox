@@ -886,6 +886,8 @@ class _DialogBox(QWidget):
         self._transparent = transparent
         self._glare = glare
         self._menu_hover_idx = -1
+        self._auto_mode = False
+        self._auto_advance_timer = None
         self.setMouseTracking(True)
         self._sprites = []
         self._sprite_allow_cover = sprite_allow_cover
@@ -1193,6 +1195,7 @@ class _DialogBox(QWidget):
                 pass
             self._after_timer.deleteLater()
             self._after_timer = None
+        self._stop_auto_advance()
         try:
             self._blink_timer.stop()
         except Exception:
@@ -1205,7 +1208,7 @@ class _DialogBox(QWidget):
                         sprites=None, sprite_pos=None, speaker_idx=None,
                         avatar_sprite_map=None, sprite_allow_cover=None,
                         sprite_allow_cover_list=None, avatar_hide_animations=None,
-                         mode=None, default=None, max_length=None, allow_empty=None):
+                          mode=None, default=None, max_length=None, allow_empty=None):
         if self._after_timer:
             try:
                 self._after_timer.stop()
@@ -1213,6 +1216,7 @@ class _DialogBox(QWidget):
                 pass
             self._after_timer.deleteLater()
             self._after_timer = None
+        self._stop_auto_advance()
 
         self._apply_content_params(mode, overflow_mode, typewriter, chardelay, bold,
                                     transparent, glare, sprite_allow_cover, sprite_allow_cover_list,
@@ -1394,6 +1398,8 @@ class _DialogBox(QWidget):
             self._typing = False
             self._typing_done = True
             self._after_timer = None
+            if self._auto_mode:
+                self._start_auto_advance()
             return
 
         self._cur_char += 1
@@ -1422,6 +1428,8 @@ class _DialogBox(QWidget):
         self._cur_line = len(self._typewriter_lines)
         self._cur_char = 0
         self.update()
+        if self._auto_mode and self._full_msg:
+            self._start_auto_advance()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -1603,7 +1611,7 @@ class _DialogBox(QWidget):
         font = QFont(self._font_family, self._body_fs, QFont.Bold)
         painter.setFont(font)
         for i, item in enumerate(MENU_LABELS):
-            if i == self._menu_hover_idx:
+            if i == self._menu_hover_idx or (i == 2 and self._auto_mode):
                 painter.setPen(MENU_HOVER_COLOR)
             else:
                 painter.setPen(MENU_COLOR)
@@ -1691,8 +1699,18 @@ class _DialogBox(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            if self._menu_hit_test(event.position()):
+            hit_idx = self._menu_hit_index(event.position())
+            if hit_idx == 2:
+                self._auto_mode = not self._auto_mode
+                if self._auto_mode and self._typing_done and self._full_msg:
+                    self._start_auto_advance()
+                elif not self._auto_mode:
+                    self._stop_auto_advance()
+                self.update()
                 return
+            if hit_idx != -1:
+                return
+            self._stop_auto_advance()
             if self._mode == "input":
                 self._submit()
             else:
@@ -1792,6 +1810,23 @@ class _DialogBox(QWidget):
         cb = QA.clipboard()
         if cb:
             self._insert_text(cb.text())
+
+    def _start_auto_advance(self):
+        self._stop_auto_advance()
+        wait_ms = max(1000, 1500 + len(self._full_msg) * 20)
+        self._auto_advance_timer = QTimer(self)
+        self._auto_advance_timer.setSingleShot(True)
+        self._auto_advance_timer.timeout.connect(self._done)
+        self._auto_advance_timer.start(wait_ms)
+
+    def _stop_auto_advance(self):
+        if self._auto_advance_timer:
+            try:
+                self._auto_advance_timer.stop()
+            except Exception:
+                pass
+            self._auto_advance_timer.deleteLater()
+            self._auto_advance_timer = None
 
     def _on_click(self):
         if self._typewriter and self._typing:
