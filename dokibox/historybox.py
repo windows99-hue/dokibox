@@ -4,7 +4,7 @@ import math
 import sys
 import ctypes
 from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
-from PySide6.QtGui import QPainter, QColor, QBrush, QPainterPath, QFont
+from PySide6.QtGui import QPainter, QColor, QBrush, QPainterPath, QFont, QFontMetrics
 from PySide6.QtWidgets import QWidget
 from dokibox._base import _get_app
 from dokibox._widgets import draw_stroked_text_left
@@ -35,6 +35,8 @@ class _HistoryBox(QWidget):
 
         self.setMouseTracking(True)
         self._drag_pos = None
+        self._hover_return = False
+        self._return_rect = None
 
         sw = self.screen().size().width()
         sh = self.screen().size().height()
@@ -97,10 +99,21 @@ class _HistoryBox(QWidget):
         self._draw_left_curtain(painter, w, h)
 
         title_font = QFont("Microsoft YaHei", 18, QFont.Bold)
-        draw_stroked_text_left(painter, int(w / 20), int(h / 15), "历史",
+        fm = QFontMetrics(title_font)
+
+        hx = int(w / 20)
+        hy = int(h / 15)
+        draw_stroked_text_left(painter, hx, hy, "历史",
                                title_font, "#ffffff", "#BD539D", 3)
-        draw_stroked_text_left(painter, int(w / 20), int(h - h / 10), "返回游戏",
-                               title_font, "#ffffff", "#BD539D", 3)
+
+        rx = int(w / 20)
+        ry = int(h - h / 10)
+        return_fill = "#ffd0e8" if self._hover_return else "#ffffff"
+        draw_stroked_text_left(painter, rx, ry, "返回游戏",
+                               title_font, return_fill, "#BD539D", 3)
+        rw = fm.horizontalAdvance("返回游戏")
+        th = fm.height()
+        self._return_rect = (rx, ry - th // 2, rw + 12, th)
 
         painter.end()
 
@@ -122,6 +135,16 @@ class _HistoryBox(QWidget):
         draw_shape(top_x, bot_x, bulge, "#FFBDE1")
         draw_shape(top_x - w * 0.03, bot_x - w * 0.03, bulge - w * 0.03, "#FEE6F4")
 
+    def _check_hover(self, pos):
+        ret_hover = False
+        if self._return_rect:
+            rx, ry, rw, rh = self._return_rect
+            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                ret_hover = True
+        if ret_hover != self._hover_return:
+            self._hover_return = ret_hover
+            self.update()
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._drag_pos = event.globalPosition().toPoint()
@@ -131,6 +154,23 @@ class _HistoryBox(QWidget):
         if self._drag_pos and event.buttons() & Qt.LeftButton:
             delta = event.globalPosition().toPoint() - self._drag_pos
             self.move(self._drag_start + delta)
+        self._check_hover(event.position().toPoint())
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and self._return_rect:
+            rx, ry, rw, rh = self._return_rect
+            pos = event.position().toPoint()
+            if rx <= pos.x() <= rx + rw and ry <= pos.y() <= ry + rh:
+                self._done()
+                return
+
+    def enterEvent(self, event):
+        self._check_hover(event.position().toPoint())
+
+    def leaveEvent(self, event):
+        if self._hover_return:
+            self._hover_return = False
+            self.update()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
