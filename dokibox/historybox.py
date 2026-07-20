@@ -171,7 +171,6 @@ class _HistoryBox(QWidget):
         text_font = QFont("Microsoft YaHei", TEXT_FONT_SIZE)
         self._text = _StrokedTextArea(self, self._data, text_font,
                                       "#ffffff", "#000000", 2)
-        self._text.set_geometry(tx, ty, tw, th)
 
         self._setup_scrollbar(tx, ty, tw, th)
 
@@ -181,6 +180,9 @@ class _HistoryBox(QWidget):
         self._sbar.setStyleSheet(SBAR_QSS % {"sbw": sb_w, "bg": "#E4E2DD"})
         self._sbar.setGeometry(tx + tw - sb_w, ty, sb_w, th)
         self._sbar.valueChanged.connect(self._text.scroll_to)
+
+        self._text.set_geometry(tx, ty, tw - sb_w - 8, th)
+
         self._sync_scroll_range()
 
     def _sync_scroll_range(self):
