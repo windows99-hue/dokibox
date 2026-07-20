@@ -29,7 +29,7 @@ class _StrokedTextArea(QWidget):
 
     def set_geometry(self, x, y, w, h):
         self.setGeometry(x, y, w, h)
-        self._wrap_lines(w)
+        self._wrap_lines(w - 8)
 
     def _wrap_lines(self, area_w):
         fm = QFontMetrics(self._font)
@@ -112,7 +112,7 @@ class _StrokedTextArea(QWidget):
             segments = self._lines[i]
             if not segments:
                 continue
-            x = 0
+            x = 8
             for text, is_bold in segments:
                 font = self._bold_font if is_bold else self._font
                 draw_stroked_text_left(painter, int(x), int(y), text,
