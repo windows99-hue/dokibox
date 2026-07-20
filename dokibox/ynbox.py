@@ -47,19 +47,21 @@ _LANG_KEYWORDS = {
 
 def get_system_locale():
     try:
+        lang, _ = locale.getdefaultlocale()
+        if lang:
+            lang_lower = lang.lower()
+            if "en" in lang_lower or lang_lower in ("C", "POSIX"):
+                return 'en'
+            for code, keywords in _LANG_KEYWORDS.items():
+                if any(kw in lang_lower for kw in keywords):
+                    return code
+    except Exception:
+        pass
+    try:
         import ctypes
         lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
         if lang_id in _LANG_MAP:
             return _LANG_MAP[lang_id]
-    except Exception:
-        pass
-    try:
-        lang, _ = locale.getdefaultlocale()
-        if lang:
-            lang_lower = lang.lower()
-            for code, keywords in _LANG_KEYWORDS.items():
-                if any(kw in lang_lower for kw in keywords):
-                    return code
     except Exception:
         pass
     return 'en'

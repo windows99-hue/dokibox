@@ -8,7 +8,7 @@ from PySide6.QtGui import (
     QPainter, QColor, QBrush, QPainterPath, QFont, QFontMetrics,
 )
 from PySide6.QtWidgets import QWidget, QScrollBar
-from dokibox._base import _get_app
+from dokibox._base import _get_app, _get_dpi_scale
 from dokibox._widgets import draw_stroked_text_left
 
 
@@ -212,15 +212,18 @@ class _HistoryBox(QWidget):
         tw = int(w - w * 0.28 - TEXT_PAD_RIGHT)
         th = int(h * 0.72)
 
-        text_font = QFont("Microsoft YaHei", TEXT_FONT_SIZE)
-        bold_font = QFont("Microsoft YaHei", TEXT_FONT_SIZE, QFont.Bold)
+        s = 1.0 / _get_dpi_scale()
+        fs = max(12, int(TEXT_FONT_SIZE * s))
+        text_font = QFont("Microsoft YaHei", fs)
+        bold_font = QFont("Microsoft YaHei", fs, QFont.Bold)
         self._text = _StrokedTextArea(self, self._records, text_font, bold_font,
                                       "#ffffff", "#000000", 2)
 
         self._setup_scrollbar(tx, ty, tw, th)
 
     def _setup_scrollbar(self, tx, ty, tw, th):
-        sb_w = SBAR_W
+        s = 1.0 / _get_dpi_scale()
+        sb_w = max(8, int(SBAR_W * s))
         self._sbar = QScrollBar(Qt.Vertical, self)
         self._sbar.setStyleSheet(SBAR_QSS % {"sbw": sb_w, "bg": "#E4E2DD"})
         self._sbar.setGeometry(tx + tw - sb_w, ty, sb_w, th)
@@ -284,7 +287,9 @@ class _HistoryBox(QWidget):
 
         self._draw_left_curtain(painter, w, h)
 
-        title_font = QFont("Microsoft YaHei", 18, QFont.Bold)
+        s = 1.0 / _get_dpi_scale()
+        title_fs = max(12, int(18 * s))
+        title_font = QFont("Microsoft YaHei", title_fs, QFont.Bold)
         fm = QFontMetrics(title_font)
 
         hx = int(w / 20)

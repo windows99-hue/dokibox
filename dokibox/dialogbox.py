@@ -50,11 +50,6 @@ _MENU_I18N = {
 
 def _detect_lang():
     try:
-        if sys.platform == "win32":
-            lid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-            lang = {0x0804: "zh", 0x0404: "zh", 0x0C04: "zh", 0x0411: "ja"}.get(lid)
-            if lang:
-                return lang
         loc = locale.getdefaultlocale()
         if loc and loc[0]:
             lc = loc[0].lower()
@@ -62,6 +57,13 @@ def _detect_lang():
                 return "zh"
             if lc.startswith("ja"):
                 return "ja"
+            if lc.startswith("en") or lc == "C" or lc == "POSIX":
+                return "en"
+        if sys.platform == "win32":
+            lid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            lang = {0x0804: "zh", 0x0404: "zh", 0x0C04: "zh", 0x0411: "ja"}.get(lid)
+            if lang:
+                return lang
     except Exception:
         pass
     return "en"
