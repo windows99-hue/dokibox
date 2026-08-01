@@ -1233,11 +1233,12 @@ class _DialogBox(QWidget):
                         sprites=None, sprite_pos=None, speaker_idx=None,
                         avatar_sprite_map=None, sprite_allow_cover=None,
                         sprite_allow_cover_list=None, avatar_hide_animations=None,
-                          mode=None, default=None, max_length=None, allow_empty=None,
-                          savecall=None, loadcall=None, settingscall=None):
+                        mode=None, default=None, max_length=None, allow_empty=None,
+                        pinned=None, savecall=None, loadcall=None, settingscall=None):
         self._after_timer.stop()
         self._stop_auto_advance()
 
+        self._apply_pinned(pinned)
         self._savecall = savecall
         self._loadcall = loadcall
         self._settingscall = settingscall
@@ -1274,6 +1275,20 @@ class _DialogBox(QWidget):
         self.activateWindow()
         if self._mode == "input":
             self.setFocus()
+
+    def _apply_pinned(self, pinned):
+        if pinned is None:
+            return
+        pinned = bool(pinned)
+        if pinned == self._pinned:
+            return
+
+        self._pinned = pinned
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, pinned)
+        for sprite in self._sprites:
+            sprite._pinned = pinned
+            sprite.setWindowFlag(Qt.WindowStaysOnTopHint, pinned)
+            sprite.show()
 
     def _apply_content_params(self, mode, overflow_mode, typewriter, chardelay, bold,
                                transparent, glare, sallow_cover, sallow_cover_list,
@@ -2322,6 +2337,7 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                                      sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
                                      avatar_hide_animations=sprite_data.get('avatar_hide_animations', {}),
                                      mode="dialog",
+                                     pinned=pinned,
                                      savecall=effective_save,
                                      loadcall=effective_load,
                                      settingscall=effective_settings)

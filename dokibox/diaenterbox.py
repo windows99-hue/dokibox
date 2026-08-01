@@ -65,7 +65,7 @@ def _create_or_reuse_box(w, h, display_name, sprite_data, font_config, style_con
                                      sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
                                      avatar_hide_animations=sprite_data.get('avatar_hide_animations', {}),
                                      mode=mode, default=default, max_length=max_length,
-                                     allow_empty=allow_empty)
+                                     allow_empty=allow_empty, pinned=pinned)
                 return _box
             else:
                 _destroy_box()
