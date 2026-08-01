@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """dokibox -- DDLC-style dialog library made by 99"""
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = version("dokibox")
+try:
+    __version__ = version("dokibox")
+except PackageNotFoundError:
+    __version__ = "development"
 
 from dokibox.ynbox import ynbox
 from dokibox.choicebox import choicebox
