@@ -5,11 +5,39 @@ import sys
 import ctypes
 from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
 from PySide6.QtGui import (
-    QPainter, QColor, QBrush, QPainterPath, QFont, QFontMetrics,
+    QPainter, QColor, QBrush, QPainterPath, QFont, QFontMetrics, QPen, QPixmap,
 )
 from PySide6.QtWidgets import QWidget, QScrollBar
 from dokibox._base import _get_app, _get_dpi_scale
-from dokibox._widgets import draw_stroked_text_left
+
+
+def _render_stroked_label(text, font, fill_color, stroke_color, stroke_w, dpr):
+    fm = QFontMetrics(font)
+    padding = stroke_w + 2
+    logical_w = max(fm.horizontalAdvance(text) + padding * 2, 1)
+    logical_h = max(fm.height() + padding * 2, 1)
+
+    pixmap = QPixmap(
+        max(int(math.ceil(logical_w * dpr)), 1),
+        max(int(math.ceil(logical_h * dpr)), 1),
+    )
+    pixmap.setDevicePixelRatio(dpr)
+    pixmap.fill(Qt.transparent)
+
+    path = QPainterPath()
+    path.addText(padding, padding + fm.ascent(), font, text)
+    pen = QPen(QColor(stroke_color))
+    pen.setWidthF(stroke_w * 2)
+    pen.setJoinStyle(Qt.RoundJoin)
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setPen(pen)
+    painter.setBrush(Qt.NoBrush)
+    painter.drawPath(path)
+    painter.fillPath(path, QColor(fill_color))
+    painter.end()
+    return pixmap, padding, fm
 
 
 class _StrokedTextArea(QWidget):
@@ -22,6 +50,17 @@ class _StrokedTextArea(QWidget):
         self._fill = fill_color
         self._stroke = stroke_color
         self._stroke_w = stroke_w
+        self._font_metrics = QFontMetrics(font)
+        self._bold_metrics = QFontMetrics(bold_font)
+        self._stroke_color = QColor(stroke_color)
+        self._fill_color = QColor(fill_color)
+        self._stroke_offsets = tuple(dict.fromkeys(
+            (
+                int(stroke_w * math.cos(2 * math.pi * step / 24)),
+                int(stroke_w * math.sin(2 * math.pi * step / 24)),
+            )
+            for step in range(24)
+        ))
         self._lines = []
         self._line_h = 0
         self._scroll = 0
@@ -32,8 +71,8 @@ class _StrokedTextArea(QWidget):
         self._wrap_lines(w - 8)
 
     def _wrap_lines(self, area_w):
-        fm = QFontMetrics(self._font)
-        bm = QFontMetrics(self._bold_font)
+        fm = self._font_metrics
+        bm = self._bold_metrics
         self._line_h = max(fm.lineSpacing(), bm.lineSpacing())
         self._lines = []
 
@@ -115,9 +154,14 @@ class _StrokedTextArea(QWidget):
             x = 8
             for text, is_bold in segments:
                 font = self._bold_font if is_bold else self._font
-                draw_stroked_text_left(painter, int(x), int(y), text,
-                                       font, self._fill, self._stroke, self._stroke_w)
-                fm = QFontMetrics(font)
+                fm = self._bold_metrics if is_bold else self._font_metrics
+                baseline = int(y + fm.ascent() - fm.height() // 2)
+                painter.setFont(font)
+                painter.setPen(self._stroke_color)
+                for dx, dy in self._stroke_offsets:
+                    painter.drawText(int(x) + dx, baseline + dy, text)
+                painter.setPen(self._fill_color)
+                painter.drawText(int(x), baseline, text)
                 x += fm.horizontalAdvance(text)
 
         painter.end()
@@ -191,6 +235,7 @@ class _HistoryBox(QWidget):
         y = (sh - h) // 2
         self.setGeometry(x, y, w, h)
         self.setFixedSize(w, h)
+        self._setup_label_cache()
 
         self._offset_x = 0.0
         self._offset_y = 0.0
@@ -202,6 +247,25 @@ class _HistoryBox(QWidget):
         self._timer.start(16)
 
         self._setup_text()
+
+    def _setup_label_cache(self):
+        s = 1.0 / _get_dpi_scale()
+        title_fs = max(12, int(18 * s))
+        self._title_font = QFont("Microsoft YaHei", title_fs, QFont.Bold)
+        dpr = self.devicePixelRatioF()
+
+        self._history_label, self._label_padding, self._title_fm = _render_stroked_label(
+            "历史", self._title_font, "#ffffff", "#BD539D", 3, dpr)
+        self._return_label, _, _ = _render_stroked_label(
+            "返回游戏", self._title_font, "#ffffff", "#BD539D", 3, dpr)
+        self._return_label_hover, _, _ = _render_stroked_label(
+            "返回游戏", self._title_font, "#ffd0e8", "#BD539D", 3, dpr)
+
+        rx = int(self.width() / 20)
+        ry = int(self.height() - self.height() / 10)
+        rw = self._title_fm.horizontalAdvance("返回游戏")
+        th = self._title_fm.height()
+        self._return_rect = (rx, ry - th // 2, rw + 12, th)
 
     def _setup_text(self):
         w = self.width()
@@ -287,24 +351,16 @@ class _HistoryBox(QWidget):
 
         self._draw_left_curtain(painter, w, h)
 
-        s = 1.0 / _get_dpi_scale()
-        title_fs = max(12, int(18 * s))
-        title_font = QFont("Microsoft YaHei", title_fs, QFont.Bold)
-        fm = QFontMetrics(title_font)
-
         hx = int(w / 20)
         hy = int(h / 15)
-        draw_stroked_text_left(painter, hx, hy, "历史",
-                               title_font, "#ffffff", "#BD539D", 3)
+        label_top = hy - self._title_fm.height() // 2 - self._label_padding
+        painter.drawPixmap(hx - self._label_padding, label_top, self._history_label)
 
         rx = int(w / 20)
         ry = int(h - h / 10)
-        return_fill = "#ffd0e8" if self._hover_return else "#ffffff"
-        draw_stroked_text_left(painter, rx, ry, "返回游戏",
-                               title_font, return_fill, "#BD539D", 3)
-        rw = fm.horizontalAdvance("返回游戏")
-        th = fm.height()
-        self._return_rect = (rx, ry - th // 2, rw + 12, th)
+        return_label = self._return_label_hover if self._hover_return else self._return_label
+        return_top = ry - self._title_fm.height() // 2 - self._label_padding
+        painter.drawPixmap(rx - self._label_padding, return_top, return_label)
 
         painter.end()
 
