@@ -9,7 +9,7 @@ def save():
 dokibox.dialogbox.save = None
 
 dokibox.dialogbox("hi", savecall=save2)
-dokibox.dialogbox("hi2")
+dokibox.dialogbox("hi2",fdst=True)
 
 # Regression check: the command should finish typing before execution starts.
 # During the five-second execution, the cursor and window should keep updating;
@@ -38,3 +38,4 @@ dokibox.cmdbox(
     chardelay=30,
 )
 dokibox.closecmdbox(delay=3000)
+dokibox.dialogbox("Command execution finished. Check the output above.", name="System", typewriter=True)

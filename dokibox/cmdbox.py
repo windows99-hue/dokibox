@@ -69,6 +69,7 @@ def _wrap_text(text, fm, max_w):
 class _CmdContent(QWidget):
 
     typing_finished = Signal()
+    content_size_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -129,7 +130,9 @@ class _CmdContent(QWidget):
         return QSize(self._fm.horizontalAdvance("> ") + 100, lh + 20)
 
     def _update_geometry(self):
+        self.setMinimumHeight(self.sizeHint().height())
         self.updateGeometry()
+        self.content_size_changed.emit()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -179,6 +182,13 @@ class _CmdPanel(QWidget):
         self._screen = self.screen()
         self._screen_w = self._screen.size().width()
         self._screen_h = self._screen.size().height()
+        available = self._screen.availableGeometry()
+        self._panel_x = available.x()
+        self._panel_y = available.y()
+        self._panel_w = int(self._screen_w / WIDTH_RATIO)
+        self._base_panel_h = int(self._screen_h / HEIGHT_RATIO)
+        self._max_panel_h = available.height()
+        self._resizing_panel = False
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
@@ -199,6 +209,7 @@ class _CmdPanel(QWidget):
 
         self._cmd_content = _CmdContent()
         self._cmd_content.typing_finished.connect(self._on_typing_finished)
+        self._cmd_content.content_size_changed.connect(self._update_panel_size)
 
         self._cmd_scroll = QScrollArea()
         self._cmd_scroll.setWidget(self._cmd_content)
@@ -231,17 +242,20 @@ class _CmdPanel(QWidget):
         self._result_edit.document().setDocumentMargin(0)
         self._result_edit.setViewportMargins(
             8 + QFontMetrics(self._font).horizontalAdvance("> "), 0, 0, 0)
+        self._result_edit.document().documentLayout().documentSizeChanged.connect(
+            self._update_panel_size)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(self._cmd_scroll, 1)
-        layout.addWidget(self._result_edit, 2)
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+        self._layout.setAlignment(Qt.AlignTop)
+        self._layout.addWidget(self._cmd_scroll)
+        self._layout.addWidget(self._result_edit)
 
-        panel_w = int(self._screen_w / WIDTH_RATIO)
-        panel_h = int(self._screen_h / HEIGHT_RATIO)
-        self.setGeometry(0, 0, panel_w, panel_h)
-        self.setFixedSize(panel_w, panel_h)
+        self.setGeometry(self._panel_x, self._panel_y,
+                         self._panel_w, self._base_panel_h)
+        self.setFixedSize(self._panel_w, self._base_panel_h)
+        QTimer.singleShot(0, self._update_panel_size)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -274,6 +288,57 @@ class _CmdPanel(QWidget):
         indent = 8 + QFontMetrics(font).horizontalAdvance("> ")
         self._result_edit.setViewportMargins(indent, 0, 0, 0)
         self._cmd_content.update()
+        self._cmd_content._update_geometry()
+        self._update_panel_size()
+
+    def _content_heights(self):
+        cmd_min = max(self._cmd_content._fm.lineSpacing() + 20, 32)
+        cmd_h = max(self._cmd_content.sizeHint().height(), cmd_min)
+
+        result_fm = QFontMetrics(self._result_edit.font())
+        result_min = max(result_fm.lineSpacing() + 12, 32)
+        visual_lines = 0
+        block = self._result_edit.document().begin()
+        while block.isValid():
+            block_layout = block.layout()
+            visual_lines += max(block_layout.lineCount(), 1) if block_layout else 1
+            block = block.next()
+        document_h = visual_lines * result_fm.lineSpacing() + 12
+        result_h = max(document_h, result_min)
+        return cmd_h, result_h, cmd_min, result_min
+
+    def _update_panel_size(self, *args):
+        if self._resizing_panel:
+            return
+        self._resizing_panel = True
+        try:
+            cmd_h, result_h, cmd_min, result_min = self._content_heights()
+            desired_h = cmd_h + result_h
+            panel_h = min(max(self._base_panel_h, desired_h), self._max_panel_h)
+
+            if desired_h <= panel_h:
+                visible_cmd_h = cmd_h
+                visible_result_h = panel_h - visible_cmd_h
+            else:
+                visible_cmd_h = round(panel_h * cmd_h / desired_h)
+                visible_cmd_h = max(
+                    cmd_min,
+                    min(visible_cmd_h, panel_h - result_min),
+                )
+                visible_result_h = panel_h - visible_cmd_h
+
+            self._cmd_scroll.setFixedHeight(visible_cmd_h)
+            self._result_edit.setFixedHeight(visible_result_h)
+            self.setFixedSize(self._panel_w, panel_h)
+        finally:
+            self._resizing_panel = False
+
+        QTimer.singleShot(0, self._scroll_visible_content_to_bottom)
+
+    def _scroll_visible_content_to_bottom(self):
+        cmd_bar = self._cmd_scroll.verticalScrollBar()
+        cmd_bar.setValue(cmd_bar.maximum())
+        self._scroll_result_to_bottom()
 
     def _on_typing_finished(self):
         if self._pending_command is not None:
@@ -322,6 +387,7 @@ class _CmdPanel(QWidget):
             self._stream_started = True
         cursor.insertText(text)
         self._result_edit.setTextCursor(cursor)
+        self._update_panel_size()
         self._scroll_result_to_bottom()
 
     def _on_command_finished(self):
@@ -340,6 +406,7 @@ class _CmdPanel(QWidget):
             cur.insertBlock(fmt)
         cur.insertText(text)
         self._result_edit.setTextCursor(cur)
+        self._update_panel_size()
 
     def _scroll_result_to_bottom(self):
         cursor = self._result_edit.textCursor()
