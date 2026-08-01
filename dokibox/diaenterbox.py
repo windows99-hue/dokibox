@@ -95,7 +95,9 @@ def diaenterbox(w: Optional[int] = None, h: Optional[int] = None,
                 sprite_allow_cover: bool = False,
                 default: str = "", max_length: int = None,
                 overflow_mode: str = "wrap", allow_empty: bool = False) -> Optional[str]:
-    """DDLC-style bottom input dialog. Type in the field and press Enter or click to submit.
+    """DDLC-style bottom input dialog.
+
+    Press Enter to insert a newline, or Shift+Enter to submit the input.
 
     The dialog body shows a DDLC-style rounded box containing a text input field.
     Character sprites (立绘) and name tags work exactly like dialogbox.
