@@ -98,6 +98,10 @@ class _Panel(QWidget):
         if event.key() == Qt.Key_Escape:
             self._on_select(None)
 
+    def closeEvent(self, event):
+        event.accept()
+        self._on_select(None)
+
     def set_position(self, x, y):
         self.move(x, y)
 
@@ -112,6 +116,7 @@ class _ChoiceManager:
         self._pinned = pinned
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
+        self._closing = False
 
         s = 1.0 / _get_dpi_scale()
         opt_fs = max(12, int((self._font_size or OPT_FONT_SIZE) * s))
@@ -159,12 +164,15 @@ class _ChoiceManager:
             QCursor.setPos(p.mapToGlobal(QPoint(p.width() // 2, p.height() // 2)))
 
     def _on_select(self, index):
+        if self._closing:
+            return
+        self._closing = True
         self.result = index
         for p in self._panels:
-            p.close()
+            p.hide()
             p.deleteLater()
         if self._msg_win:
-            self._msg_win.close()
+            self._msg_win.hide()
             self._msg_win.deleteLater()
 
     def _create_msg_label(self, msg):
@@ -244,6 +252,10 @@ class _MsgLabel(QWidget):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self._on_cancel(None)
+
+    def closeEvent(self, event):
+        event.accept()
+        self._on_cancel(None)
 
 
 def choicebox(msg: str = "", choices: Optional[List[str]] = None, title: str = "",

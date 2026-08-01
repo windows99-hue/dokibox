@@ -23,6 +23,8 @@ BTN_FONT_SIZE = 26
 
 class _MsgDialog(_DokiBase):
 
+    SYSTEM_CLOSE_RESULT = True
+
     def __init__(self, msg, title="", tooltip=None, pinned=True,
                  font_family=None, font_size=None):
         self._font_family = font_family or "Microsoft YaHei"

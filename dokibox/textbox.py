@@ -155,8 +155,15 @@ class _ContinueWindow(QWidget):
         if event.button() == Qt.LeftButton:
             self._owner._done(True)
 
+    def closeEvent(self, event):
+        event.accept()
+        if self._owner is not None:
+            self._owner._done(True)
+
 
 class _TextDialog(_DokiBase):
+
+    SYSTEM_CLOSE_RESULT = True
 
     def __init__(self, msg, font_family=None, font_size=None, delay=400,
                  okbtn=True, btn_text=None, pinned=True):

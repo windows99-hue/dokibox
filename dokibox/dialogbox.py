@@ -1240,6 +1240,9 @@ class _DialogBox(QWidget):
         except Exception:
             pass
         self._destroy_sprites()
+        if self._mode == "input":
+            self.result = None
+        self.dismissed.emit()
         super().closeEvent(event)
 
     def _update_content(self, msg, typewriter, chardelay, bold, overflow_mode, name=None,

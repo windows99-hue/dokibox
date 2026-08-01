@@ -88,6 +88,17 @@ class _NoticeWidget(QWidget):
             self._block_loop.quit()
         self.deleteLater()
 
+    def closeEvent(self, event):
+        self._close_timer.stop()
+        anim = getattr(self, "_anim", None)
+        if anim is not None:
+            anim.stop()
+        _cleanup_and_reposition(self)
+        if self._block_loop and self._block_loop.isRunning():
+            self._block_loop.quit()
+        super().closeEvent(event)
+        self.deleteLater()
+
     def showEvent(self, event):
         super().showEvent(event)
         if sys.platform != 'win32':

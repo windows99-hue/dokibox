@@ -69,6 +69,8 @@ def get_system_locale():
 
 class _YnDialog(_DokiBase):
 
+    SYSTEM_CLOSE_RESULT = False
+
     def __init__(self, msg, title="", tooltip=None, pinned=True, btn_texts=None,
                  font_family=None, font_size=None):
         self._font_family = font_family or "Microsoft YaHei"

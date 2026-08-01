@@ -452,6 +452,7 @@ class _HistoryBox(QWidget):
     def closeEvent(self, event):
         self._stop_animation()
         super().closeEvent(event)
+        self.deleteLater()
 
     def changeEvent(self, event):
         if event.type() == QEvent.WindowStateChange:

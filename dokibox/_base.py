@@ -46,6 +46,7 @@ class _DokiBase(QWidget):
     """Dialog base class. Subclasses implement _calc_size / _draw_content / _on_click."""
 
     BORDER_W = 12
+    SYSTEM_CLOSE_RESULT = None
 
     def __init__(self, msg, title="", pinned=True):
         _get_app()
@@ -137,6 +138,14 @@ class _DokiBase(QWidget):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self._done(False)
+
+    def closeEvent(self, event):
+        # The blocking run() loop waits for destruction.  QWidget.close()
+        # normally only hides a top-level widget, which would leave the caller
+        # stuck after Alt+F4.
+        self.result = self.SYSTEM_CLOSE_RESULT
+        super().closeEvent(event)
+        self.deleteLater()
 
     def _done(self, value):
         self.result = value
