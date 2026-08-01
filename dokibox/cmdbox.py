@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 """dokibox.cmdbox -- top-left command panel"""
 import sys
+import os
 import ctypes
 import subprocess
+import codecs
 import io
+import locale
+import shutil
 import threading
 from PySide6.QtCore import Qt, QTimer, QSize, Signal, QEventLoop
 from PySide6.QtGui import (
@@ -418,32 +422,142 @@ class _CmdPanel(QWidget):
 _cmd_panel = None
 
 
-class _CallbackWriter(io.TextIOBase):
+class _CallbackBinaryStream:
+    """Turn byte writes into streamed UTF-8 text for cmdbox."""
 
-    def __init__(self, callback):
-        super().__init__()
-        self._callback = callback
+    def __init__(self, output_callback):
+        self._output_callback = output_callback
+        self._decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+
+    def write(self, data):
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError("a bytes-like object is required")
+        raw = bytes(data)
+        text = self._decoder.decode(raw)
+        if text:
+            self._output_callback(text)
+        return len(raw)
+
+    def flush(self):
+        return None
 
     def writable(self):
         return True
 
+    def isatty(self):
+        return False
+
+    def fileno(self):
+        raise OSError("cmdbox output has no file descriptor")
+
+
+class _CallbackTextStream:
+    """A small stdout/stderr-compatible stream backed by a callback."""
+
+    encoding = "utf-8"
+    errors = "replace"
+
+    def __init__(self, output_callback):
+        self._output_callback = output_callback
+        self.buffer = _CallbackBinaryStream(output_callback)
+
     def write(self, text):
+        if not isinstance(text, str):
+            raise TypeError("write() argument must be str")
         if text:
-            self._callback(text)
+            self._output_callback(text)
         return len(text)
 
     def flush(self):
-        pass
+        return None
+
+    def writable(self):
+        return True
+
+    def isatty(self):
+        return False
+
+    def fileno(self):
+        raise OSError("cmdbox output has no file descriptor")
 
 
-def _stream_subprocess(args, output_callback, shell=False, timeout=30):
+class _ThreadStreamRouter:
+    """Delegate a process-global sys stream according to the calling thread."""
+
+    def __init__(self, default_stream):
+        object.__setattr__(self, "_default_stream", default_stream)
+        object.__setattr__(self, "_local", threading.local())
+
+    def set_thread_stream(self, stream):
+        self._local.stream = stream
+
+    def _stream(self):
+        return getattr(self._local, "stream", self._default_stream)
+
+    def __getattr__(self, name):
+        return getattr(self._stream(), name)
+
+    def write(self, data):
+        return self._stream().write(data)
+
+    def flush(self):
+        return self._stream().flush()
+
+    def read(self, *args, **kwargs):
+        return self._stream().read(*args, **kwargs)
+
+    def readline(self, *args, **kwargs):
+        return self._stream().readline(*args, **kwargs)
+
+
+_python_stream_lock = threading.Lock()
+
+
+def _execute_python_in_process(cmd, output_callback):
+    """Execute Python in this process while routing only this thread's streams."""
+    # sys.stdin/stdout/stderr are process globals.  The temporary routers keep
+    # other threads connected to their original streams while this worker gets
+    # cmdbox-specific streams.
+    with _python_stream_lock:
+        original_stdin = sys.stdin
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+        stdin_router = _ThreadStreamRouter(original_stdin)
+        stdout_router = _ThreadStreamRouter(original_stdout)
+        stderr_router = _ThreadStreamRouter(original_stderr)
+        command_output = _CallbackTextStream(output_callback)
+
+        stdin_router.set_thread_stream(io.StringIO(""))
+        stdout_router.set_thread_stream(command_output)
+        stderr_router.set_thread_stream(command_output)
+        sys.stdin = stdin_router
+        sys.stdout = stdout_router
+        sys.stderr = stderr_router
+        try:
+            namespace = {
+                "__name__": "__main__",
+                "__builtins__": __builtins__,
+            }
+            exec(compile(cmd, "<cmdbox>", "exec"), namespace)
+        finally:
+            # Restore even when the command assigns to sys.stdout itself or
+            # raises SystemExit/KeyboardInterrupt.
+            sys.stdin = original_stdin
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+
+
+def _stream_subprocess(args, output_callback, timeout=30, encoding=None, env=None):
+    if encoding is None:
+        encoding = locale.getpreferredencoding(False) or "utf-8"
     process = subprocess.Popen(
         args,
-        shell=shell,
+        shell=False,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
+        stdin=subprocess.DEVNULL,
+        bufsize=-1,
+        env=env,
     )
     timed_out = threading.Event()
 
@@ -456,8 +570,18 @@ def _stream_subprocess(args, output_callback, shell=False, timeout=30):
     timeout_timer.daemon = True
     timeout_timer.start()
     try:
-        for line in process.stdout:
-            output_callback(line)
+        decoder = codecs.getincrementaldecoder(encoding)(errors="replace")
+        read_chunk = getattr(process.stdout, "read1", process.stdout.read)
+        while True:
+            chunk = read_chunk(4096)
+            if not chunk:
+                break
+            text = decoder.decode(chunk)
+            if text:
+                output_callback(text)
+        remaining = decoder.decode(b"", final=True)
+        if remaining:
+            output_callback(remaining)
         process.wait()
     finally:
         timeout_timer.cancel()
@@ -466,6 +590,32 @@ def _stream_subprocess(args, output_callback, shell=False, timeout=30):
 
     if timed_out.is_set():
         raise subprocess.TimeoutExpired(args, timeout)
+
+
+def _cmd_subprocess_args(cmd):
+    comspec = os.environ.get("COMSPEC") or "cmd.exe"
+    utf8_command = f"chcp 65001>nul & {cmd}"
+    return [comspec, "/d", "/s", "/c", utf8_command]
+
+
+def _powershell_subprocess_args(cmd):
+    executable = (
+        shutil.which("pwsh.exe")
+        or shutil.which("pwsh")
+        or shutil.which("powershell.exe")
+        or shutil.which("powershell")
+    )
+    if executable is None:
+        raise FileNotFoundError("PowerShell executable was not found")
+    utf8_command = (
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+        "$OutputEncoding = [Console]::OutputEncoding; "
+        f"& {{ {cmd}\n}}"
+    )
+    return [
+        executable, "-NoLogo", "-NoProfile", "-NonInteractive",
+        "-Command", utf8_command,
+    ]
 
 
 def _execute_command(cmd, language, output_callback=None):
@@ -477,20 +627,17 @@ def _execute_command(cmd, language, output_callback=None):
         chunks = None
 
     if language == "python":
-        writer = _CallbackWriter(output_callback)
-        old_stdout, old_stderr = sys.stdout, sys.stderr
-        sys.stdout, sys.stderr = writer, writer
-        try:
-            exec(compile(cmd, "<cmdbox>", "exec"))
-        finally:
-            sys.stdout, sys.stderr = old_stdout, old_stderr
-            writer.close()
+        _execute_python_in_process(cmd, output_callback)
     elif language == "cmd":
-        _stream_subprocess(cmd, output_callback, shell=True)
-    elif language == "powershell":
         _stream_subprocess(
-            ["powershell", "-NoProfile", "-Command", cmd], output_callback,
-        )
+            _cmd_subprocess_args(cmd), output_callback, encoding="utf-8")
+    elif language == "powershell":
+        args = _powershell_subprocess_args(cmd)
+        _stream_subprocess(args, output_callback, encoding="utf-8")
+    else:
+        raise ValueError(
+            "language must be 'python', 'cmd', or 'powershell', "
+            f"got {language!r}")
 
     return "".join(chunks) if chunks is not None else ""
 
@@ -502,7 +649,8 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
     Parameters:
         cmd:         command string to display (typewriter animation).
         result:      result text or callable (if callable, invoked after typing).
-        runcmd:      if True, actually execute cmd and use real output as result.
+        runcmd:      if True, execute cmd and stream its output. Python runs in
+                     this process; CMD and PowerShell run in subprocesses.
         language:    "python" / "cmd" / "powershell" -- what to run cmd as.
         clear:       if True, clear all previous results before showing.
         font_family: font family name (default Consolas).
