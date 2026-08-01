@@ -263,6 +263,7 @@ class _HistoryBox(QWidget):
         tile_w = max(step_x, 1)
         tile_h = max(row_h * 2, 1)
         self._dot_tile = self._new_cache_pixmap(tile_w, tile_h)
+        self._background_dpr = self.devicePixelRatioF()
         self._dot_tile_w = self._dot_tile.width() / self._dot_tile.devicePixelRatio()
         self._dot_tile_h = self._dot_tile.height() / self._dot_tile.devicePixelRatio()
 
@@ -281,6 +282,28 @@ class _HistoryBox(QWidget):
         curtain_painter.setPen(Qt.NoPen)
         self._draw_left_curtain(curtain_painter, self.width(), self.height())
         curtain_painter.end()
+
+    def _refresh_background_cache_for_dpi(self):
+        current_dpr = self.devicePixelRatioF()
+        cached_dpr = getattr(self, "_background_dpr", current_dpr)
+        if math.isclose(current_dpr, cached_dpr, rel_tol=0.0, abs_tol=1e-6):
+            return
+
+        self._setup_background_cache()
+        if hasattr(self, "_offset_x"):
+            self._offset_x %= self._dot_tile_w
+            self._offset_y %= self._dot_tile_h
+        self.update()
+
+    def event(self, event):
+        result = super().event(event)
+        dpi_events = (
+            getattr(QEvent, "ScreenChangeInternal", None),
+            getattr(QEvent, "DevicePixelRatioChange", None),
+        )
+        if event.type() in dpi_events and hasattr(self, "_dot_tile"):
+            QTimer.singleShot(0, self._refresh_background_cache_for_dpi)
+        return result
 
     def _setup_label_cache(self):
         s = 1.0 / _get_dpi_scale()
@@ -346,8 +369,16 @@ class _HistoryBox(QWidget):
     def _grid_params(self):
         h = self.height()
         dr = h / 17
-        step_x = int(dr * 2 + DOT_GAP_X)
-        row_h = int(dr * 2 + DOT_GAP_Y)
+        dpr = self.devicePixelRatioF()
+        if dpr <= 0:
+            dpr = 1.0
+
+        # The radius already follows the window's logical height.  Only the
+        # fixed gaps need inverse-DPI compensation to keep their physical
+        # spacing consistent on high-DPI screens.
+        gap_scale = 1.0 / dpr
+        step_x = max(int(round(dr * 2 + DOT_GAP_X * gap_scale)), 1)
+        row_h = max(int(round(dr * 2 + DOT_GAP_Y * gap_scale)), 1)
         return dr, step_x, row_h
 
     def _begin_timer_resolution(self):
