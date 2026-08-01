@@ -14,10 +14,19 @@ dokibox.dialogbox("hi2")
 # Regression check: the command should finish typing before execution starts.
 # During the five-second execution, the cursor and window should keep updating;
 # captured output should appear only after execution finishes.
+# blocking_command = (
+#     "import time\n"
+#     "print('Command started')\n"
+#     "time.sleep(5)\n"
+#     "print('Command finished')"
+# )
+
 blocking_command = (
     "import time\n"
     "print('Command started')\n"
-    "time.sleep(5)\n"
+    "for i in range(5):\n"
+    "    time.sleep(1)\n"
+    "    print(f'Elapsed time: {i+1} seconds')\n"
     "print('Command finished')"
 )
 

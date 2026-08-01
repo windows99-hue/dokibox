@@ -169,7 +169,8 @@ class _CmdContent(QWidget):
 
 class _CmdPanel(QWidget):
 
-    command_finished = Signal(object)
+    command_output = Signal(str)
+    command_finished = Signal()
 
     def __init__(self, pinned=True):
         _get_app()
@@ -192,6 +193,8 @@ class _CmdPanel(QWidget):
         self._pending_command = None
         self._current_loop = None
         self._command_thread = None
+        self._stream_started = False
+        self.command_output.connect(self._on_command_output)
         self.command_finished.connect(self._on_command_finished)
 
         self._cmd_content = _CmdContent()
@@ -295,18 +298,36 @@ class _CmdPanel(QWidget):
     def _start_command(self, cmd, language):
         def run_command():
             try:
-                result = _execute_command(cmd, language)
+                _execute_command(cmd, language, self.command_output.emit)
             except BaseException as exc:
-                result = str(exc) or type(exc).__name__
-            self.command_finished.emit(result)
+                self.command_output.emit(str(exc) or type(exc).__name__)
+            self.command_finished.emit()
 
+        self._stream_started = False
         self._command_thread = threading.Thread(target=run_command, daemon=True)
         self._command_thread.start()
 
-    def _on_command_finished(self, result):
+    def _on_command_output(self, text):
+        if not text:
+            return
+        self._result_edit.moveCursor(QTextCursor.End)
+        cursor = self._result_edit.textCursor()
+        fmt = cursor.blockFormat()
+        fmt.setTopMargin(0)
+        fmt.setBottomMargin(0)
+        cursor.setBlockFormat(fmt)
+        if not self._stream_started:
+            if cursor.block().text():
+                cursor.insertBlock(fmt)
+            self._stream_started = True
+        cursor.insertText(text)
+        self._result_edit.setTextCursor(cursor)
+        self._scroll_result_to_bottom()
+
+    def _on_command_finished(self):
         self._command_thread = None
-        self._pending_result = result
-        self._on_typing_finished()
+        if self._current_loop and self._current_loop.isRunning():
+            self._current_loop.quit()
 
     def _append_zero_spaced(self, text):
         self._result_edit.moveCursor(QTextCursor.End)
@@ -330,33 +351,81 @@ class _CmdPanel(QWidget):
 _cmd_panel = None
 
 
-def _execute_command(cmd, language):
+class _CallbackWriter(io.TextIOBase):
+
+    def __init__(self, callback):
+        super().__init__()
+        self._callback = callback
+
+    def writable(self):
+        return True
+
+    def write(self, text):
+        if text:
+            self._callback(text)
+        return len(text)
+
+    def flush(self):
+        pass
+
+
+def _stream_subprocess(args, output_callback, shell=False, timeout=30):
+    process = subprocess.Popen(
+        args,
+        shell=shell,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    timed_out = threading.Event()
+
+    def stop_process():
+        if process.poll() is None:
+            timed_out.set()
+            process.kill()
+
+    timeout_timer = threading.Timer(timeout, stop_process)
+    timeout_timer.daemon = True
+    timeout_timer.start()
+    try:
+        for line in process.stdout:
+            output_callback(line)
+        process.wait()
+    finally:
+        timeout_timer.cancel()
+        if process.stdout is not None:
+            process.stdout.close()
+
+    if timed_out.is_set():
+        raise subprocess.TimeoutExpired(args, timeout)
+
+
+def _execute_command(cmd, language, output_callback=None):
     """Execute cmd in the given language and return the result string."""
+    if output_callback is None:
+        chunks = []
+        output_callback = chunks.append
+    else:
+        chunks = None
+
     if language == "python":
-        buf = io.StringIO()
+        writer = _CallbackWriter(output_callback)
         old_stdout, old_stderr = sys.stdout, sys.stderr
-        sys.stdout, sys.stderr = buf, buf
+        sys.stdout, sys.stderr = writer, writer
         try:
             exec(compile(cmd, "<cmdbox>", "exec"))
         finally:
             sys.stdout, sys.stderr = old_stdout, old_stderr
-        return buf.getvalue()
+            writer.close()
     elif language == "cmd":
-        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
-        result = r.stdout
-        if r.stderr:
-            result += r.stderr
-        return result
+        _stream_subprocess(cmd, output_callback, shell=True)
     elif language == "powershell":
-        r = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", cmd],
-            capture_output=True, text=True, timeout=30,
+        _stream_subprocess(
+            ["powershell", "-NoProfile", "-Command", cmd], output_callback,
         )
-        result = r.stdout
-        if r.stderr:
-            result += r.stderr
-        return result
-    return ""
+
+    return "".join(chunks) if chunks is not None else ""
 
 
 def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
