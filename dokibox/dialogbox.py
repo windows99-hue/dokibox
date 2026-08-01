@@ -1297,8 +1297,7 @@ class _DialogBox(QWidget):
         if default is not None:
             self._input_text = default
             self._cursor_pos = len(default)
-        if max_length is not None:
-            self._max_length = max_length
+        self._max_length = max_length
         if allow_empty is not None:
             self._allow_empty = allow_empty
         self._name = name
