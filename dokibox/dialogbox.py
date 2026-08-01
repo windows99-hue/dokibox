@@ -1248,12 +1248,9 @@ class _DialogBox(QWidget):
             self._after_timer = None
         self._stop_auto_advance()
 
-        if savecall is not None:
-            self._savecall = savecall
-        if loadcall is not None:
-            self._loadcall = loadcall
-        if settingscall is not None:
-            self._settingscall = settingscall
+        self._savecall = savecall
+        self._loadcall = loadcall
+        self._settingscall = settingscall
 
         self._apply_content_params(mode, overflow_mode, typewriter, chardelay, bold,
                                     transparent, glare, sprite_allow_cover, sprite_allow_cover_list,
