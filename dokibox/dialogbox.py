@@ -6,7 +6,7 @@ import ctypes
 import locale
 from typing import Optional, Union, List
 from PySide6.QtCore import (
-    Qt, QTimer, QEventLoop, QRectF, QPointF, Signal,
+    Qt, QTimer, QEventLoop, QElapsedTimer, QRectF, QPointF, Signal,
     QPropertyAnimation, QVariantAnimation, QEasingCurve,
     QParallelAnimationGroup, Property, QRect,
 )
@@ -37,6 +37,8 @@ SPRITE_SILENT_SCALE = 1.0
 SPRITE_SILENT_OPACITY = 1.0
 SPRITE_ANIM_DURATION = 220
 SPRITE_FADE_DURATION = 180
+SPRITE_SLIDE_DURATION = 350
+SPRITE_FRAME_INTERVAL = 16
 
 MENU_COLOR = QColor("#59242C")
 MENU_HOVER_COLOR = QColor("#ffffff")
@@ -504,13 +506,22 @@ class _SpriteWindow(QWidget):
         start_scale = self._anim_scale
         start_opacity = self._opacity_val
         geom_changed = (start_geom != target_geom)
+        scale_changed = not math.isclose(
+            start_scale, target_scale, rel_tol=0.0, abs_tol=1e-6)
+        opacity_changed = not math.isclose(
+            start_opacity, target_opacity, rel_tol=0.0, abs_tol=1e-6)
 
-        num_ticks = SPRITE_ANIM_DURATION // 10
+        if not (geom_changed or scale_changed or opacity_changed):
+            self.update()
+            return
+
         easing = QEasingCurve(QEasingCurve.OutCubic)
-        tick = [0]
+        elapsed = QElapsedTimer()
+        elapsed.start()
 
-        self._anim_timer = QTimer(self)
-        self._anim_timer.setInterval(10)
+        timer = QTimer(self)
+        timer.setInterval(SPRITE_FRAME_INTERVAL)
+        self._anim_timer = timer
 
         sx, sy = start_geom.x(), start_geom.y()
         sw_val, sh_val = start_geom.width(), start_geom.height()
@@ -518,7 +529,7 @@ class _SpriteWindow(QWidget):
         tw, th = target_geom.width(), target_geom.height()
 
         def on_tick():
-            progress = tick[0] / max(num_ticks - 1, 1)
+            progress = min(elapsed.elapsed() / SPRITE_ANIM_DURATION, 1.0)
             t = easing.valueForProgress(min(progress, 1.0))
             if geom_changed:
                 self.setGeometry(
@@ -526,20 +537,20 @@ class _SpriteWindow(QWidget):
                     int(sw_val + (tw - sw_val) * t), int(sh_val + (th - sh_val) * t))
             self._anim_scale = start_scale + (target_scale - start_scale) * t
             self._opacity_val = start_opacity + (target_opacity - start_opacity) * t
-            self.repaint()
-            tick[0] += 1
-            if tick[0] >= num_ticks:
+            self.update()
+            if progress >= 1.0:
                 if geom_changed:
                     self.setGeometry(target_geom)
                 self._anim_scale = target_scale
                 self._opacity_val = target_opacity
-                self.repaint()
-                self._anim_timer.stop()
-                self._anim_timer.deleteLater()
-                self._anim_timer = None
+                self.update()
+                timer.stop()
+                timer.deleteLater()
+                if self._anim_timer is timer:
+                    self._anim_timer = None
 
-        self._anim_timer.timeout.connect(on_tick)
-        self._anim_timer.start()
+        timer.timeout.connect(on_tick)
+        timer.start()
 
     def _stop_animation(self):
         if self._anim_timer is not None:
@@ -560,32 +571,33 @@ class _SpriteWindow(QWidget):
             self._fade_timer.deleteLater()
             self._fade_timer = None
 
-        num_ticks = SPRITE_FADE_DURATION // 10
         easing = QEasingCurve(QEasingCurve.OutCubic)
-        tick = [0]
+        elapsed = QElapsedTimer()
+        elapsed.start()
 
-        self._fade_timer = QTimer(self)
-        self._fade_timer.setInterval(10)
+        timer = QTimer(self)
+        timer.setInterval(SPRITE_FRAME_INTERVAL)
+        self._fade_timer = timer
 
         def on_tick():
-            progress = tick[0] / max(num_ticks - 1, 1)
+            progress = min(elapsed.elapsed() / SPRITE_FADE_DURATION, 1.0)
             t = easing.valueForProgress(min(progress, 1.0))
             self._opacity_val = target * t
-            self.repaint()
-            tick[0] += 1
-            if tick[0] >= num_ticks:
+            self.update()
+            if progress >= 1.0:
                 self._opacity_val = target
-                self.repaint()
-                self._fade_timer.stop()
-                self._fade_timer.deleteLater()
-                self._fade_timer = None
+                self.update()
+                timer.stop()
+                timer.deleteLater()
+                if self._fade_timer is timer:
+                    self._fade_timer = None
 
-        self._fade_timer.timeout.connect(on_tick)
-        self._fade_timer.start()
+        timer.timeout.connect(on_tick)
+        timer.start()
 
     def update_state(self, image_data=None, x_frac=None, is_speaker=None):
         changed = False
-        if image_data is not None:
+        if image_data is not None and not _same_image(image_data, self):
             if self._offset_anim is not None:
                 self._offset_anim.stop()
                 self._offset_anim.deleteLater()
@@ -594,10 +606,11 @@ class _SpriteWindow(QWidget):
             self._pixmap = _load_pixmap(image_data)
             self._pixmap_data_ref = image_data
             changed = True
-        if x_frac is not None:
+        if x_frac is not None and not math.isclose(
+                x_frac, self._x_frac, rel_tol=0.0, abs_tol=1e-6):
             self._x_frac = x_frac
             changed = True
-        if is_speaker is not None:
+        if is_speaker is not None and is_speaker != self._is_speaker:
             self._is_speaker = is_speaker
             changed = True
         if changed:
@@ -625,10 +638,16 @@ class _SpriteWindow(QWidget):
         ox = (w - paint_w) // 2
         oy = h - paint_h + int(self._offset_y)
 
-        scaled = self._pixmap.scaled(paint_w, paint_h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        sx = ox + (paint_w - scaled.width()) // 2
-        sy = oy + paint_h - scaled.height()
-        painter.drawPixmap(sx, sy, scaled)
+        source_w = self._pixmap.width()
+        source_h = self._pixmap.height()
+        if source_w > 0 and source_h > 0 and paint_w > 0 and paint_h > 0:
+            scale = min(paint_w / source_w, paint_h / source_h)
+            draw_w = max(1, int(source_w * scale))
+            draw_h = max(1, int(source_h * scale))
+            sx = ox + (paint_w - draw_w) // 2
+            sy = oy + paint_h - draw_h
+            painter.drawPixmap(
+                QRect(sx, sy, draw_w, draw_h), self._pixmap, self._pixmap.rect())
         painter.end()
 
     def destroy_sprite(self, animation="fade"):
@@ -652,23 +671,22 @@ class _SpriteWindow(QWidget):
             self._offset_anim = None
 
     def _fade_out_and_destroy(self):
-        num_ticks = SPRITE_FADE_DURATION // 10
         easing = QEasingCurve(QEasingCurve.OutCubic)
         start_opacity = self._opacity_val
-        tick = [0]
+        elapsed = QElapsedTimer()
+        elapsed.start()
 
         timer = QTimer(self)
-        timer.setInterval(10)
+        timer.setInterval(SPRITE_FRAME_INTERVAL)
 
         def on_tick():
-            progress = tick[0] / max(num_ticks - 1, 1)
+            progress = min(elapsed.elapsed() / SPRITE_FADE_DURATION, 1.0)
             t = easing.valueForProgress(min(progress, 1.0))
             self._opacity_val = start_opacity * (1.0 - t)
-            self.repaint()
-            tick[0] += 1
-            if tick[0] >= num_ticks:
+            self.update()
+            if progress >= 1.0:
                 self._opacity_val = 0.0
-                self.repaint()
+                self.update()
                 timer.stop()
                 timer.deleteLater()
                 self.hide()
@@ -678,30 +696,29 @@ class _SpriteWindow(QWidget):
         timer.start()
 
     def _slide_out_right_and_destroy(self):
-        num_ticks = 35
         easing = QEasingCurve(QEasingCurve.InCubic)
         start_geom = self.geometry()
         start_opacity = self._opacity_val
-        tick = [0]
+        elapsed = QElapsedTimer()
+        elapsed.start()
 
         screen = QApplication.primaryScreen()
         sw = screen.size().width()
         target_x = sw + start_geom.width()
 
         timer = QTimer(self)
-        timer.setInterval(10)
+        timer.setInterval(SPRITE_FRAME_INTERVAL)
 
         def on_tick():
-            progress = tick[0] / max(num_ticks - 1, 1)
+            progress = min(elapsed.elapsed() / SPRITE_SLIDE_DURATION, 1.0)
             t = easing.valueForProgress(min(progress, 1.0))
             self._opacity_val = start_opacity * (1.0 - t)
             new_x = int(start_geom.x() + (target_x - start_geom.x()) * t)
             self.move(new_x, start_geom.y())
-            self.repaint()
-            tick[0] += 1
-            if tick[0] >= num_ticks:
+            self.update()
+            if progress >= 1.0:
                 self._opacity_val = 0.0
-                self.repaint()
+                self.update()
                 timer.stop()
                 timer.deleteLater()
                 self.hide()
@@ -711,28 +728,27 @@ class _SpriteWindow(QWidget):
         timer.start()
 
     def _slide_out_left_and_destroy(self):
-        num_ticks = 35
         easing = QEasingCurve(QEasingCurve.InCubic)
         start_geom = self.geometry()
         start_opacity = self._opacity_val
-        tick = [0]
+        elapsed = QElapsedTimer()
+        elapsed.start()
 
         target_x = -start_geom.width()
 
         timer = QTimer(self)
-        timer.setInterval(10)
+        timer.setInterval(SPRITE_FRAME_INTERVAL)
 
         def on_tick():
-            progress = tick[0] / max(num_ticks - 1, 1)
+            progress = min(elapsed.elapsed() / SPRITE_SLIDE_DURATION, 1.0)
             t = easing.valueForProgress(min(progress, 1.0))
             self._opacity_val = start_opacity * (1.0 - t)
             new_x = int(start_geom.x() + (target_x - start_geom.x()) * t)
             self.move(new_x, start_geom.y())
-            self.repaint()
-            tick[0] += 1
-            if tick[0] >= num_ticks:
+            self.update()
+            if progress >= 1.0:
                 self._opacity_val = 0.0
-                self.repaint()
+                self.update()
                 timer.stop()
                 timer.deleteLater()
                 self.hide()
@@ -746,29 +762,28 @@ class _SpriteWindow(QWidget):
         start_x = -target_geom.width()
         start_opacity = self._opacity_val
 
-        num_ticks = 35
         easing = QEasingCurve(QEasingCurve.OutCubic)
-        tick = [0]
+        elapsed = QElapsedTimer()
+        elapsed.start()
 
         self.move(start_x, target_geom.y())
         self._opacity_val = 0.0
-        self.repaint()
+        self.update()
 
         timer = QTimer(self)
-        timer.setInterval(10)
+        timer.setInterval(SPRITE_FRAME_INTERVAL)
 
         def on_tick():
-            progress = tick[0] / max(num_ticks - 1, 1)
+            progress = min(elapsed.elapsed() / SPRITE_SLIDE_DURATION, 1.0)
             t = easing.valueForProgress(min(progress, 1.0))
             self._opacity_val = t
             new_x = int(start_x + (target_geom.x() - start_x) * t)
             self.move(new_x, target_geom.y())
-            self.repaint()
-            tick[0] += 1
-            if tick[0] >= num_ticks:
+            self.update()
+            if progress >= 1.0:
                 self._opacity_val = 1.0
                 self.move(target_geom.x(), target_geom.y())
-                self.repaint()
+                self.update()
                 timer.stop()
                 timer.deleteLater()
 
@@ -781,29 +796,28 @@ class _SpriteWindow(QWidget):
         sw = screen.size().width()
         start_x = sw + target_geom.width()
 
-        num_ticks = 35
         easing = QEasingCurve(QEasingCurve.OutCubic)
-        tick = [0]
+        elapsed = QElapsedTimer()
+        elapsed.start()
 
         self.move(start_x, target_geom.y())
         self._opacity_val = 0.0
-        self.repaint()
+        self.update()
 
         timer = QTimer(self)
-        timer.setInterval(10)
+        timer.setInterval(SPRITE_FRAME_INTERVAL)
 
         def on_tick():
-            progress = tick[0] / max(num_ticks - 1, 1)
+            progress = min(elapsed.elapsed() / SPRITE_SLIDE_DURATION, 1.0)
             t = easing.valueForProgress(min(progress, 1.0))
             self._opacity_val = t
             new_x = int(start_x + (target_geom.x() - start_x) * t)
             self.move(new_x, target_geom.y())
-            self.repaint()
-            tick[0] += 1
-            if tick[0] >= num_ticks:
+            self.update()
+            if progress >= 1.0:
                 self._opacity_val = 1.0
                 self.move(target_geom.x(), target_geom.y())
-                self.repaint()
+                self.update()
                 timer.stop()
                 timer.deleteLater()
 
@@ -825,7 +839,7 @@ class _SpriteWindow(QWidget):
 
     def _set_offset_y(self, val):
         self._offset_y = val
-        self.repaint()
+        self.update()
 
     anim_offset_y = Property(float, _get_offset_y, _set_offset_y)
 
