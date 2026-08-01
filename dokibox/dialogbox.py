@@ -907,7 +907,9 @@ class _DialogBox(QWidget):
         self._pinned = pinned
         self._typing = False
         self._typing_done = False
-        self._after_timer = None
+        self._after_timer = QTimer(self)
+        self._after_timer.setSingleShot(True)
+        self._after_timer.timeout.connect(self._type_tick)
         self._transparent = transparent
         self._glare = glare
         self._menu_hover_idx = -1
@@ -1217,13 +1219,7 @@ class _DialogBox(QWidget):
         self._sprites = []
 
     def closeEvent(self, event):
-        if self._after_timer:
-            try:
-                self._after_timer.stop()
-            except Exception:
-                pass
-            self._after_timer.deleteLater()
-            self._after_timer = None
+        self._after_timer.stop()
         self._stop_auto_advance()
         try:
             self._blink_timer.stop()
@@ -1239,13 +1235,7 @@ class _DialogBox(QWidget):
                         sprite_allow_cover_list=None, avatar_hide_animations=None,
                           mode=None, default=None, max_length=None, allow_empty=None,
                           savecall=None, loadcall=None, settingscall=None):
-        if self._after_timer:
-            try:
-                self._after_timer.stop()
-            except Exception:
-                pass
-            self._after_timer.deleteLater()
-            self._after_timer = None
+        self._after_timer.stop()
         self._stop_auto_advance()
 
         self._savecall = savecall
@@ -1424,16 +1414,12 @@ class _DialogBox(QWidget):
             self._typing_done = True
 
     def _start_typewriter_timer(self):
-        self._after_timer = QTimer(self)
-        self._after_timer.setSingleShot(True)
-        self._after_timer.timeout.connect(self._type_tick)
         self._after_timer.start(self._chardelay)
 
     def _type_tick(self):
         if self._cur_line >= len(self._typewriter_lines):
             self._typing = False
             self._typing_done = True
-            self._after_timer = None
             if self._auto_mode or self._skip_mode:
                 self._start_auto_advance()
             return
@@ -1446,19 +1432,10 @@ class _DialogBox(QWidget):
             return
 
         self.update()
-        self._after_timer = QTimer(self)
-        self._after_timer.setSingleShot(True)
-        self._after_timer.timeout.connect(self._type_tick)
         self._after_timer.start(self._chardelay)
 
     def _finish_typewriter(self):
-        if self._after_timer:
-            try:
-                self._after_timer.stop()
-            except Exception:
-                pass
-            self._after_timer.deleteLater()
-            self._after_timer = None
+        self._after_timer.stop()
         self._typing = False
         self._typing_done = True
         self._cur_line = len(self._typewriter_lines)
@@ -2223,13 +2200,10 @@ def _calc_im_overflow_cursor(self, font, fm, x, y, cursor_pos):
 def _destroy_box():
     global _box
     if _box is not None:
-        if _box._after_timer:
-            try:
-                _box._after_timer.stop()
-            except Exception:
-                pass
-            _box._after_timer.deleteLater()
-            _box._after_timer = None
+        try:
+            _box._after_timer.stop()
+        except Exception:
+            pass
         try:
             _box._blink_timer.stop()
         except Exception:
