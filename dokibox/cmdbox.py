@@ -4,6 +4,7 @@ import sys
 import ctypes
 import subprocess
 import io
+import threading
 from PySide6.QtCore import Qt, QTimer, QSize, Signal, QEventLoop
 from PySide6.QtGui import (
     QPainter, QColor, QFont, QFontMetrics, QTextOption, QTextCursor,
@@ -168,6 +169,8 @@ class _CmdContent(QWidget):
 
 class _CmdPanel(QWidget):
 
+    command_finished = Signal(object)
+
     def __init__(self, pinned=True):
         _get_app()
         super().__init__(None)
@@ -186,7 +189,10 @@ class _CmdPanel(QWidget):
         self._font = QFont(FONT_FAMILY, FONT_SIZE)
 
         self._pending_result = ""
+        self._pending_command = None
         self._current_loop = None
+        self._command_thread = None
+        self.command_finished.connect(self._on_command_finished)
 
         self._cmd_content = _CmdContent()
         self._cmd_content.typing_finished.connect(self._on_typing_finished)
@@ -267,6 +273,12 @@ class _CmdPanel(QWidget):
         self._cmd_content.update()
 
     def _on_typing_finished(self):
+        if self._pending_command is not None:
+            cmd, language = self._pending_command
+            self._pending_command = None
+            self._start_command(cmd, language)
+            return
+
         pending = self._pending_result
         if callable(pending):
             try:
@@ -279,6 +291,22 @@ class _CmdPanel(QWidget):
         self._pending_result = ""
         if self._current_loop and self._current_loop.isRunning():
             self._current_loop.quit()
+
+    def _start_command(self, cmd, language):
+        def run_command():
+            try:
+                result = _execute_command(cmd, language)
+            except BaseException as exc:
+                result = str(exc) or type(exc).__name__
+            self.command_finished.emit(result)
+
+        self._command_thread = threading.Thread(target=run_command, daemon=True)
+        self._command_thread.start()
+
+    def _on_command_finished(self, result):
+        self._command_thread = None
+        self._pending_result = result
+        self._on_typing_finished()
 
     def _append_zero_spaced(self, text):
         self._result_edit.moveCursor(QTextCursor.End)
@@ -353,13 +381,6 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
         _cmd_panel.activateWindow()
         _cmd_panel.setFocus()
 
-    actual_result = result
-    if runcmd and cmd:
-        try:
-            actual_result = _execute_command(cmd, language)
-        except Exception as e:
-            actual_result = str(e)
-
     if clear:
         _cmd_panel._result_edit.clear()
 
@@ -368,8 +389,9 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
     fs = int((font_size or FONT_SIZE) * dpi_s)
     _cmd_panel._apply_font(ff, fs)
 
+    _cmd_panel._pending_command = (cmd, language) if runcmd and cmd else None
     _cmd_panel._cmd_content.set_text(cmd, chardelay)
-    _cmd_panel._pending_result = actual_result
+    _cmd_panel._pending_result = result
     if not cmd:
         _cmd_panel._on_typing_finished()
         return
@@ -378,6 +400,7 @@ def cmdbox(cmd="", result="", runcmd=False, language="python", clear=False,
     _cmd_panel._current_loop = loop
     _cmd_panel.destroyed.connect(loop.quit)
     loop.exec()
+    _cmd_panel._current_loop = None
 
 
 def closecmdbox(delay=0):
