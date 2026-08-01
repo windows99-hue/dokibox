@@ -3,9 +3,9 @@
 import math
 import sys
 import ctypes
-from PySide6.QtCore import Qt, QEventLoop, QPointF, QTimer, QElapsedTimer
+from PySide6.QtCore import Qt, QEvent, QEventLoop, QPointF, QRectF, QTimer, QElapsedTimer
 from PySide6.QtGui import (
-    QPainter, QColor, QBrush, QPainterPath, QFont, QFontMetrics, QPen, QPixmap,
+    QPainter, QColor, QPainterPath, QFont, QFontMetrics, QPen, QPixmap,
 )
 from PySide6.QtWidgets import QWidget, QScrollBar
 from dokibox._base import _get_app, _get_dpi_scale
@@ -213,14 +213,13 @@ class _HistoryBox(QWidget):
         super().__init__(None)
         self.result = None
         self._records = records
-
-        if sys.platform == "win32":
-            ctypes.windll.winmm.timeBeginPeriod(1)
+        self._timer_resolution_active = False
 
         flags = Qt.FramelessWindowHint | Qt.Tool
         if pinned:
             flags |= Qt.WindowStaysOnTopHint
         self.setWindowFlags(flags)
+        self.setAttribute(Qt.WA_OpaquePaintEvent, True)
 
         self.setMouseTracking(True)
         self._drag_pos = None
@@ -235,6 +234,7 @@ class _HistoryBox(QWidget):
         y = (sh - h) // 2
         self.setGeometry(x, y, w, h)
         self.setFixedSize(w, h)
+        self._setup_background_cache()
         self._setup_label_cache()
 
         self._offset_x = 0.0
@@ -243,10 +243,44 @@ class _HistoryBox(QWidget):
         self._elapsed.start()
 
         self._timer = QTimer(self)
+        self._timer.setTimerType(Qt.PreciseTimer)
         self._timer.timeout.connect(self._tick)
-        self._timer.start(16)
 
         self._setup_text()
+
+    def _new_cache_pixmap(self, logical_w, logical_h):
+        dpr = self.devicePixelRatioF()
+        pixmap = QPixmap(
+            max(int(round(logical_w * dpr)), 1),
+            max(int(round(logical_h * dpr)), 1),
+        )
+        pixmap.setDevicePixelRatio(dpr)
+        pixmap.fill(Qt.transparent)
+        return pixmap
+
+    def _setup_background_cache(self):
+        dr, step_x, row_h = self._grid_params()
+        tile_w = max(step_x, 1)
+        tile_h = max(row_h * 2, 1)
+        self._dot_tile = self._new_cache_pixmap(tile_w, tile_h)
+        self._dot_tile_w = self._dot_tile.width() / self._dot_tile.devicePixelRatio()
+        self._dot_tile_h = self._dot_tile.height() / self._dot_tile.devicePixelRatio()
+
+        tile_painter = QPainter(self._dot_tile)
+        tile_painter.setRenderHint(QPainter.Antialiasing)
+        tile_painter.setPen(Qt.NoPen)
+        tile_painter.setBrush(QColor(DOT_COLOR))
+        tile_painter.drawEllipse(QPointF(dr, dr), dr, dr)
+        tile_painter.drawEllipse(
+            QPointF(dr + step_x // 2, dr + row_h), dr, dr)
+        tile_painter.end()
+
+        self._curtain_cache = self._new_cache_pixmap(self.width(), self.height())
+        curtain_painter = QPainter(self._curtain_cache)
+        curtain_painter.setRenderHint(QPainter.Antialiasing)
+        curtain_painter.setPen(Qt.NoPen)
+        self._draw_left_curtain(curtain_painter, self.width(), self.height())
+        curtain_painter.end()
 
     def _setup_label_cache(self):
         s = 1.0 / _get_dpi_scale()
@@ -316,40 +350,52 @@ class _HistoryBox(QWidget):
         row_h = int(dr * 2 + DOT_GAP_Y)
         return dr, step_x, row_h
 
+    def _begin_timer_resolution(self):
+        if sys.platform != "win32" or self._timer_resolution_active:
+            return
+        try:
+            if ctypes.windll.winmm.timeBeginPeriod(1) == 0:
+                self._timer_resolution_active = True
+        except Exception:
+            pass
+
+    def _end_timer_resolution(self):
+        if not self._timer_resolution_active:
+            return
+        try:
+            ctypes.windll.winmm.timeEndPeriod(1)
+        except Exception:
+            pass
+        finally:
+            self._timer_resolution_active = False
+
+    def _start_animation(self):
+        self._begin_timer_resolution()
+        self._elapsed.restart()
+        if not self._timer.isActive():
+            self._timer.start(16)
+
+    def _stop_animation(self):
+        self._timer.stop()
+        self._end_timer_resolution()
+
     def _tick(self):
         dt = self._elapsed.restart() / 1000.0
-        self._offset_x += DOT_SPEED_X * dt
-        self._offset_y += DOT_SPEED_Y * dt
+        self._offset_x = (self._offset_x + DOT_SPEED_X * dt) % self._dot_tile_w
+        self._offset_y = (self._offset_y + DOT_SPEED_Y * dt) % self._dot_tile_h
         self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
         painter.fillRect(self.rect(), QColor("#FFFFFF"))
-
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(QBrush(QColor(DOT_COLOR)))
 
         w = self.width()
         h = self.height()
-        dr, step_x, row_h = self._grid_params()
-        m = dr * 3
-
-        first_row = math.floor((self._offset_y - dr - m) / row_h)
-        last_row = math.ceil((self._offset_y + h + m - dr) / row_h)
-
-        for r in range(first_row, last_row + 1):
-            row_offset = step_x // 2 if r % 2 == 1 else 0
-            y = dr + r * row_h - self._offset_y
-
-            first_col = math.floor((self._offset_x - dr - row_offset - m) / step_x)
-            last_col = math.ceil((self._offset_x + w + m - dr - row_offset) / step_x)
-
-            for c in range(first_col, last_col + 1):
-                x = dr + row_offset + c * step_x - self._offset_x
-                painter.drawEllipse(QPointF(x, y), dr, dr)
-
-        self._draw_left_curtain(painter, w, h)
+        painter.drawTiledPixmap(
+            QRectF(self.rect()), self._dot_tile,
+            QPointF(self._offset_x, self._offset_y),
+        )
+        painter.drawPixmap(0, 0, self._curtain_cache)
 
         hx = int(w / 20)
         hy = int(h / 15)
@@ -363,6 +409,26 @@ class _HistoryBox(QWidget):
         painter.drawPixmap(rx - self._label_padding, return_top, return_label)
 
         painter.end()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._start_animation()
+
+    def hideEvent(self, event):
+        self._stop_animation()
+        super().hideEvent(event)
+
+    def closeEvent(self, event):
+        self._stop_animation()
+        super().closeEvent(event)
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.WindowStateChange:
+            if self.isMinimized():
+                self._stop_animation()
+            elif self.isVisible():
+                self._start_animation()
+        super().changeEvent(event)
 
     def _draw_left_curtain(self, painter, w, h):
         top_x = w * 0.12
@@ -429,7 +495,7 @@ class _HistoryBox(QWidget):
             self._done()
 
     def _done(self):
-        self._timer.stop()
+        self._stop_animation()
         self.result = None
         self.hide()
         self.deleteLater()
