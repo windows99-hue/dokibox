@@ -512,6 +512,25 @@ class _HistoryBox(QWidget):
         return dialog.result
 
 
+def _normalize_history_records(data):
+    items = [data] if isinstance(data, dict) else data
+    records = []
+    for item in items:
+        if isinstance(item, dict):
+            name = item.get("name", "")
+            msg = item.get("msg", "")
+        elif isinstance(item, (list, tuple)) and len(item) == 2:
+            name, msg = item
+        else:
+            raise TypeError(
+                "history records must be dictionaries or two-item lists/tuples")
+        records.append((
+            "" if name is None else str(name),
+            "" if msg is None else str(msg),
+        ))
+    return records
+
+
 def historybox(data="", pinned=True):
     """DDLC-menu-style history viewer showing past dialog records.
 
@@ -537,5 +556,5 @@ def historybox(data="", pinned=True):
     elif isinstance(data, str):
         records = [("", data)]
     else:
-        records = data
+        records = _normalize_history_records(data)
     return _HistoryBox.run(records, pinned=pinned)
