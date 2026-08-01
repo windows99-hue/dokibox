@@ -54,7 +54,8 @@ def _create_or_reuse_box(w, h, display_name, sprite_data, font_config, style_con
                                      glare=style_config.get('glare', True),
                                      sprites=sprite_data['sprites'],
                                      sprite_pos=sprite_data['sprite_pos'],
-                                     speaker_idx=sprite_data['speaker_idx'] or -1,
+                                     speaker_idx=(sprite_data['speaker_idx']
+                                                  if sprite_data['speaker_idx'] is not None else -1),
                                      avatar_sprite_map=sprite_data['avatar_sprite_map'],
                                      sprite_allow_cover=sprite_data.get('sprite_allow_cover', False),
                                      sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
@@ -77,7 +78,8 @@ def _create_or_reuse_box(w, h, display_name, sprite_data, font_config, style_con
                    glare=style_config.get('glare', True),
                    sprites=sprite_data['sprites'],
                    sprite_pos=sprite_data['sprite_pos'],
-                   speaker_idx=sprite_data['speaker_idx'] or -1,
+                   speaker_idx=(sprite_data['speaker_idx']
+                                if sprite_data['speaker_idx'] is not None else -1),
                    sprite_allow_cover=sprite_data.get('sprite_allow_cover', False),
                    sprite_allow_cover_list=sprite_data['sprite_allow_cover_list'],
                    mode=mode, default=default, max_length=max_length,
