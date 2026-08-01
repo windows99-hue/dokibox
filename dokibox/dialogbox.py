@@ -2333,6 +2333,10 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 
     if _box is not None:
         try:
+            _box.isVisible()
+        except RuntimeError:
+            _destroy_box()
+        else:
             if _box.w == w and _box.h == h:
                 _box._update_content(msg, typewriter, chardelay, bold, overflow_mode, display_name,
                                      font_family=font_family, font_size=font_size,
@@ -2350,8 +2354,6 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
                                      settingscall=effective_settings)
             else:
                 _destroy_box()
-        except Exception:
-            _destroy_box()
 
     if _box is None:
         _box = _DialogBox(msg, w, h, display_name, typewriter, chardelay, bold, pinned=pinned,

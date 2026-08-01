@@ -45,6 +45,10 @@ def _create_or_reuse_box(w, h, display_name, sprite_data, font_config, style_con
 
     if _box is not None:
         try:
+            _box.isVisible()
+        except RuntimeError:
+            _destroy_box()
+        else:
             if _box.w == w and _box.h == h:
                 _box._update_content("", True, 50, False, overflow_mode,
                                      display_name,
@@ -65,8 +69,6 @@ def _create_or_reuse_box(w, h, display_name, sprite_data, font_config, style_con
                 return _box
             else:
                 _destroy_box()
-        except Exception:
-            _destroy_box()
 
     if _get_shared_box() is None:
         _DialogBox("", w, h, display_name,
