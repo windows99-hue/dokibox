@@ -1456,7 +1456,7 @@ class _DialogBox(QWidget):
             return
 
         self._cur_char += 1
-        if self._cur_char > len(self._typewriter_lines[self._cur_line]):
+        if self._cur_char > self._line_visible_len(self._typewriter_lines[self._cur_line]):
             self._cur_line += 1
             self._cur_char = 0
             self._type_tick()
@@ -1668,6 +1668,86 @@ class _DialogBox(QWidget):
     def _text_area_width(self):
         return self.w - self._pad_x * 2
 
+    def _body_style_font(self, bold=False, italic=False):
+        weight = QFont.Black if bold else QFont.Bold
+        font = QFont(self._font_family, self._body_fs, weight)
+        font.setItalic(italic)
+        return font
+
+    def _parse_rich_text(self, text):
+        segments = []
+        bold = False
+        italic = False
+        buf = ""
+        i = 0
+        tags = {
+            "{b}": ("bold", True),
+            "{/b}": ("bold", False),
+            "{i}": ("italic", True),
+            "{/i}": ("italic", False),
+        }
+        while i < len(text):
+            matched = None
+            for tag, state in tags.items():
+                if text.startswith(tag, i):
+                    matched = (tag, state)
+                    break
+            if matched:
+                if buf:
+                    segments.append((buf, bold, italic))
+                    buf = ""
+                attr, value = matched[1]
+                if attr == "bold":
+                    bold = value
+                else:
+                    italic = value
+                i += len(matched[0])
+            else:
+                buf += text[i]
+                i += 1
+        if buf:
+            segments.append((buf, bold, italic))
+        return segments
+
+    def _plain_text(self, line):
+        if isinstance(line, str):
+            return line
+        return "".join(seg[0] for seg in line)
+
+    def _line_visible_len(self, line):
+        return len(self._plain_text(line))
+
+    def _take_visible_chars(self, line, count):
+        if isinstance(line, str):
+            return line[:count]
+        remaining = count
+        result = []
+        for text, bold, italic in line:
+            if remaining <= 0:
+                break
+            part = text[:remaining]
+            if part:
+                result.append((part, bold, italic))
+            remaining -= len(part)
+        return result
+
+    def _line_width(self, line):
+        if isinstance(line, str):
+            return QFontMetrics(self._body_style_font()).horizontalAdvance(line)
+        width = 0
+        for text, bold, italic in line:
+            width += QFontMetrics(self._body_style_font(bold, italic)).horizontalAdvance(text)
+        return width
+
+    def _append_segment(self, segments, text, bold, italic):
+        if not text:
+            return
+        if segments and segments[-1][1] == bold and segments[-1][2] == italic:
+            old_text, old_bold, old_italic = segments[-1]
+            segments[-1] = (old_text + text, old_bold, old_italic)
+        else:
+            segments.append((text, bold, italic))
+
     def _wrap_line(self, text, font, max_w):
         fm = QFontMetrics(font)
         if fm.horizontalAdvance(text) <= max_w:
@@ -1686,7 +1766,42 @@ class _DialogBox(QWidget):
             lines.append(current)
         return lines
 
+    def _wrap_rich_segments(self, segments, max_w):
+        if self._line_width(segments) <= max_w:
+            return [segments]
+        lines = []
+        current = []
+        current_w = 0
+        for text, bold, italic in segments:
+            fm = QFontMetrics(self._body_style_font(bold, italic))
+            for ch in text:
+                ch_w = fm.horizontalAdvance(ch)
+                if current and current_w + ch_w > max_w:
+                    lines.append(current)
+                    current = []
+                    current_w = 0
+                self._append_segment(current, ch, bold, italic)
+                current_w += ch_w
+        if current:
+            lines.append(current)
+        return lines
+
     def _process_lines(self, text, font, max_w):
+        parsed_lines = [self._parse_rich_text(line) for line in text.split('\n')]
+        has_rich = any(
+            bold or italic
+            for line in parsed_lines
+            for _, bold, italic in line
+        )
+        if has_rich:
+            if self._overflow_mode == "overflow":
+                return parsed_lines
+            if self._overflow_mode == "wrap":
+                result = []
+                for line in parsed_lines:
+                    result.extend(self._wrap_rich_segments(line, max_w))
+                return result
+            return parsed_lines
         if self._overflow_mode == "overflow":
             return text.split('\n')
         if self._overflow_mode == "wrap":
@@ -1718,7 +1833,7 @@ class _DialogBox(QWidget):
                 if j < self._cur_line:
                     shown = full_text
                 elif j == self._cur_line:
-                    shown = full_text[:self._cur_char]
+                    shown = self._take_visible_chars(full_text, self._cur_char)
                 else:
                     shown = ""
                 if shown:
@@ -1730,6 +1845,9 @@ class _DialogBox(QWidget):
                 self._draw_stroked(painter, dl + px, py, line, font)
 
     def _draw_stroked(self, painter, x, y, text, font):
+        if not isinstance(text, str):
+            self._draw_stroked_segments(painter, x, y, text)
+            return
         sw = 4 if self._bold else 1
         painter.setFont(font)
         fm = QFontMetrics(font)
@@ -1742,6 +1860,30 @@ class _DialogBox(QWidget):
             painter.drawText(int(x) + dx, text_y + dy, text)
         painter.setPen(QColor("#ffffff"))
         painter.drawText(int(x), text_y, text)
+
+    def _draw_stroked_segments(self, painter, x, y, segments):
+        sw = 4 if self._bold else 1
+        cur_x = x
+        for text, bold, italic in segments:
+            if not text:
+                continue
+            font = self._body_style_font(bold, italic)
+            painter.setFont(font)
+            fm = QFontMetrics(font)
+            text_y = int(y + fm.ascent() - fm.height() // 2)
+            for step in range(48):
+                angle = 2 * math.pi * step / 24
+                dx = int(math.cos(angle) * sw)
+                dy = int(math.sin(angle) * sw)
+                painter.setPen(QColor("#000000"))
+                painter.drawText(int(cur_x) + dx, text_y + dy, text)
+            painter.setPen(QColor("#ffffff"))
+            if bold:
+                for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                    painter.drawText(int(cur_x) + dx, text_y + dy, text)
+            else:
+                painter.drawText(int(cur_x), text_y, text)
+            cur_x += fm.horizontalAdvance(text)
 
     def mousePressEvent(self, event):
         if _box is None:

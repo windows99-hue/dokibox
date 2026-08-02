@@ -105,6 +105,7 @@ monika = dokibox.Avatar(name="Monika", emotes={
 sayori2 = copy.deepcopy(sayori)
 
 if __name__ == "__main__":
+    dokibox.dialogbox("普通 {b}加粗{/b} {i}斜体{/i} {b}{i}加粗斜体{/i}{/b}")
     dokibox.dialogbox("哇，这里的风景也太舒服啦！",name=sayori,sprites=[sayori("center", "happy",animation="lenter")])
     dokibox.dialogbox("你好，纱世里。没想到会在这里碰到你。",name=yuri,sprites=[sayori("left", "normal"),yuri("right", "normal")])
     dokibox.dialogbox("诶！优里！？你也来这边散步嘛？太巧啦！",name=sayori,sprites=[sayori("left", "surprised"),yuri("right", "normal")])
