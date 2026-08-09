@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.8.5] - 2026-08-09
+
+### Added
+
+1. 给dialogbox加了个dismiss函数，用于关闭现有的dialogbox，在保存示例中不需要调用内部方法
+
 ## [2.8.4] - 2026-08-09
 
 ### Fixed
