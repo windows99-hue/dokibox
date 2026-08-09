@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.4] - 2026-08-09
+
+### Fixed
+
+1. 修复了enterbox的tooltip参数问题
+
+2. 优化了thanks动画的效果
+
 ## [2.8.3] - 2026-08-09
 
 ### Added
