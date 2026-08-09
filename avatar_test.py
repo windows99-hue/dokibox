@@ -8,6 +8,10 @@ IMAGE_ARCHIVE = r"J:\SteamLibrary\steamapps\common\Doki Doki Literature Club\gam
 
 data = rpareader.RPAReader(IMAGE_ARCHIVE)
 
+dokibox.dialogbox.chardelay = 2
+dokibox.dialogbox.font_size = 25
+dokibox.dialogbox.transparent = False
+
 sayori_images = data.preload(["images/sayori/*"])
 yuri_images = data.preload(["images/yuri/*"])
 natsuki_images = data.preload(["images/natsuki/*"])

@@ -44,6 +44,11 @@ MENU_COLOR = QColor("#59242C")
 MENU_HOVER_COLOR = QColor("#ffffff")
 MENU_DISABLED_COLOR = QColor("#AA646F")
 
+# A private sentinel lets dialogbox distinguish an omitted argument from an
+# explicitly supplied value (including None).  Omitted arguments are resolved
+# from the attributes on the public dialogbox function below.
+_UNSET = object()
+
 _MENU_I18N = {
     "zh": ["历史", "快进", "自动", "保存", "加载", "设置"],
     "ja": ["履歴", "スキップ", "自動", "セーブ", "ロード", "設定"],
@@ -2398,14 +2403,14 @@ def _get_shared_box():
     return _box
 
 
-def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
-              name: Optional[str] = None, typewriter: bool = True,
-              chardelay: int = 50, bold: bool = False, pinned: bool = True,
-              fdst: bool = False, overflow_mode: str = "wrap",
-              font_family: str = None, font_size: int = None,
-              transparent: bool = True, glare: bool = True,
-              sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = None,
-              sprite_allow_cover: bool = False,
+def dialogbox(msg: str = "", w: Optional[int] = _UNSET, h: Optional[int] = _UNSET,
+              name: Optional[str] = _UNSET, typewriter: bool = _UNSET,
+              chardelay: int = _UNSET, bold: bool = _UNSET, pinned: bool = _UNSET,
+              fdst: bool = _UNSET, overflow_mode: str = _UNSET,
+              font_family: str = _UNSET, font_size: int = _UNSET,
+              transparent: bool = _UNSET, glare: bool = _UNSET,
+              sprites: Optional[Union[str, bytes, List[Union[str, bytes]]]] = _UNSET,
+              sprite_allow_cover: bool = _UNSET,
               savecall=None, loadcall=None, settingscall=None) -> None:
     """DDLC-style bottom rounded dialog. Click anywhere or press Esc to dismiss.
 
@@ -2442,6 +2447,12 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         These are fallbacks when savecall / loadcall / settingscall are not
         provided. If neither is set, the corresponding menu button is disabled.
 
+    Global settings::
+        Every option other than ``msg`` and the per-button callbacks can also
+        be set on the function, for example ``dokibox.dialogbox.chardelay = 5``.
+        An argument supplied to this call takes priority over its global value.
+        The initial global values are the same as the original defaults.
+
     Usage:
         sayori = Avatar(name="Sayori", emotes={"happy": ["sayori_happy.png"]})
         yuri = Avatar(name="Yuri", emotes={"shocked": ["yuri_shocked.png"]})
@@ -2449,6 +2460,25 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
         dokibox.dialogbox("Hi!", name=yuri)  # sprites persist, speaker auto-detected
     """
     global _box
+
+    # Per-call arguments have priority.  Only arguments that were genuinely
+    # omitted use the corresponding global setting.
+    w = dialogbox.w if w is _UNSET else w
+    h = dialogbox.h if h is _UNSET else h
+    name = dialogbox.name if name is _UNSET else name
+    typewriter = dialogbox.typewriter if typewriter is _UNSET else typewriter
+    chardelay = dialogbox.chardelay if chardelay is _UNSET else chardelay
+    bold = dialogbox.bold if bold is _UNSET else bold
+    pinned = dialogbox.pinned if pinned is _UNSET else pinned
+    fdst = dialogbox.fdst if fdst is _UNSET else fdst
+    overflow_mode = dialogbox.overflow_mode if overflow_mode is _UNSET else overflow_mode
+    font_family = dialogbox.font_family if font_family is _UNSET else font_family
+    font_size = dialogbox.font_size if font_size is _UNSET else font_size
+    transparent = dialogbox.transparent if transparent is _UNSET else transparent
+    glare = dialogbox.glare if glare is _UNSET else glare
+    sprites = dialogbox.sprites if sprites is _UNSET else sprites
+    sprite_allow_cover = (dialogbox.sprite_allow_cover
+                          if sprite_allow_cover is _UNSET else sprite_allow_cover)
 
     _get_app()
     effective_save = savecall if savecall is not None else dialogbox.save
@@ -2540,3 +2570,18 @@ def dialogbox(msg: str = "", w: Optional[int] = None, h: Optional[int] = None,
 dialogbox.save = None
 dialogbox.load = None
 dialogbox.settings = None
+dialogbox.w = None
+dialogbox.h = None
+dialogbox.name = None
+dialogbox.typewriter = True
+dialogbox.chardelay = 50
+dialogbox.bold = False
+dialogbox.pinned = True
+dialogbox.fdst = False
+dialogbox.overflow_mode = "wrap"
+dialogbox.font_family = None
+dialogbox.font_size = None
+dialogbox.transparent = True
+dialogbox.glare = True
+dialogbox.sprites = None
+dialogbox.sprite_allow_cover = False
