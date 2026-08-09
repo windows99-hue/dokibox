@@ -877,11 +877,17 @@ class _SpriteWindow(QWidget):
             anim.setStartValue(self._offset_y)
             anim.setKeyValueAt(0.12, -65.0)
             anim.setEndValue(0.0)
-        elif anim_type in ("sad", "thanks"):
+        elif anim_type == "sad":
             anim.setDuration(900)
             anim.setEasingCurve(QEasingCurve.InOutCubic)
             anim.setStartValue(self._offset_y)
             anim.setEndValue(35.0)
+        elif anim_type == "thanks":
+            anim.setDuration(900)
+            anim.setEasingCurve(QEasingCurve.InOutCubic)
+            anim.setStartValue(0.0)
+            anim.setKeyValueAt(0.5, 35.0)
+            anim.setEndValue(0.0)
 
         anim.start()
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """dokibox.enterbox -- DDLC-style input dialog with text entry"""
 import math
-from typing import Optional
+from typing import Optional, Union
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QFontMetrics
 from PySide6.QtWidgets import QToolTip, QLineEdit
@@ -135,11 +135,15 @@ class _CustomLineEdit(QLineEdit):
 
 class _EnterDialog(_DokiBase):
 
-    def __init__(self, msg, default="", tooltip=False, pinned=True,
+    def __init__(self, msg, default="", tooltip=None, pinned=True,
                  font_family=None, font_size=None, max_length=None):
         self._font_family = font_family or "Microsoft YaHei"
         self._font_size = font_size
-        self._tooltip = tooltip if isinstance(tooltip, str) and tooltip else None
+        if isinstance(tooltip, str):
+            self._tooltip = tooltip or None
+        else:
+            # Keep compatibility with the previous tooltip=True API.
+            self._tooltip = "OK" if tooltip else None
         self._btn_ok_hover = False
         self._btn_ok_rect = None
         self._tooltip_shown = False
@@ -261,7 +265,7 @@ class _EnterDialog(_DokiBase):
         if self._tooltip:
             if self._btn_ok_hover and not self._tooltip_shown:
                 self._tooltip_shown = True
-                QToolTip.showText(event.globalPosition().toPoint(), "OK", self)
+                QToolTip.showText(event.globalPosition().toPoint(), self._tooltip, self)
             elif not self._btn_ok_hover:
                 self._tooltip_shown = False
                 QToolTip.hideText()
@@ -274,7 +278,7 @@ class _EnterDialog(_DokiBase):
 
 
 def enterbox(msg: str = "", default: str = "",
-             tooltip: bool = False, pinned: bool = True,
+             tooltip: Optional[Union[str, bool]] = None, pinned: bool = True,
              font_family: str = None, font_size: int = None,
              max_length: int = None) -> Optional[str]:
     """DDLC-style input dialog. Returns the entered text or None if cancelled.
@@ -282,7 +286,8 @@ def enterbox(msg: str = "", default: str = "",
     Args:
         msg:        prompt text to display above the input field.
         default:    default value in the input field.
-        tooltip:    show a floating tooltip when hovering over the button.
+        tooltip:    custom tooltip text shown while hovering over the OK button.
+                    True keeps the legacy behavior and displays "OK".
         pinned:     keep the window always on top of other windows.
         font_family: custom font family name.
         font_size:  base font size (automatically scaled by DPI).
