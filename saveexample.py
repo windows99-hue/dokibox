@@ -5,11 +5,9 @@
 """
 
 import json
-from importlib import import_module
 from pathlib import Path
 
 import dokibox
-from PySide6.QtCore import QTimer
 
 
 SAVE_PATH = Path(__file__).with_name("save.json")
@@ -31,11 +29,6 @@ progress = {"chapter": 1, "line": 0}
 # 读档发生在按钮回调中，文件会当场读取。这个标记只用来防止
 # 当前 dialogbox 关闭后把刚读取的行号再加 1。
 load_happened = False
-
-# dialogbox 按钮回调执行时，dokibox 会暂时放下共享窗口引用。
-# 因此要在回调返回后的下一轮 Qt 事件中关闭当前对话框。
-dialogbox_module = import_module("dokibox.dialogbox")
-
 
 def show_notice(message):
     """显示非阻塞通知，让按钮回调可以立即返回。"""
@@ -87,13 +80,6 @@ def _validate_progress(data):
     return chapter, line
 
 
-def _dismiss_current_dialog():
-    """结束当前对话，让剧情循环立即跳到读档位置。"""
-    box = dialogbox_module._get_shared_box()
-    if box is not None:
-        box._done()
-
-
 def load_game():
     """立即读取进度、关闭当前对话并刷新为存档内容。"""
     global load_happened
@@ -112,7 +98,7 @@ def load_game():
     progress["line"] = line
     load_happened = True
     show_notice("已读取：第 {} 章，第 {} 句".format(chapter, line + 1))
-    QTimer.singleShot(0, _dismiss_current_dialog)
+    dokibox.dialogbox.dismiss()
 
 
 def run_story():

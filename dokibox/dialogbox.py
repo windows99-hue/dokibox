@@ -114,6 +114,7 @@ def remove_window_shadow(hwnd):
         hwnd, DWMWA_SHADOW_OPACITY, ctypes.byref(zero_val), ctypes.sizeof(zero_val))
 
 _box = None
+_menu_callback_box = None
 _history = []
 
 
@@ -2280,13 +2281,16 @@ class _DialogBox(QWidget):
 
 
 def _call_menu_callback(callback):
-    global _box
+    global _box, _menu_callback_box
     saved_box = _box
+    saved_callback_box = _menu_callback_box
+    _menu_callback_box = saved_box
     _box = None
     try:
         callback()
     finally:
         _box = saved_box
+        _menu_callback_box = saved_callback_box
 
 
 def _iter_avatar_sprites(sprites):
@@ -2407,6 +2411,32 @@ def _destroy_box():
 
 def _get_shared_box():
     return _box
+
+
+def dismiss() -> bool:
+    """Request that the currently displayed dialogbox be dismissed.
+
+    This also works inside save, load, and settings callbacks.  The dismissal
+    is queued until the current Qt event has finished so callback bookkeeping
+    can be restored safely.
+
+    Returns True when an active dialogbox was found, otherwise False.
+    """
+    target_box = _menu_callback_box if _menu_callback_box is not None else _box
+    if target_box is None:
+        return False
+
+    def dismiss_target():
+        if _box is not target_box:
+            return
+        try:
+            target_box._done()
+        except RuntimeError:
+            # The underlying Qt object may already have been deleted.
+            pass
+
+    QTimer.singleShot(0, dismiss_target)
+    return True
 
 
 def dialogbox(msg: str = "", w: Optional[int] = _UNSET, h: Optional[int] = _UNSET,
@@ -2591,3 +2621,4 @@ dialogbox.transparent = True
 dialogbox.glare = True
 dialogbox.sprites = None
 dialogbox.sprite_allow_cover = False
+dialogbox.dismiss = dismiss
